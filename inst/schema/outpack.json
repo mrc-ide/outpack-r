@@ -1,0 +1,115 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "outpack metadata schema",
+    "description": "This is the minimal schema, it is expected that implementations will want and need additional fields throughout",
+
+    "definitions": {
+        "hash": {
+            "description": "A hash, including the algorithm name (e.g., md5, sha256)",
+            "type": "string",
+            "pattern": "^([a-zA-Z0-9]+):([0-9a-f]{16,})$"
+        }
+    },
+
+    "type": "object",
+    "properties": {
+        "schemaVersion": {
+            "description": "Schema version, used to manage migrations",
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+
+        "id": {
+            "description": "Task id, globally unique",
+            "type": "string",
+            "pattern": "^([0-9]{8}-[0-9]{6})-([0-9a-f]{8})$"
+        },
+
+        "name": {
+            "description": "Task name. No restrictions on contents",
+            "type": "string"
+        },
+
+        "parameters": {
+            "description": "Task parameters, used when running and for querying",
+            "type": ["null", "object"]
+        },
+
+        "time": {
+            "description": "Information about the running time",
+            "start": {
+                "description": "Time that the report was started",
+                "type": "date-time"
+            },
+            "end": {
+                "description": "Time that the report was completed",
+                "type": "date-time"
+            },
+            "elapsed": {
+                "description": "Running time, in seconds",
+                "type": "number"
+            }
+        },
+
+        "inputs": {
+            "description": "Information on the file inputs",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "description": "The path of the file",
+                        "type": "string"
+                    },
+                    "hash": {
+                        "$ref": "#/definitions/hash"
+                    },
+                    "size": {
+                        "description": "The file size. Unlikely to be accurate for text files due to line ending differences",
+                        "type": "number"
+                    },
+                    "origin": {
+                        "description": "For dependencies, we need to be able to get back to the original source of the data",
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "$ref": "#/properties/id"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "path": {
+                                "description": "Original filename name",
+                                "type": "string"
+                            },
+                        },
+                        "required": ["id", "name", "path"]
+                    }
+                },
+                "required": ["path", "hash", "size"]
+            }
+        },
+
+        "outputs": {
+            "description": "Information about file outputs",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "description": "Filename of generated file",
+                        "type": "string"
+                    },
+                    "hash": {
+                        "$ref": "#/definitions/hash"
+                    },
+                    "size": {
+                        "description": "The file size. Unlikely to be accurate for text files due to line ending differences",
+                        "type": "number"
+                    }
+                },
+                "required": ["hash", "size"]
+            }
+        }
+    }
+}
