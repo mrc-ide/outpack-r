@@ -3,6 +3,16 @@
 }
 
 
+vlapply <- function(X, FUN, ...) {
+  vapply(X, FUN, logical(1), ...)
+}
+
+
+vcapply <- function(X, FUN, ...) {
+  vapply(X, FUN, character(1), ...)
+}
+
+
 squote <- function(x) {
   sprintf("'%s'", x)
 }
@@ -67,8 +77,77 @@ file_exists <- function(..., check_case = FALSE, workdir = NULL,
 }
 
 
+file_has_canonical_case <- function(filename) {
+  dat <- file_split_base(filename)
+  base <- dat$base
+  absolute <- dat$absolute
+
+  for (p in dat$path) {
+    if (p %in% dir(base, all.files = TRUE)) {
+      base <- paste(base, p, sep = if (absolute) "" else "/")
+      absolute <- FALSE
+    } else {
+      return(FALSE)
+    }
+  }
+  TRUE
+}
+
+
+file_canonical_case <- function(filename) {
+  dat <- file_split_base(filename)
+  base <- dat$base
+  path <- dat$path
+  absolute <- dat$absolute
+
+  for (p in dat$path) {
+    pos <- dir(base, all.files = TRUE)
+    i <- match(tolower(p), tolower(pos))
+    if (!is.na(i)) {
+      p <- pos[[i]]
+    } else if (grepl("~", p, fixed = TRUE)) {
+      ## Windows truncated path, ignore case
+    } else {
+      return(NA_character_)
+    }
+
+    base <- paste(base, p, sep = if (absolute) "" else "/")
+    absolute <- FALSE
+  }
+
+  if (grepl("^\\./", base) && !grepl("^\\./", filename)) {
+    base <- sub("^\\./", "", base)
+  }
+  base
+}
+
+
+file_split_base <- function(filename) {
+  path <- strsplit(filename, "[/\\\\]")[[1L]]
+  if (!nzchar(path[[1]])) {
+    base <- "/"
+    path <- path[-1L]
+    absolute <- TRUE
+  } else if (grepl("^[A-Za-z]:", path[[1]])) {
+    base <- paste0(path[[1L]], "/")
+    path <- path[-1L]
+    absolute <- TRUE
+  } else {
+    base <- "."
+    absolute <- FALSE
+  }
+
+  list(path = path[nzchar(path)], base = base, absolute = absolute)
+}
+
+
 is_linux <- function() {
   tolower(Sys.info()[["sysname"]]) == "linux"
+}
+
+
+is_windows <- function() {
+  tolower(Sys.info()[["sysname"]]) == "windows"
 }
 
 
@@ -89,9 +168,4 @@ drop_class <- function(x) {
 set_names <- function(x, nms) {
   names(x) <- nms
   x
-}
-
-
-vlapply <- function(X, FUN, ...) {
-  vapply(X, FUN, logical(1), ...)
 }

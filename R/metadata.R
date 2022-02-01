@@ -26,30 +26,30 @@ outpack_metadata_read <- function(path) {
 }
 
 
-outpack_metadata_create <- function(name, id, time, inputs, outputs,
-                                    depends = NULL, parameters = NULL,
-                                    session = NULL, extra = NULL,
-                                    pretty = FALSE) {
+outpack_metadata_create <- function(name, id, time_start, time_end,
+                                    inputs, outputs, depends = NULL,
+                                    parameters = NULL, session = NULL,
+                                    extra = NULL, hash_algorithm = "sha256") {
   assert_scalar_character(name)
   assert_scalar_character(id)
-  assert_is(time, "outpack_metadata_time")
-  time <- drop_class(time)
+  time <- outpack_metadata_time(time_start, time_end)
 
-  if (!all(vlapply(inputs, inherits, "outpack_metadata_file"))) {
-    stop("All elements of 'inputs' must be 'outpack_metadata_file'")
+  if (!is.null(inputs)) {
+    assert_character(inputs)
+    inputs <- unname(lapply(inputs, outpack_metadata_file, hash_algorithm))
   }
-  inputs <- lapply(inputs, drop_class)
-  if (!all(vlapply(outputs, inherits, "outpack_metadata_file"))) {
-    stop("All elements of 'outputs' must be 'outpack_metadata_file'")
-  }
-  outputs <- lapply(outputs, drop_class)
+
   if (length(outputs) == 0) {
     stop("At least one 'outputs' is required")
   }
+  assert_character(outputs)
+  outputs <- unname(lapply(outputs, outpack_metadata_file, hash_algorithm))
+
   if (!all(vlapply(depends, inherits, "outpack_metadata_depends"))) {
     stop("All elements of 'depends' must be 'outpack_metadata_depends'")
   }
   depends <- lapply(depends, drop_class)
+
   if (!is.null(parameters)) {
     assert_named(parameters)
     ## TODO: check basic types here, ensure scalar
@@ -77,23 +77,22 @@ outpack_metadata_create <- function(name, id, time, inputs, outputs,
     ret <- c(ret, extra)
   }
 
-  jsonlite::toJSON(ret, pretty = pretty)
+  ## We *must* use pretty = FALSE because we might sign this later.
+  jsonlite::toJSON(ret, pretty = FALSE)
 }
 
 
-outpack_metadata_time <- function(begin, end) {
+outpack_metadata_time <- function(start, end) {
   ## There's a question here about what we should do for timezones
-  assert_is(begin, "POSIXt")
+  assert_is(start, "POSIXt")
   assert_is(end, "POSIXt")
-  ret <- list(begin = scalar(as.character(begin)),
-              end = scalar(as.character(end)),
-              elapsed = scalar(as.numeric(end - begin, units = "secs")))
-  class(ret) <- c("outpack_metadata_time", "outpack_metadata_partial")
-  ret
+  list(start = scalar(as.character(start)),
+       end = scalar(as.character(end)),
+       elapsed = scalar(as.numeric(end - start, units = "secs")))
 }
 
 
-outpack_metadata_file <- function(path, hash, size, algorithm) {
+outpack_metadata_file_CHECKL <- function(path, hash, size, algorithm) {
   if (!file.exists(path)) {
     stop("File missing")
   }
@@ -122,6 +121,16 @@ outpack_metadata_file <- function(path, hash, size, algorithm) {
               size = scalar(size))
   class(ret) <- c("outpack_metadata_file", "outpack_metadata_input")
   ret
+}
+
+
+outpack_metadata_file <- function(path, hash_algorithm) {
+  if (!file.exists(path)) {
+    stop("File missing")
+  }
+  list(path = scalar(path),
+       size = scalar(file.size(path)),
+       hash = scalar(hash_file(path, hash_algorithm)))
 }
 
 
