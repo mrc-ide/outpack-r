@@ -26,20 +26,21 @@ test_that("assert_is", {
 
 
 test_that("assert_file_exists", {
-  path <- tempfile(tmpdir = normalizePath(tempdir(), mustWork = TRUE))
+  tmp <- normalizePath(tempdir(), mustWork = TRUE)
+  path <- tempfile(tmpdir = tmp)
   expect_error(assert_file_exists(path), "File does not exist")
-  writeLines(character(0), path)
+  file.create(path)
   expect_silent(assert_file_exists(path))
+  expect_silent(assert_file_exists(basename(path), workdir = tmp))
 })
 
 
 test_that("assert_file_exists: error in case", {
   skip_if_not_installed("mockery")
-  mockery::stub(assert_file_exists, "file_exists",
-                structure(c(TRUE, FALSE, FALSE),
-                          incorrect_case = c(FALSE, TRUE, FALSE),
-                          correct_case = c("FOO" = "foo")))
-  expect_error(assert_file_exists(c("bar", "FOO", "gaz")),
-               "File does not exist: 'FOO' (should be 'foo'), 'gaz'",
+  mockery::stub(assert_file_exists, "fs::file_exists", TRUE)
+  mockery::stub(assert_file_exists, "fs::path_real", "path.txt")
+  expect_error(assert_file_exists("PATH.TXT"),
+               "File does not exist: 'PATH.TXT' (should be 'path.txt')",
                fixed = TRUE)
+  expect_silent(assert_file_exists("path.txt"))
 })

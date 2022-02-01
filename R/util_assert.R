@@ -42,22 +42,25 @@ assert_is <- function(x, what, name = deparse(substitute(x))) {
 
 assert_file_exists <- function(x, check_case = TRUE, workdir = NULL,
                                name = "File") {
-  err <- !file_exists(x, check_case = check_case, workdir = workdir)
-  if (any(err)) {
-    i <- attr(err, "incorrect_case")
-    if (!is.null(i)) {
-      msg_case <- x[i]
-      msg_totally <- x[err & !i]
-      if (length(msg_case) > 0L) {
-        correct_case <- attr(err, "correct_case")
-        msg_case <- sprintf("'%s' (should be '%s')",
-                            names(correct_case), correct_case)
-      }
-      msg <- c(msg_case, squote(msg_totally))
-    } else {
-      msg <- squote(x[err])
-    }
-    stop(sprintf("%s does not exist: %s", name, paste(msg, collapse = ", ")),
-         call. = FALSE)
+  if (!is.null(workdir)) {
+    assert_scalar_character(workdir)
+    owd <- setwd(workdir) # nolint
+    on.exit(setwd(owd)) # nolint
   }
+
+  if (!fs::file_exists(x)) {
+    stop(sprintf("%s does not exist: '%s'", name, x))
+  }
+  if (check_case) {
+    x_real <- fs::path_real(x)
+    if (!fs::is_absolute_path(x)) {
+      x_real <- fs::path_rel(x_real)
+    }
+    if (x_real != x) {
+      stop(sprintf("%s does not exist: '%s' (should be '%s')",
+                   name, x, x_real))
+    }
+  }
+
+  invisible(x)
 }
