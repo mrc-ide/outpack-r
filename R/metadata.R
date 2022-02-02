@@ -2,6 +2,8 @@
 ##'
 ##' @title Create outpack metadata
 ##'
+##' @param path Directory holding the packet
+##'
 ##' @param name The name of the packet
 ##'
 ##' @param id The unique identifier
@@ -90,7 +92,7 @@ outpack_metadata_create <- function(path, name, id, time,
   }
 
   if (is.null(session)) {
-    session <- outpack_session_info(sessionInfo())
+    session <- outpack_session_info(utils::sessionInfo())
   }
 
   ## TODO: make sure that zero length inputs, depends are actually
@@ -193,7 +195,7 @@ outpack_metadata_depends <- function(id, name, files) {
 }
 
 
-outpack_session_info <- function(info = sessionInfo()) {
+outpack_session_info <- function(info) {
   platform <- list(version = scalar(info$R.version$version.string),
                    os = scalar(info$running),
                    system = scalar(info$R.version$system))

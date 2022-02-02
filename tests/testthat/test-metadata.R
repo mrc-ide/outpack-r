@@ -10,8 +10,7 @@ test_that("Can construct minimal metadata", {
   write.csv(mtcars, file.path(tmp, "data.csv"))
 
   json <- outpack_metadata_create(tmp, "tmp", "20220202-084931-35a26e55", time,
-                                  inputs = "script.R", outputs = "data.csv",
-                                  session = list())
+                                  inputs = "script.R", outputs = "data.csv")
   expect_s3_class(json, "json")
 
   expect_true(outpack_metadata_validate(json))
