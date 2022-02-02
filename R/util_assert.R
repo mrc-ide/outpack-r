@@ -69,7 +69,7 @@ assert_file_exists <- function(x, workdir = NULL, name = "File") {
   ## path parts with fs::path_rel().  This does do very badly in the
   ## case of symlinks though (e.g., macOS tempdir) and windows
   ## shortened paths (e.g., Windows - orderly struggles there
-  ## generally too).
+  ## generally too). (See 1170cc9)
 
   invisible(x)
 }
