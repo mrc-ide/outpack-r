@@ -44,3 +44,11 @@ test_that("assert_file_exists: error in case", {
                fixed = TRUE)
   expect_silent(assert_file_exists("path.txt"))
 })
+
+
+test_that("assert_relative_path", {
+  expect_error(assert_relative_path(getwd()),
+               "'getwd()' must be relative path",
+               fixed = TRUE)
+  expect_silent(assert_relative_path("relpath"))
+})

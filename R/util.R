@@ -44,9 +44,3 @@ parse_hash <- function(hash) {
   list(algorithm = sub(re, "\\1", hash),
        value = sub(re, "\\2", hash))
 }
-
-
-drop_class <- function(x) {
-  class(x) <- NULL
-  x
-}

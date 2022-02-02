@@ -8,7 +8,8 @@
 ##'
 ##' @param id The unique identifier
 ##'
-##' @param time A list of times. Must contain the elements `start` and `end` (as `POSIXt` objects) and may contain any
+##' @param time A list of times. Must contain the elements `start` and
+##'   `end` (as `POSIXt` objects)
 ##'
 ##' @param inputs A character vector of inputs
 ##'
@@ -16,7 +17,7 @@
 ##'
 ##' @param depends Optionally, information about dependencies on other
 ##'   packets.  This must a list of objects created by
-##'   `outpack::outpack_metadata_depends`, and all files referenced
+##'   [outpack::outpack_metadata_depends], and all files referenced
 ##'   should be found within `inputs`
 ##'
 ##' @param parameters Optionally, a list of named key/value
@@ -62,9 +63,6 @@ outpack_metadata_create <- function(path, name, id, time,
     }
   }
 
-  ## inputs and outputs must be *relative* paths, within 'path'. Not
-  ## yet asserted...
-
   if (!is.null(inputs)) {
     assert_character(inputs)
     assert_relative_path(inputs)
@@ -79,11 +77,25 @@ outpack_metadata_create <- function(path, name, id, time,
   outputs <- unname(lapply(outputs, outpack_metadata_file, hash_algorithm))
 
   ## TODO: best to validate here that all elements of depends are
-  ## really found in the inputs list.
-  if (!all(vlapply(depends, inherits, "outpack_metadata_depends"))) {
-    stop("All elements of 'depends' must be 'outpack_metadata_depends'")
+  ## really found in the inputs list; more generally we might verify
+  ## that they really exist at all?
+
+  ## What *IS* the best way of modelling this? I think that capturing
+  ## the idea of a single dependency "event" is important, because
+  ## that's what we'd end up hanging a query against
+  if (is.null(depends)) {
+    depends <- list()
+  } else {
+    if (inherits(depends, "outpack_metadata_depends")) {
+      depends <- list(depends)
+    } else {
+      assert_is(depends, "list")
+      if (!all(vlapply(depends, inherits, "outpack_metadata_depends"))) {
+        stop("All elements of 'depends' must be 'outpack_metadata_depends'")
+      }
+    }
+    depends <- lapply(depends, outpack_metadata_hash_depends, hash_algorithm)
   }
-  depends <- lapply(depends, drop_class)
 
   if (!is.null(parameters)) {
     assert_named(parameters)
@@ -115,6 +127,24 @@ outpack_metadata_create <- function(path, name, id, time,
   ## We *must* use pretty = FALSE because we might sign this later.
   jsonlite::toJSON(ret, pretty = FALSE, auto_unbox = FALSE,
                    json_verbatim = TRUE, na = "null", null = "null")
+}
+
+
+##' @rdname outpack_metadata_create
+##'
+##' @param files A named character vector of files; the name
+##'   corresponds to the name within the current packet, while the
+##'   value corresponds to the name within the upstream packet
+outpack_metadata_depends <- function(name, id, files) {
+  assert_scalar_character(id) # TODO: check format matches here
+  assert_scalar_character(name)
+  assert_named(files)
+  assert_character(files)
+  ret <- list(name = scalar(name),
+              id = scalar(id),
+              files = lapply(files, scalar))
+  class(ret) <- "outpack_metadata_depends"
+  ret
 }
 
 
@@ -173,25 +203,10 @@ outpack_metadata_schema <- function() {
 
 
 outpack_metadata_file <- function(path, hash_algorithm) {
-  if (!file.exists(path)) {
-    stop("File missing")
-  }
+  assert_file_exists(path)
   list(path = scalar(path),
        size = scalar(file.size(path)),
        hash = scalar(hash_file(path, hash_algorithm)))
-}
-
-
-outpack_metadata_depends <- function(id, name, files) {
-  assert_scalar_character(id) # TODO: check format matches here
-  assert_scalar_character(name)
-  assert_named(files)
-  assert_character(files)
-  ret <- list(id = scalar(id),
-              name = scalar(name),
-              files = lapply(files, scalar))
-  class(ret) <- c("outpack_metadata_depends", "outpack_metadata_partial")
-  ret
 }
 
 
@@ -210,4 +225,15 @@ outpack_session_info <- function(info) {
 
   list(platform = platform,
        packages = packages)
+}
+
+
+outpack_metadata_hash_depends <- function(x, hash_algorithm) {
+  f <- function(i) {
+    c(outpack_metadata_file(names(x$files)[[i]], hash_algorithm),
+      list(source = scalar(x$files[[i]])))
+  }
+  x$files <- lapply(seq_along(x$files), f)
+  class(x) <- NULL
+  x
 }
