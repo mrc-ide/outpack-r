@@ -35,17 +35,6 @@ test_that("assert_file_exists", {
 })
 
 
-test_that("assert_file_exists: error in case", {
-  skip_if_not_installed("mockery")
-  mockery::stub(assert_file_exists, "fs::file_exists", TRUE)
-  mockery::stub(assert_file_exists, "fs::path_real", "path.txt")
-  expect_error(assert_file_exists("PATH.TXT"),
-               "File does not exist: 'PATH.TXT' (should be 'path.txt')",
-               fixed = TRUE)
-  expect_silent(assert_file_exists("path.txt"))
-})
-
-
 test_that("assert_relative_path", {
   expect_error(assert_relative_path(getwd()),
                "'getwd()' must be relative path",

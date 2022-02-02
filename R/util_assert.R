@@ -50,8 +50,7 @@ assert_relative_path <- function(x, name = deparse(substitute(x))) {
 }
 
 
-assert_file_exists <- function(x, check_case = TRUE, workdir = NULL,
-                               name = "File") {
+assert_file_exists <- function(x, workdir = NULL, name = "File") {
   if (!is.null(workdir)) {
     assert_scalar_character(workdir)
     owd <- setwd(workdir) # nolint
@@ -61,16 +60,16 @@ assert_file_exists <- function(x, check_case = TRUE, workdir = NULL,
   if (!fs::file_exists(x)) {
     stop(sprintf("%s does not exist: '%s'", name, x))
   }
-  if (check_case) {
-    x_real <- fs::path_real(x)
-    if (!fs::is_absolute_path(x)) {
-      x_real <- fs::path_rel(x_real)
-    }
-    if (x_real != x) {
-      stop(sprintf("%s does not exist: '%s' (should be '%s')",
-                   name, x, x_real))
-    }
-  }
+
+  ## TODO: we should (as orderly does) verify that the casing is
+  ## correct here (avoiding README.MD/README.md confusion), but that's
+  ## actually quite hard to pull off.  Either we need to pull in the
+  ## enormous mess of code in orderly, or we can just about achive
+  ## this by looking at the fs::path_real(x) and stripping leading
+  ## path parts with fs::path_rel().  This does do very badly in the
+  ## case of symlinks though (e.g., macOS tempdir) and windows
+  ## shortened paths (e.g., Windows - orderly struggles there
+  ## generally too).
 
   invisible(x)
 }
