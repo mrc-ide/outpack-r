@@ -40,6 +40,16 @@ assert_is <- function(x, what, name = deparse(substitute(x))) {
 }
 
 
+assert_relative_path <- function(x, name = deparse(substitute(x))) {
+  err <- fs::is_absolute_path(x)
+  if (any(err)) {
+    stop(sprintf("'%s' must be relative %s",
+                 name, ngettext(length(x), "path", "paths")),
+         call. = FALSE)
+  }
+}
+
+
 assert_file_exists <- function(x, check_case = TRUE, workdir = NULL,
                                name = "File") {
   if (!is.null(workdir)) {

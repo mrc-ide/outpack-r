@@ -1,41 +1,71 @@
-outpack_schema_version <- function() {
-  if (is.null(cache$schema)) {
-    path <- outpack_file("schema/outpack.json")
-    cache$schema_version <- jsonlite::read_json(path)$version
-  }
-  cache$schema_version
-}
-
-
-outpack_metadata_validate <- function(path) {
-  outpack_metadata_schema()$validate(path, error = TRUE)
-}
-
-
-outpack_metadata_schema <- function() {
-  if (is.null(cache$schema)) {
-    path <- outpack_file("schema/outpack.json")
-    cache$schema <- jsonvalidate::json_schema$new(path)
-  }
-  cache$schema
-}
-
-
-outpack_metadata_read <- function(path) {
-  jsonlite::read_json(path)
-}
-
-
-outpack_metadata_create <- function(name, id, time_start, time_end,
+##' Create outpack metadata.
+##'
+##' @title Create outpack metadata
+##'
+##' @param name The name of the packet
+##'
+##' @param id The unique identifier
+##'
+##' @param time A list of times. Must contain the elements `start` and `end` (as `POSIXt` objects) and may contain any
+##'
+##' @param inputs A character vector of inputs
+##'
+##' @param outputs A character vector of outputs
+##'
+##' @param depends Optionally, information about dependencies on other
+##'   packets.  This must a list of objects created by
+##'   `outpack::outpack_metadata_depends`, and all files referenced
+##'   should be found within `inputs`
+##'
+##' @param parameters Optionally, a list of named key/value
+##'   parameters.  Each key must be string and each value may be a
+##'   boolean, number or string (no vectors are allowed).
+##'
+##' @param session Optionally, information about the running session.
+##'   If omitted, then default session information is included.
+##'
+##' @param extra Optionally, arbitrary additional metadata as needed.
+##'   This will be passed through `jsonlite::toJSON` with arguments
+##'   `pretty = FALSE, auto_unbox = FALSE, json_verbatim = TRUE, na =
+##'   "null", null = "null"`, so plan accordingly.
+##'
+##' @param hash_algorithm Optionally, the hash algorithm to use.  The
+##'   default is `sha256` which is what git uses and should be good
+##'   for most uses.
+##'
+##' @return A `json` string
+##'
+##' @export
+outpack_metadata_create <- function(path, name, id, time,
                                     inputs, outputs, depends = NULL,
                                     parameters = NULL, session = NULL,
                                     extra = NULL, hash_algorithm = "sha256") {
+  owd <- setwd(path)
+  on.exit(setwd(owd))
+
   assert_scalar_character(name)
   assert_scalar_character(id)
-  time <- outpack_metadata_time(time_start, time_end)
+
+  ## Here, we will probably tweak this a little later, this validation
+  ## is not great as it would struggle to properly sanitise other
+  ## information here (e.g., numbers)
+  assert_is(time, "list")
+  assert_is(time$start, "POSIXt")
+  assert_is(time$end, "POSIXt")
+
+  time$elapsed <- scalar(as.numeric(time$end - time$start, units = "secs"))
+  for (v in names(time)) {
+    if (inherits(time[[v]], "POSIXt")) {
+      time[[v]] <- scalar(as.character(time[[v]]))
+    }
+  }
+
+  ## inputs and outputs must be *relative* paths, within 'path'. Not
+  ## yet asserted...
 
   if (!is.null(inputs)) {
     assert_character(inputs)
+    assert_relative_path(inputs)
     inputs <- unname(lapply(inputs, outpack_metadata_file, hash_algorithm))
   }
 
@@ -43,8 +73,11 @@ outpack_metadata_create <- function(name, id, time_start, time_end,
     stop("At least one 'outputs' is required")
   }
   assert_character(outputs)
+  assert_relative_path(outputs)
   outputs <- unname(lapply(outputs, outpack_metadata_file, hash_algorithm))
 
+  ## TODO: best to validate here that all elements of depends are
+  ## really found in the inputs list.
   if (!all(vlapply(depends, inherits, "outpack_metadata_depends"))) {
     stop("All elements of 'depends' must be 'outpack_metadata_depends'")
   }
@@ -78,49 +111,62 @@ outpack_metadata_create <- function(name, id, time_start, time_end,
   }
 
   ## We *must* use pretty = FALSE because we might sign this later.
-  jsonlite::toJSON(ret, pretty = FALSE)
+  jsonlite::toJSON(ret, pretty = FALSE, auto_unbox = FALSE,
+                   json_verbatim = TRUE, na = "null", null = "null")
 }
 
 
-outpack_metadata_time <- function(start, end) {
-  ## There's a question here about what we should do for timezones
-  assert_is(start, "POSIXt")
-  assert_is(end, "POSIXt")
-  list(start = scalar(as.character(start)),
-       end = scalar(as.character(end)),
-       elapsed = scalar(as.numeric(end - start, units = "secs")))
+##' Load outpack metadata as an R object.  Note that due to the
+##' difficulties of serialising R objects to JSON this cannot be
+##' directly re-converted to JSON (but as the outpack metadata is
+##' immutable, that should not be a big limitation.
+##'
+##' @title Load outpack metadata
+##'
+##' @param json A path to generated json, or the json itself as a
+##'   string.
+##'
+##' @return A list with the deserialised metadata
+##'
+##' @export
+outpack_metadata_load <- function(json) {
+  if (inherits(json, "json")) {
+    jsonlite::parse_json(json)
+  } else {
+    jsonlite::read_json(json)
+  }
 }
 
 
-outpack_metadata_file_CHECKL <- function(path, hash, size, algorithm) {
-  if (!file.exists(path)) {
-    stop("File missing")
-  }
-  if (is.null(size)) {
-    size <- file.size(path)
-  } else if (size != file.size(path)) {
-      stop(sprintf(
-        "Unexpected file size for %s:\n - expected: %s\n - found:    %s",
-        path, size, file.size(path)))
-  }
-  if (!is.null(hash)) {
-    assert_scalar_character(hash)
-    expected <- parse_hash(hash)
-    found <- hash_file(path, expected$algorithm)
-    if (found != hash) {
-      stop(sprintf(
-        "Unexpected %s hash for %s:\n - expected: %s\n - found:    %s",
-        expected$algorithm, path, expected$value, parse_hash(found)$value))
+##' Validate metadata against the schema
+##'
+##' @title Validate metadata against schema
+##'
+##' @inheritParams outpack_metadata_load
+##'
+##' @return Logical `TRUE` (invisibly) if valid, error otherwise.
+##'
+##' @export
+outpack_metadata_validate <- function(json) {
+  invisible(outpack_metadata_schema()$validate(json, error = TRUE))
+}
 
-    }
-  }
-  hash <- hash_file(path, algorithm)
 
-  ret <- list(path = scalar(path),
-              hash = scalar(hash),
-              size = scalar(size))
-  class(ret) <- c("outpack_metadata_file", "outpack_metadata_input")
-  ret
+outpack_schema_version <- function() {
+  if (is.null(cache$schema)) {
+    path <- outpack_file("schema/outpack.json")
+    cache$schema_version <- jsonlite::read_json(path)$version
+  }
+  cache$schema_version
+}
+
+
+outpack_metadata_schema <- function() {
+  if (is.null(cache$schema)) {
+    path <- outpack_file("schema/outpack.json")
+    cache$schema <- jsonvalidate::json_schema$new(path)
+  }
+  cache$schema
 }
 
 
