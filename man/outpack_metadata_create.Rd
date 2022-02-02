@@ -2,6 +2,7 @@
 % Please edit documentation in R/metadata.R
 \name{outpack_metadata_create}
 \alias{outpack_metadata_create}
+\alias{outpack_metadata_depends}
 \title{Create outpack metadata}
 \usage{
 outpack_metadata_create(
@@ -17,6 +18,8 @@ outpack_metadata_create(
   extra = NULL,
   hash_algorithm = "sha256"
 )
+
+outpack_metadata_depends(name, id, files)
 }
 \arguments{
 \item{path}{Directory holding the packet}
@@ -25,7 +28,8 @@ outpack_metadata_create(
 
 \item{id}{The unique identifier}
 
-\item{time}{A list of times. Must contain the elements \code{start} and \code{end} (as \code{POSIXt} objects) and may contain any}
+\item{time}{A list of times. Must contain the elements \code{start} and
+\code{end} (as \code{POSIXt} objects)}
 
 \item{inputs}{A character vector of inputs}
 
@@ -33,7 +37,7 @@ outpack_metadata_create(
 
 \item{depends}{Optionally, information about dependencies on other
 packets.  This must a list of objects created by
-\code{outpack::outpack_metadata_depends}, and all files referenced
+\link{outpack_metadata_depends}, and all files referenced
 should be found within \code{inputs}}
 
 \item{parameters}{Optionally, a list of named key/value
@@ -50,6 +54,10 @@ This will be passed through \code{jsonlite::toJSON} with arguments
 \item{hash_algorithm}{Optionally, the hash algorithm to use.  The
 default is \code{sha256} which is what git uses and should be good
 for most uses.}
+
+\item{files}{A named character vector of files; the name
+corresponds to the name within the current packet, while the
+value corresponds to the name within the upstream packet}
 }
 \value{
 A \code{json} string
