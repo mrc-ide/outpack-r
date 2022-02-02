@@ -3,7 +3,7 @@
 }
 
 
-vlapply <- function(X, FUN, ...) {
+vlapply <- function(X, FUN, ...) { # nolint
   vapply(X, FUN, logical(1), ...)
 }
 
