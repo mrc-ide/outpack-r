@@ -135,6 +135,8 @@ outpack_metadata_create <- function(path, name, id, time,
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
+##'
+##' @export
 outpack_metadata_depends <- function(name, id, files) {
   assert_scalar_character(id) # TODO: check format matches here
   assert_scalar_character(name)
