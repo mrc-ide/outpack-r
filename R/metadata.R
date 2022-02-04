@@ -186,6 +186,39 @@ outpack_metadata_validate <- function(json) {
 }
 
 
+##' Create a reasonable `session` entry using output from [sessionInfo()]
+##'
+##' @title Create session information
+##'
+##' @param info Output from [sessionInfo()]
+##'
+##' @return A list with information on the platform and packages
+##'
+##' @export
+##' @examples
+##' dat <- outpack::outpack_session_info(sessionInfo())
+##' jsonlite::toJSON(dat, pretty = TRUE)
+outpack_session_info <- function(info) {
+  ## TODO: we might also add some host information here too; orderly
+  ## has some of that for us.
+  assert_is(info, "sessionInfo")
+  platform <- list(version = scalar(info$R.version$version.string),
+                   os = scalar(info$running),
+                   system = scalar(info$R.version$system))
+
+  pkg_info <- function(el, attached) {
+    list(package = scalar(el$Package),
+         version = scalar(el$Version),
+         attached = scalar(attached))
+  }
+  packages <- unname(c(lapply(info$otherPkgs, pkg_info, TRUE),
+                       lapply(info$loadedOnly, pkg_info, FALSE)))
+
+  list(platform = platform,
+       packages = packages)
+}
+
+
 outpack_schema_version <- function() {
   if (is.null(cache$schema)) {
     path <- outpack_file("schema/outpack.json")
@@ -209,24 +242,6 @@ outpack_metadata_file <- function(path, hash_algorithm) {
   list(path = scalar(path),
        size = scalar(file.size(path)),
        hash = scalar(hash_file(path, hash_algorithm)))
-}
-
-
-outpack_session_info <- function(info) {
-  platform <- list(version = scalar(info$R.version$version.string),
-                   os = scalar(info$running),
-                   system = scalar(info$R.version$system))
-
-  pkg_info <- function(el, attached) {
-    list(package = scalar(el$Package),
-         version = scalar(el$Version),
-         attached = scalar(attached))
-  }
-  packages <- unname(c(lapply(info$otherPkgs, pkg_info, TRUE),
-                       lapply(info$loadedOnly, pkg_info, FALSE)))
-
-  list(platform = platform,
-       packages = packages)
 }
 
 
