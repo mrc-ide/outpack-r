@@ -221,7 +221,7 @@ outpack_session_info <- function(info) {
 
 outpack_schema_version <- function() {
   if (is.null(cache$schema)) {
-    path <- outpack_file("schema/outpack.json")
+    path <- outpack_file("schema/metadata.json")
     cache$schema_version <- jsonlite::read_json(path)$version
   }
   cache$schema_version
@@ -230,7 +230,7 @@ outpack_schema_version <- function() {
 
 outpack_metadata_schema <- function() {
   if (is.null(cache$schema)) {
-    path <- outpack_file("schema/outpack.json")
+    path <- outpack_file("schema/metadata.json")
     cache$schema <- jsonvalidate::json_schema$new(path)
   }
   cache$schema
