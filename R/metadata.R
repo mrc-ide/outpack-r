@@ -254,3 +254,37 @@ outpack_metadata_hash_depends <- function(x, hash_algorithm) {
   class(x) <- NULL
   x
 }
+
+
+outpack_metadata_read_index <- function(path) {
+  str <- read_string(path)
+  hash <- hash_data(str, "sha256")
+
+  keep <- c("name", "id", "parameters", "time", "inputs", "outputs", "depends")
+  data <- jsonlite::parse_json(str)[keep]
+  data$hash <- hash
+
+  ## There's a _huge_ set of issues here with times
+  data$time$start <- as.POSIXct(data$time$start, tz = "UTC")
+  data$time$end <- as.POSIXct(data$time$end, tz = "UTC")
+  data$inputs <- data.frame(path = vcapply(data$inputs, "[[", "path"),
+                            size = vnapply(data$inputs, "[[", "size"),
+                            hash = vcapply(data$inputs, "[[", "hash"),
+                            stringsAsFactors = FALSE)
+  data$outputs <- data.frame(path = vcapply(data$outputs, "[[", "path"),
+                             size = vnapply(data$outputs, "[[", "size"),
+                             hash = vcapply(data$outputs, "[[", "hash"),
+                             stringsAsFactors = FALSE)
+  data$depends <- data.frame(
+    name = vcapply(data$depends, "[[", "name"),
+    id = vcapply(data$depends, "[[", "id"),
+    files = I(lapply(data$depends, function(x)
+      data.frame(path = vcapply(x$files, "[[", "path"),
+                 size = vnapply(x$files, "[[", "size"),
+                 hash = vcapply(x$files, "[[", "hash"),
+                 source = vcapply(x$files, "[[", "source"),
+                 stringsAsFactors = FALSE))),
+    stringsAsFactors = FALSE)
+
+  data
+}
