@@ -1,33 +1,40 @@
-##' Create a new outpack root
+##' Create a new outpack root.
 ##'
 ##' @title Create outpack root
 ##'
-##' @param root Path to use
+##' @param root Path to use.  This path may exist, but it is an error
+##'   to call this on a path that has already been initialised.
+##'
+##' @param archive Path to the archive directory, used to store
+##'   human-readable copies of packets.  If `NULL`, no such copy is
+##'   made, and `file_store` must be `TRUE`
+##'
+##' @param file_store Logical, indicating if we should use a
+##'   content-addressable file-store as the source of truth for
+##'   packets.  If `archive` is non-`NULL`, the file-store will be
+##'   used as the source of truth and the duplicated files in archive
+##'   exist only for convenience.
 ##'
 ##' @return An `outpack_root` object
-outpack_init <- function(root, verbose = TRUE) {
+outpack_init <- function(root, path_archive = "archive",
+                         use_file_store = FALSE, verbose = TRUE) {
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
-    cli::cli_alert_info("outpack already initialised at '{root}'")
-    return(invisible(outpack_root$new(root)))
+    stop(sprintf("outpack already initialised at '%s'", path_outpack))
   }
 
+  cfg <- config_new(path_archive, use_file_store)
+
   fs::dir_create(path_outpack)
-
-  ## Things that we might do here (but don't yet):
-  ##
-  ## * Write out some version information so that we can gracefully
-  ##   handle any migration
-
-  writeLines(outpack_config_default(), file.path(path_outpack, "config.json"))
+  ## TODO: this whole section needs to be within a tryCatch that would
+  ## delete .outpack if we fail
+  writeLines(cfg, file.path(path_outpack, "config.json"))
 
   fs::dir_create(file.path(path_outpack, "metadata"))
   fs::dir_create(file.path(path_outpack, "location"))
 
-  ## We need to configure our local location at this point, or is that
-  ## always implied?
-
-  ## TODO: edit gitignore to add .outpack and archive to it
+  ## TODO: edit gitignore to add .outpack and archive to it, or at
+  ## least prompt the user to do this.
 
   invisible(outpack_root$new(root))
 }
@@ -53,9 +60,9 @@ outpack_root <- R6::R6Class(
       self$path <- path
       self$config <- jsonlite::read_json(
         file.path(path, ".outpack/config.json"))
-      ## Good chance we don't want this activated all the time,
-      ## really, just on demand.
-      self$files <- file_store$new(file.path(path, ".outpack", "files"))
+      if (self$config$core$use_file_store) {
+        self$files <- file_store$new(file.path(path, ".outpack", "files"))
+      }
       lockBinding("path", self)
       lockBinding("config", self)
       lockBinding("files", self)

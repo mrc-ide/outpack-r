@@ -14,9 +14,23 @@ assert_character <- function(x, name = deparse(substitute(x))) {
 }
 
 
+assert_logical <- function(x, name = deparse(substitute(x))) {
+  if (!is.logical(x)) {
+    stop(sprintf("'%s' must be logical", name), call. = FALSE)
+  }
+  invisible(x)
+}
+
+
 assert_scalar_character <- function(x, name = deparse(substitute(x))) {
   assert_scalar(x, name)
   assert_character(x, name)
+}
+
+
+assert_scalar_logical <- function(x, name = deparse(substitute(x))) {
+  assert_scalar(x, name)
+  assert_logical(x, name)
 }
 
 

@@ -1,11 +1,11 @@
-## TODO: not yet sure about the name here, or the args.  We'll get
-## there...
-outpack_add_local <- function(path, json, root = NULL, verbose = FALSE) {
+outpack_insert_packet <- function(path, json, root = NULL, verbose = FALSE) {
   root <- outpack_root_locate(root)
   meta <- outpack_metadata_load(json)
   assert_file_exists(path)
 
-  ## TODO: Is 'local' really the only valid choice here?
+  ## TODO: Is 'local' really the only valid choice here?  It feels
+  ## like we could allow for temporary locations and implement
+  ## transactions this way.
   location <- "local"
 
   ## TODO: we should get this from the configuration; it should be
@@ -14,7 +14,7 @@ outpack_add_local <- function(path, json, root = NULL, verbose = FALSE) {
   ## that it might be best to just use a single algorithm everywhere.
   ## sha1 is probably enough and is the fastest of the 3 obvious
   ## choices.
-  hash_algorithm <- "sha256"
+  hash_algorithm <- config$core$hash_algorithm
 
   ## assert directory too, probably...
 
@@ -32,17 +32,37 @@ outpack_add_local <- function(path, json, root = NULL, verbose = FALSE) {
   ## TODO: add a method to the store for bulk import-and-verify and/or
   ## put the hash arg into put to request validation.  It's important that the
 
-  ## This section only happens if we use a file store (will be the
-  ## case on, say, an OrderlyWeb repository).
-  store <- root$files
-  for (i in seq_len(nrow(meta$files))) {
-    p <- file.path(path, meta$files$path[[i]])
-    h <- store$put(p, hash_algorithm)
-    if (h != meta$files$hash[[i]]) {
-      stop("Hashes do not match") # TODO: user actionable error
+  n_files <- nrow(meta$files)
+  if (root$config$core$use_file_store) {
+    if (verbose) {
+      cli::cli_progress_step("Adding {n_files} file{?s} to file store")
+    }
+    store <- root$files
+    for (i in seq_len(n_files)) {
+      p <- file.path(path, meta$files$path[[i]])
+      h <- store$put(p, hash_algorithm)
+      if (h != meta$files$hash[[i]]) {
+        stop("Hashes do not match") # TODO: user actionable error
+      }
     }
   }
 
+  if (!is.null(root$config$core$path_archive)) {
+    if (verbose) {
+      cli::cli_progress_step("Adding {n_files} file{?s} to archive")
+    }
+    dest <- file.path(root$path, root$config$core$path_archive,
+                      meta$name, meta$id)
+    ## TODO: open question as to if we should filter this down to just
+    ## the required files.  We could do a copy of file.path(path,
+    ## meta$files$path) into dest, but that does require some care
+    ## with path components that have directories.
+    fs::dir_copy(path, dest)
+  }
+
+  if (verbose) {
+    cli::cli_progress_step("Writing out new metadata")
+  }
   path_meta <- file.path(root$path, ".outpack", "metadata", id)
   writeLines(json, path_meta)
 
@@ -54,6 +74,9 @@ outpack_add_local <- function(path, json, root = NULL, verbose = FALSE) {
   fs::dir_create(dirname(path_meta_loc))
   jsonlite::write_json(meta_loc, path_meta_loc)
 
+  if (verbose) {
+    cli::cli_progress_done()
+  }
   root$index_update(location, verbose = verbose)
 }
 
