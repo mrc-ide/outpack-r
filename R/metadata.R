@@ -255,6 +255,6 @@ outpack_metadata_file <- function(path, hash_algorithm) {
 
 
 outpack_metadata_index_read <- function(path) {
-  keep <- c("name", "id", "parameters", "time", "inputs", "outputs", "depends")
+  keep <- c("name", "id", "parameters", "files", "depends")
   outpack_metadata_load(path)[keep]
 }

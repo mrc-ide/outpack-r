@@ -14,7 +14,7 @@ outpack_insert_packet <- function(path, json, root = NULL, verbose = FALSE) {
   ## that it might be best to just use a single algorithm everywhere.
   ## sha1 is probably enough and is the fastest of the 3 obvious
   ## choices.
-  hash_algorithm <- config$core$hash_algorithm
+  hash_algorithm <- root$config$core$hash_algorithm
 
   ## assert directory too, probably...
 
@@ -29,9 +29,36 @@ outpack_insert_packet <- function(path, json, root = NULL, verbose = FALSE) {
     stop(sprintf("'%s' has already been added for '%s'", id, location))
   }
 
-  ## TODO: add a method to the store for bulk import-and-verify and/or
-  ## put the hash arg into put to request validation.  It's important that the
+  ## We could do a bunch of this here, but it's not clear that it will
+  ## help, and we should be doing it elsewhere, when setting up the
+  ## dependency (once that code exists).  Then we could mark these as
+  ## validated I think and skip this.
+  if (nrow(meta$depends) > 0) {
+    if (!all(meta$depends$id %in% names(index$metadata))) {
+      err <- setdiff(meta$depends$id, names(index$metadata))
+      stop(sprintf("Packet references unknown id as dependency: %s",
+                   paste(err, collapse = ", ")))
+    }
+    for (i in seq_len(nrow(meta$depends))) {
+      d <- index$metadata[[meta$depends$id[[i]]]]$files
+      msg_src <- !(meta$depends$files[[i]]$source %in% d$path)
+      if (any(msg_src)) {
+        err <- meta$depends$files[[i]]$source[msg_src]
+        stop(sprintf("Packet %s does not contain path %s",
+                     meta$depends$id[[i]], paste(err, collapse = ", ")))
+      }
+      msg_dst <- !(meta$depends$files[[i]]$path %in% meta$files$path)
+      if (any(msg_dst)) {
+        err <- meta$depends$files[[i]]$source[msg_src]
+        stop(sprintf("This packet does not contain path %s",
+                     paste(err, collapse = ", ")))
+      }
+      ## Probably should check the hash here too
+    }
+  }
 
+  ## TODO: add a method to the store for bulk import-and-verify and/or
+  ## put the hash arg into put to request validation.
   n_files <- nrow(meta$files)
   if (root$config$core$use_file_store) {
     if (verbose) {
@@ -57,6 +84,12 @@ outpack_insert_packet <- function(path, json, root = NULL, verbose = FALSE) {
     ## the required files.  We could do a copy of file.path(path,
     ## meta$files$path) into dest, but that does require some care
     ## with path components that have directories.
+    if (file.exists(dest)) {
+      ## this could be allowed if src and dest are the same, or when
+      ## fixing a failed import.  However, if dest exists and is a dir
+      ## we end up with an extra level of nesting...
+      stop("this needs more care, implement me")
+    }
     fs::dir_copy(path, dest)
   }
 
