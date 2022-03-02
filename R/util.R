@@ -118,3 +118,9 @@ data_frame <- function(...) {
   rownames(ret) <- NULL
   ret
 }
+
+
+drop_class <- function(x) {
+  class(x) <- NULL
+  x
+}

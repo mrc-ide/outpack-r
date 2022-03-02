@@ -1,12 +1,12 @@
 ## This is not really meant for use; we'll need to derive a better set
 ## of primatives here later.  However, this might be enough to get
 ## us going.
+
+## TODO: note that things like parameters etc are not pulled through
+## here.
+
 test_outpack_run <- function(src, dst, name, script,
                              id = NULL, depends = NULL, root = NULL) {
-  if (!is.null(depends)) {
-    stop("WRITEME")
-  }
-
   root <- outpack_root_locate(root)
   config <- root$config
   hash_algorithm <- root$config$hash_algorithm

@@ -156,7 +156,7 @@ index_read <- function(locations, root, prev, refresh, verbose) {
 
   ## TODO: we should have a validate function somewhere that
   ## checks all in the directory are of this form exactly
-  path_index <- file.path(root, "index", "outpack.rds")
+  path_index <- file.path(root, ".outpack", "index", "outpack.rds")
 
   if (refresh) {
     data <- list()
@@ -177,7 +177,7 @@ index_read <- function(locations, root, prev, refresh, verbose) {
   if (length(id_new) > 0) {
     if (verbose) {
       cli::cli_progress_step(
-        "Indexing metadata for {length(id_new)} packet{?s}")
+        "Indexing metadata for {length(id_new)} new packet{?s}")
     }
     files <- file.path(root, ".outpack", "metadata", id_new)
     metadata_new <- lapply(files, outpack_metadata_index_read)
@@ -190,7 +190,8 @@ index_read <- function(locations, root, prev, refresh, verbose) {
     data$metadata <- c(data$metadata, metadata_new)
     fs::dir_create(dirname(path_index))
     if (verbose) {
-      cli::cli_progress_step("Writing index")
+      total <- length(data$metadata)
+      cli::cli_progress_step("Writing index ({total} packet{?s} total)")
     }
     saveRDS(data, path_index)
   }

@@ -86,20 +86,29 @@ outpack_metadata_create <- function(path, name, id, files = NULL,
     depends <- list()
   } else {
     if (inherits(depends, "outpack_metadata_depends")) {
-      depends <- list(depends)
+      depends <- list(drop_class(depends))
     } else {
       assert_is(depends, "list")
       if (!all(vlapply(depends, inherits, "outpack_metadata_depends"))) {
         stop("All elements of 'depends' must be 'outpack_metadata_depends'")
       }
+      depends <- unname(lapply(depends, drop_class))
     }
-    depends <- lapply(depends, outpack_metadata_hash_depends, hash_algorithm)
+
+    ## TODO: Additional checks are required here:
+    ##
+    ## 1. is the id known to the system?
+    ## 2. is names(depends[[i]]$files$path) present in 'path' (for all i)?
+    ## 3. is unname(depends[[i]]$files$source) present in 'id' (for all i)?
+    ## 4. is the file unchanged since import?
+    ##
+    ## 1, 3 and 4 require that we have the root active as they will
+    ## require us to query the index.
   }
 
   if (is.null(session)) {
     session <- outpack_session_info(utils::sessionInfo())
   }
-
 
   ## TODO: make sure that zero length inputs, depends are actually
   ## NULL; the 'all' conditions would be true for integer(0) etc.
@@ -127,19 +136,13 @@ outpack_metadata_create <- function(path, name, id, files = NULL,
 ##'   value corresponds to the name within the upstream packet
 ##'
 ##' @export
-outpack_metadata_depends <- function(name, id, files) {
-  ## TODO: I don't think that we want 'name' here
-  ##
-  ## TODO: We will need to check that 'id' exists and that files exist
-  ## within it, that names are unique, etc.
-
+outpack_metadata_depends <- function(id, files) {
   assert_scalar_character(id) # TODO: check format matches here
-  assert_scalar_character(name)
   assert_named(files)
   assert_character(files)
-  ret <- list(name = scalar(name),
-              id = scalar(id),
-              files = lapply(files, scalar))
+  ret <- list(id = scalar(id),
+              files = data_frame(path = names(files),
+                                 source = unname(files)))
   class(ret) <- "outpack_metadata_depends"
   ret
 }
@@ -169,7 +172,6 @@ outpack_metadata_load <- function(json) {
                            size = vnapply(data$files, "[[", "size"),
                            hash = vcapply(data$files, "[[", "hash"))
   data$depends <- data.frame(
-    name = vcapply(data$depends, "[[", "name"),
     id = vcapply(data$depends, "[[", "id"),
     files = I(lapply(data$depends, function(x)
       data_frame(path = vcapply(x$files, "[[", "path"),
@@ -249,17 +251,6 @@ outpack_metadata_file <- function(path, hash_algorithm) {
   list(path = scalar(path),
        size = scalar(file.size(path)),
        hash = scalar(hash_file(path, hash_algorithm)))
-}
-
-
-outpack_metadata_hash_depends <- function(x, hash_algorithm) {
-  f <- function(i) {
-    c(outpack_metadata_file(names(x$files)[[i]], hash_algorithm),
-      list(source = scalar(x$files[[i]])))
-  }
-  x$files <- lapply(seq_along(x$files), f)
-  class(x) <- NULL
-  x
 }
 
 
