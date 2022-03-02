@@ -75,6 +75,29 @@
             }
         },
 
+        "outputs": {
+            "description": "Information about file outputs",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "description": "Filename of generated file",
+                        "type": "string"
+                    },
+                    "hash": {
+                        "$ref": "#/definitions/hash"
+                    },
+                    "size": {
+                        "description": "The file size. Unlikely to be accurate for text files due to line ending differences",
+                        "type": "number"
+                    }
+                },
+                "required": ["path", "hash", "size"]
+            }
+        },
+
         "depends": {
             "description": "Information on dependencies",
             "type": "array",
@@ -115,29 +138,6 @@
                     }
                 },
                 "required": ["name", "id", "files"]
-            }
-        },
-
-        "outputs": {
-            "description": "Information about file outputs",
-            "type": "array",
-            "minItems": 1,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "description": "Filename of generated file",
-                        "type": "string"
-                    },
-                    "hash": {
-                        "$ref": "#/definitions/hash"
-                    },
-                    "size": {
-                        "description": "The file size. Unlikely to be accurate for text files due to line ending differences",
-                        "type": "number"
-                    }
-                },
-                "required": ["hash", "size"]
             }
         },
 

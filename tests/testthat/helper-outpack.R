@@ -25,23 +25,12 @@ test_outpack_run <- function(src, dst, name, script,
   ## if (src == root$path) {
   ##   stop()
   ## }
-  inputs <- dir(src, recursive = TRUE, all.files = TRUE, no.. = TRUE)
-  stopifnot(!file.exists(dst))
-  fs::dir_create(dst)
 
-  ## TODO: This is not going to work as expected for subdirectories
-  fs::file_copy(file.path(src, inputs), dst)
+  fs::dir_copy(src, dst)
 
-  time_start <- Sys.time()
   withr::with_dir(dst, sys.source(script, envir = new.env()))
-  time_end <- Sys.time()
-  time <- list(start = time_start, end = time_end)
 
-  contents <- dir(dst, recursive = TRUE, all.files = TRUE, no.. = TRUE)
-  outputs <- setdiff(contents, inputs)
-
-  json <- outpack_metadata_create(dst, name, id, time, inputs, outputs,
-                                  depends = depends)
+  json <- outpack_metadata_create(dst, name, id, depends = depends)
 
   list(path = dst, json = json)
 }

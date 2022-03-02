@@ -97,7 +97,24 @@ str_iso_time <- function(str) {
 }
 
 
+time_to_num <- function(time = Sys.time()) {
+  as.numeric(time)
+}
+
+
+num_to_time <- function(num) {
+  as.POSIXct(num, origin = "1970-01-01", tz = "UTC")
+}
+
+
 to_json <- function(x) {
   jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
                    json_verbatim = TRUE, na = "null", null = "null")
+}
+
+
+data_frame <- function(...) {
+  ret <- data.frame(..., stringsAsFactors = FALSE, check.names = FALSE)
+  rownames(ret) <- NULL
+  ret
 }

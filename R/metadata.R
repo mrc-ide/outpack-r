@@ -8,8 +8,8 @@
 ##'
 ##' @param id The unique identifier
 ##'
-##' @param time A list of times. Must contain the elements `start` and
-##'   `end` (as `POSIXt` objects)
+##' @param files A character of files. If `NULL`, then all files
+##'   within `path` are considered part of the packet.
 ##'
 ##' @param inputs A character vector of inputs
 ##'
@@ -39,42 +39,41 @@
 ##' @return A `json` string
 ##'
 ##' @export
-outpack_metadata_create <- function(path, name, id, time,
-                                    inputs, outputs, depends = NULL,
-                                    parameters = NULL, session = NULL,
-                                    extra = NULL, hash_algorithm = "sha256") {
+outpack_metadata_create <- function(path, name, id, files = NULL,
+                                    depends = NULL, parameters = NULL,
+                                    session = NULL, extra = NULL,
+                                    hash_algorithm = "sha256") {
   owd <- setwd(path)
   on.exit(setwd(owd))
 
   assert_scalar_character(name)
   assert_scalar_character(id)
 
-  ## Here, we will probably tweak this a little later, this validation
-  ## is not great as it would struggle to properly sanitise other
-  ## information here (e.g., numbers)
-  assert_is(time, "list")
-  assert_is(time$start, "POSIXt")
-  assert_is(time$end, "POSIXt")
-
-  time$elapsed <- scalar(as.numeric(time$end - time$start, units = "secs"))
-  for (v in names(time)) {
-    if (inherits(time[[v]], "POSIXt")) {
-      time[[v]] <- scalar(as.character(time[[v]]))
-    }
+  if (!is.null(parameters)) {
+    assert_named(parameters)
+    ## TODO: check basic types here, ensure scalar
+    parameters <- lapply(parameters, scalar)
   }
 
-  if (!is.null(inputs)) {
-    assert_character(inputs)
-    assert_relative_path(inputs)
-    inputs <- unname(lapply(inputs, outpack_metadata_file, hash_algorithm))
+  if (is.null(files)) {
+    ## NOTE: look in current directory because of the setwd above.
+    files <- dir(".", recursive = TRUE, all.files = TRUE, no.. = TRUE)
+  } else {
+    ## TODO: make sure that all files are inside of this directory
+    ## (and are relative paths)
   }
 
-  if (length(outputs) == 0) {
-    stop("At least one 'outputs' is required")
-  }
-  assert_character(outputs)
-  assert_relative_path(outputs)
-  outputs <- unname(lapply(outputs, outpack_metadata_file, hash_algorithm))
+  ## In the most simple case we could just do nothing about inputs vs
+  ## outputs; we don't even need a list of them (we just have files
+  ## and that's all there is to it).  I am not 100% sure if that's
+  ## sensible, but it will be easy enough to extend this later.  For
+  ## orderly we can handle this via additional data in 'extra'.  Not
+  ## having this distinction will make doing output-only packets
+  ## easier of course.
+  files <- data_frame(
+    path = files,
+    size = fs::file_size(files),
+    hash = vcapply(files, hash_file, hash_algorithm))
 
   ## TODO: best to validate here that all elements of depends are
   ## really found in the inputs list; more generally we might verify
@@ -97,15 +96,10 @@ outpack_metadata_create <- function(path, name, id, time,
     depends <- lapply(depends, outpack_metadata_hash_depends, hash_algorithm)
   }
 
-  if (!is.null(parameters)) {
-    assert_named(parameters)
-    ## TODO: check basic types here, ensure scalar
-    parameters <- lapply(parameters, scalar)
-  }
-
   if (is.null(session)) {
     session <- outpack_session_info(utils::sessionInfo())
   }
+
 
   ## TODO: make sure that zero length inputs, depends are actually
   ## NULL; the 'all' conditions would be true for integer(0) etc.
@@ -113,9 +107,7 @@ outpack_metadata_create <- function(path, name, id, time,
               name = scalar(name),
               id = scalar(id),
               parameters = parameters,
-              time = time,
-              inputs = inputs,
-              outputs = outputs,
+              files = files,
               depends = depends,
               session = session)
 
@@ -136,6 +128,11 @@ outpack_metadata_create <- function(path, name, id, time,
 ##'
 ##' @export
 outpack_metadata_depends <- function(name, id, files) {
+  ## TODO: I don't think that we want 'name' here
+  ##
+  ## TODO: We will need to check that 'id' exists and that files exist
+  ## within it, that names are unique, etc.
+
   assert_scalar_character(id) # TODO: check format matches here
   assert_scalar_character(name)
   assert_named(files)
@@ -168,26 +165,15 @@ outpack_metadata_load <- function(json) {
 
   data <- jsonlite::parse_json(json)
   data$hash <- hash_data(json, "sha256")
-  data$time$start <- as.POSIXct(data$time$start, tz = "UTC")
-  data$time$end <- as.POSIXct(data$time$end, tz = "UTC")
-  data$inputs <- data.frame(path = vcapply(data$inputs, "[[", "path"),
-                            size = vnapply(data$inputs, "[[", "size"),
-                            hash = vcapply(data$inputs, "[[", "hash"),
-                            stringsAsFactors = FALSE)
-  data$outputs <- data.frame(path = vcapply(data$outputs, "[[", "path"),
-                             size = vnapply(data$outputs, "[[", "size"),
-                             hash = vcapply(data$outputs, "[[", "hash"),
-                             stringsAsFactors = FALSE)
+  data$files <- data_frame(path = vcapply(data$files, "[[", "path"),
+                           size = vnapply(data$files, "[[", "size"),
+                           hash = vcapply(data$files, "[[", "hash"))
   data$depends <- data.frame(
     name = vcapply(data$depends, "[[", "name"),
     id = vcapply(data$depends, "[[", "id"),
     files = I(lapply(data$depends, function(x)
-      data.frame(path = vcapply(x$files, "[[", "path"),
-                 size = vnapply(x$files, "[[", "size"),
-                 hash = vcapply(x$files, "[[", "hash"),
-                 source = vcapply(x$files, "[[", "source"),
-                 stringsAsFactors = FALSE))),
-    stringsAsFactors = FALSE)
+      data_frame(path = vcapply(x$files, "[[", "path"),
+                 source = vcapply(x$files, "[[", "source")))))
 
   data
 }

@@ -29,47 +29,32 @@ outpack_add_local <- function(path, json, root = NULL, verbose = FALSE) {
     stop(sprintf("'%s' has already been added for '%s'", id, location))
   }
 
-  if (NROW(meta$depends) > 0) {
-    ## Need to check throiugh
-    stop("WRITEME")
-  }
-
   ## TODO: add a method to the store for bulk import-and-verify and/or
   ## put the hash arg into put to request validation.  It's important that the
 
   ## This section only happens if we use a file store (will be the
   ## case on, say, an OrderlyWeb repository).
-  files <- rbind(meta$inputs, meta$outputs)
   store <- root$files
-  for (i in seq_len(nrow(files))) {
-    p <- file.path(path, files$path[[i]])
+  for (i in seq_len(nrow(meta$files))) {
+    p <- file.path(path, meta$files$path[[i]])
     h <- store$put(p, hash_algorithm)
-    if (h != files$hash[[i]]) {
+    if (h != meta$files$hash[[i]]) {
       stop("Hashes do not match") # TODO: user actionable error
     }
   }
 
-  ## NOTE: We really should not need the dir_create here, but it does
-  ## not really hurt.
   path_meta <- file.path(root$path, ".outpack", "metadata", id)
-  fs::dir_create(dirname(path_meta))
   writeLines(json, path_meta)
 
   path_meta_loc <- file.path(root$path, ".outpack", "location", location, id)
   meta_loc <- list(schemaVersion = scalar(outpack_schema_version()),
                    id = scalar(id),
-                   date = scalar(iso_time_str()),
+                   time = scalar(time_to_num()),
                    hash = scalar(hash_data(json, hash_algorithm)))
   fs::dir_create(dirname(path_meta_loc))
   jsonlite::write_json(meta_loc, path_meta_loc)
 
-  ## Then we need to:
-  ## * update the flag to indicate that new data has been written to this time
-  ## * refresh the index
   root$index_update(location, verbose = verbose)
-
-  ## doing this well without any race conditions requires some real
-  ## care unfortunately (e.g., doing file locking, appending to files)
 }
 
 

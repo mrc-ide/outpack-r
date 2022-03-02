@@ -123,16 +123,12 @@ read_location <- function(location, root, prev) {
   if (!any(is_new)) {
     return(NULL)
   }
-  dat <- lapply(file.path(path, ids[is_new]), jsonlite::read_json)
-  cols <- c("id", "date", "hash")
-  ret <- lapply(cols, function(v) vcapply(dat, "[[", v))
-  names(ret) <- cols
-  ## TODO: this is not correctly roundtripped
-  ## TODO: this should be 'time' not 'date'
-  ret$date <- str_iso_time(ret$date)
-  ret$location <- location
 
-  as.data.frame(ret, stringsAsFactors = FALSE)
+  dat <- lapply(file.path(path, ids[is_new]), jsonlite::read_json)
+  data_frame(id = vcapply(dat, "[[", "id"),
+             time = num_to_time(vnapply(dat, "[[", "time")),
+             hash = vcapply(dat, "[[", "hash"),
+             location = location)
 }
 
 
