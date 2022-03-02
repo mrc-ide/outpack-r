@@ -1,3 +1,9 @@
+outpack_location_list <- function(root = NULL) {
+  root <- outpack_root_locate(root)
+  root$location_list()
+}
+
+
 outpack_location <- function(name, driver, args) {
   if (driver == "path") {
     driver <- outpack_location_path
@@ -36,6 +42,9 @@ outpack_location_add <- function(name, driver, ..., args = list(...),
   if (verbose) {
     cli::cli_progress_step("Validating location")
   }
+
+  ## TODO: this is currently saved as rds but we will want to save as
+  ## json to allow other interfaces to pull from remotes.
   assert_scalar_character(driver)
   data <- list(driver = driver, args = args)
   loc <- outpack_location(name, driver, args)
@@ -68,8 +77,7 @@ outpack_location_remove <- function(location, root = NULL, verbose = TRUE) {
       cli::cli_alert_info("Orphaning {length(ids_orphan)} packet{?s}")
     }
     fs::dir_create(path_orphan)
-    fs::file_move(file.path(path_here, paste0(ids_orphan, ".json")),
-                  path_orphan)
+    fs::file_move(file.path(path_here, ids_orphan), path_orphan)
   } else {
     if (verbose) {
       cli::cli_alert_info("No orphans created")
@@ -124,7 +132,7 @@ outpack_location_update_metadata <- function(location, root = NULL,
   location <- outpack_location_get(location, root)
 
   ## 3. look up current time, if known, for this location in the index
-  last_update <- root$last_update(location$name)
+  last_update <- root$location_last_update(location$name)
 
   ## 4. request all new metadata newer than this time
   if (verbose) {
@@ -160,9 +168,9 @@ outpack_location_update_metadata <- function(location, root = NULL,
     }
     path_metadata <- file.path(root$root, ".outpack", "metadata")
     fs::dir_create(path_metadata)
+    filename <- file.path(path_metadata, new_id)
     for (i in seq_along(new_id)) {
-      filename <- file.path(path_metadata, paste0(new_id[[i]], ".json"))
-      writeLines(metadata[[i]], filename)
+      writeLines(metadata[[i]], filename[[i]])
     }
   }
 
@@ -177,7 +185,7 @@ outpack_location_update_metadata <- function(location, root = NULL,
     d <- list(id = scalar(new$id[[i]]),
               date = scalar(new$time),
               hash = scalar(new$hash[[i]]))
-    filename <- file.path(path_location, paste0(new$id[[i]], ".json"))
+    filename <- file.path(path_location, new$id[[i]])
     jsonlite::write_json(d, filename)
   }
 

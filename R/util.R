@@ -33,29 +33,6 @@ scalar <- function(x) {
 }
 
 
-hash_file <- function(path, algorithm = "sha256") {
-  assert_file_exists(path)
-  con <- file(path, open = "rb")
-  on.exit(close(con))
-  hash_data(con, algorithm)
-}
-
-
-hash_data <- function(data, algorithm) {
-  assert_scalar_character(algorithm)
-  value <- openssl::multihash(data, algorithm)[[algorithm]]
-  sprintf("%s:%s", algorithm, as.character(value))
-}
-
-
-parse_hash <- function(hash) {
-  re <- "^([[:alnum:]]+):([[:xdigit:]]+)$"
-  stopifnot(all(grepl(re, hash))) # TODO: better error
-  list(algorithm = sub(re, "\\1", hash),
-       value = sub(re, "\\2", hash))
-}
-
-
 ## Designed for use reading json files as a single string and dropping
 ## and trailing whitespace
 read_string <- function(path) {
@@ -94,4 +71,33 @@ max_time <- function(x) {
     return(NULL)
   }
   max(x)
+}
+
+
+set_names <- function(x, nms) {
+  names(x) <- nms
+  x
+}
+
+
+val_to_bytes <- function(x, nbytes) {
+  n <- round((x %% 1) * 256 ^ nbytes)
+  paste(packBits(intToBits(n))[nbytes:1], collapse = "")
+}
+
+
+## TODO: make sure we convert to UTC here
+iso_time_str <- function(time = Sys.time()) {
+  strftime(time, "%Y%m%d-%H%M%S")
+}
+
+
+str_iso_time <- function(str) {
+  as.POSIXct(str, "UTC", "%Y%m%d-%H%M%S")
+}
+
+
+to_json <- function(x) {
+  jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
+                   json_verbatim = TRUE, na = "null", null = "null")
 }

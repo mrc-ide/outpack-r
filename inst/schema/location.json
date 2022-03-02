@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "outpack location download schema",
+
+    "description": "Information about where a packet comes from",
+
+    "definitions": {
+        "hash": {
+            "comment": "Duplicated from outpack.json, probably could move it into its own file",
+            "description": "A hash, including the algorithm name (e.g., md5, sha256)",
+            "type": "string",
+            "pattern": "^([a-zA-Z0-9]+):([0-9a-f]{16,})$"
+        }
+    },
+
+    "type": "object",
+    "properties": {
+        "schemaVersion": {
+            "description": "Schema version, used to manage migrations",
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+
+        "id": {
+            "description": "Task id, globally unique",
+            "type": "string",
+            "pattern": "^([0-9]{8}-[0-9]{6})-([0-9a-f]{8})$"
+        },
+
+        "date": {
+            "description": "Time that the packet was imported",
+            "type": "date-time"
+        },
+
+        "hash": {
+            "$ref": "#/definitions/hash"
+        }
+    },
+    "required": ["schemaVersion", "id", "date", "hash"]
+}

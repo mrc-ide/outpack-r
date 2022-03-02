@@ -1,9 +1,15 @@
-outpack_init <- function(root) {
-  ## TODO: might be safest to only allow relative paths here?
+##' Create a new outpack root
+##'
+##' @title Create outpack root
+##'
+##' @param root Path to use
+##'
+##' @return An `outpack_root` object
+outpack_init <- function(root, verbose = TRUE) {
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
-    message(sprintf("outpack already initialised at '%s'", root))
-    outpack_root$new(root)
+    cli::cli_alert_info("outpack already initialised at '{root}'")
+    return(invisible(outpack_root$new(root)))
   }
 
   fs::dir_create(path_outpack)
@@ -12,8 +18,8 @@ outpack_init <- function(root) {
   ##
   ## * Write out some version information so that we can gracefully
   ##   handle any migration
-  ##
-  ## * Write out some configuration file (once we have things worth tweaking)
+
+  writeLines(outpack_config_default(), file.path(path_outpack, "config.json"))
 
   fs::dir_create(file.path(path_outpack, "metadata"))
   fs::dir_create(file.path(path_outpack, "location"))
@@ -23,8 +29,9 @@ outpack_init <- function(root) {
 
   ## TODO: edit gitignore to add .outpack and archive to it
 
-  outpack_root$new(root)
+  invisible(outpack_root$new(root))
 }
+
 
 
 outpack_root <- R6::R6Class(
@@ -36,21 +43,30 @@ outpack_root <- R6::R6Class(
   ),
 
   public = list(
-    root = NULL,
+    path = NULL,
+    config = NULL,
+    files = NULL,
 
-    initialize = function(root) {
-      assert_file_exists(root)
-      assert_file_exists(file.path(root, ".outpack"))
-      self$root <- root
-      lockBinding("root", self)
+    initialize = function(path) {
+      assert_file_exists(path)
+      assert_file_exists(file.path(path, ".outpack"))
+      self$path <- path
+      self$config <- jsonlite::read_json(
+        file.path(path, ".outpack/config.json"))
+      ## Good chance we don't want this activated all the time,
+      ## really, just on demand.
+      self$files <- file_store$new(file.path(path, ".outpack", "files"))
+      lockBinding("path", self)
+      lockBinding("config", self)
+      lockBinding("files", self)
     },
 
     ## TODO: this needs an extended form with notions of trust.
     location_list = function() {
-      union("local", dir(file.path(self$root, ".outpack", "location")))
+      union("local", dir(file.path(self$path, ".outpack", "location")))
     },
 
-    last_update = function(location = NULL) {
+    location_last_update = function(location = NULL) {
       index <- self$index_update()
       if (is.null(location)) {
         date <- index$location$date
@@ -60,53 +76,60 @@ outpack_root <- R6::R6Class(
       max_time(date)
     },
 
-    index_update = function(refresh = FALSE, verbose = FALSE) {
-      private$index_data <- read_index(
-        self$location_list(), self$root, self$index_data, refresh, verbose)
+    index_update = function(locations = NULL, refresh = FALSE,
+                            verbose = FALSE) {
+      if (is.null(locations)) {
+        locations <- self$location_list()
+      }
+      private$index_data <- index_read(locations, self$path, private$index_data,
+                                       refresh, verbose)
       invisible(private$index_data)
     }
   ))
 
 
-outpack_root_locate <- function(root) {
-  if (inherits(root, "outpack_root")) {
-    return(root)
+outpack_root_locate <- function(path) {
+  if (inherits(path, "outpack_root")) {
+    return(path)
   }
-  root_found <- find_file_descend(".outpack", root %||% getwd())
+  root_found <- find_file_descend(".outpack", path %||% getwd())
   if (is.null(root_found)) {
     stop(sprintf("Did not find existing outpack root from directory '%s'",
-                 root %||% "."))
+                 path %||% "."))
   }
   outpack_root$new(root_found)
 }
 
 
-outpack_root_open <- function(root) {
-  if (inherits(root, "outpack_root")) {
-    return(root)
+outpack_root_open <- function(path) {
+  if (inherits(path, "outpack_root")) {
+    return(path)
   }
-  assert_scalar_character(root)
-  assert_file_exists(root)
-  if (!file.exists(file.path(root, ".outpack"))) {
-    stop(sprintf("'%s' does not look like an outpack root", root))
+  assert_scalar_character(path)
+  assert_file_exists(path)
+  if (!file.exists(file.path(path, ".outpack"))) {
+    stop(sprintf("'%s' does not look like an outpack root", path))
   }
-  outpack_root$new(root)
+  outpack_root$new(path)
 }
 
 
 read_location <- function(location, root, prev) {
-  re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})\\.json$"
+  ## TODO: If we're more relaxed here about format, then this is
+  re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$"
   path <- file.path(root, ".outpack", "location", location)
-  files <- dir(path, re)
-  is_new <- !(sub(re, "\\1", files) %in% prev$id[prev$location == location])
+  ids <- dir(path, re)
+  is_new <- !(ids %in% prev$id[prev$location == location])
   if (!any(is_new)) {
     return(NULL)
   }
-  dat <- lapply(file.path(path, files[is_new]), jsonlite::read_json)
+  dat <- lapply(file.path(path, ids[is_new]), jsonlite::read_json)
   cols <- c("id", "date", "hash")
   ret <- lapply(cols, function(v) vcapply(dat, "[[", v))
   names(ret) <- cols
-  ret$date <- as.POSIXct(ret$date, "UTC")
+  ## TODO: this is not correctly roundtripped
+  ## TODO: this should be 'time' not 'date'
+  ret$date <- str_iso_time(ret$date)
   ret$location <- location
 
   as.data.frame(ret, stringsAsFactors = FALSE)
@@ -132,7 +155,7 @@ read_locations <- function(locations, root, prev) {
 ##          name split by id)
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
-read_index <- function(locations, root, prev, refresh, verbose) {
+index_read <- function(locations, root, prev, refresh, verbose) {
   ## TODO: option to validate hashes, or do we do that on import?
 
   ## TODO: we should have a validate function somewhere that
@@ -150,24 +173,25 @@ read_index <- function(locations, root, prev, refresh, verbose) {
   if (verbose) {
     cli::cli_progress_step("Indexing data for {length(locations)} location{?s}")
   }
-  location <- read_locations(locations, root, data$location)
-  data$location <- location
+  data$location <- read_locations(locations, root, data$location)
 
   ## Work out what we've not yet seen and read that:
-  id_new <- setdiff(location$id, data$index$id)
+  id_new <- setdiff(data$location$id, data$index$id)
 
   if (length(id_new) > 0) {
     if (verbose) {
       cli::cli_progress_step(
         "Indexing metadata for {length(id_new)} packet{?s}")
     }
-    files <- file.path(root, ".outpack", "metadata", paste0(id_new, ".json"))
-    metadata_new <- lapply(files, outpack_metadata_read_index)
+    files <- file.path(root, ".outpack", "metadata", id_new)
+    metadata_new <- lapply(files, outpack_metadata_index_read)
+    names(metadata_new) <- id_new
     index_new <- data.frame(
       data.frame(name = vcapply(metadata_new, "[[", "name"),
                  id = vcapply(metadata_new, "[[", "id")))
     data$index <- rbind(data$index, index_new)
-    data$metadata <- rbind(data$index, metadata_new)
+    rownames(data$index) <- NULL
+    data$metadata <- c(data$metadata, metadata_new)
     fs::dir_create(dirname(path_index))
     if (verbose) {
       cli::cli_progress_step("Writing index")
