@@ -1,3 +1,4 @@
+## Same basic approach as orderly
 outpack_id <- function(time = Sys.time()) {
   ## TODO: there's a question here of if we should use UTC for the id
    sprintf("%s-%s%s",

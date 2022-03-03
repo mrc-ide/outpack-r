@@ -27,8 +27,3 @@ hash_parse <- function(hash) {
   list(algorithm = sub(re, "\\1", hash),
        value = sub(re, "\\2", hash))
 }
-
-
-hash_validate <- function(a, b) {
-
-}

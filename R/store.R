@@ -23,6 +23,7 @@ file_store <- R6::R6Class(
                 substr(dat$value, 3, nchar(dat$value)))
     },
 
+    ## TODO: bulk get, with overwrite control
     get = function(hash, dst) {
       src <- self$filename(hash)
       if (!file.exists(src)) {
@@ -32,6 +33,8 @@ file_store <- R6::R6Class(
       fs::file_copy(src, dst)
       invisible(dst)
     },
+
+    ## TODO: bulk set
 
     ## TODO: allow verification of hashes here (but what happens if
     ## the algorithm differs?)

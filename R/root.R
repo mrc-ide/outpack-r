@@ -5,40 +5,34 @@
 ##' @param root Path to use.  This path may exist, but it is an error
 ##'   to call this on a path that has already been initialised.
 ##'
-##' @param archive Path to the archive directory, used to store
+##' @param path_archive Path to the archive directory, used to store
 ##'   human-readable copies of packets.  If `NULL`, no such copy is
 ##'   made, and `file_store` must be `TRUE`
 ##'
-##' @param file_store Logical, indicating if we should use a
+##' @param use_file_store Logical, indicating if we should use a
 ##'   content-addressable file-store as the source of truth for
 ##'   packets.  If `archive` is non-`NULL`, the file-store will be
 ##'   used as the source of truth and the duplicated files in archive
 ##'   exist only for convenience.
 ##'
-##' @return An `outpack_root` object
+##' @return Invisibly, an `outpack_root` object; these will be
 outpack_init <- function(root, path_archive = "archive",
-                         use_file_store = FALSE, verbose = TRUE) {
+                         use_file_store = FALSE) {
+  ## Logging: print information about what we're doing here.
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
     stop(sprintf("outpack already initialised at '%s'", path_outpack))
   }
 
-  cfg <- config_new(path_archive, use_file_store)
+  cfg <- outpack_root_config_new(path_archive, use_file_store)
 
   fs::dir_create(path_outpack)
-  ## TODO: this whole section needs to be within a tryCatch that would
-  ## delete .outpack if we fail
-  writeLines(cfg, file.path(path_outpack, "config.json"))
-
   fs::dir_create(file.path(path_outpack, "metadata"))
   fs::dir_create(file.path(path_outpack, "location"))
-
-  ## TODO: edit gitignore to add .outpack and archive to it, or at
-  ## least prompt the user to do this.
+  writeLines(cfg, file.path(path_outpack, "config.json"))
 
   invisible(outpack_root$new(root))
 }
-
 
 
 outpack_root <- R6::R6Class(
@@ -68,11 +62,11 @@ outpack_root <- R6::R6Class(
       lockBinding("files", self)
     },
 
-    ## TODO: this needs an extended form with notions of trust.
     location_list = function() {
       union("local", dir(file.path(self$path, ".outpack", "location")))
     },
 
+    ## TODO: remove this method until next PR?
     location_last_update = function(location = NULL) {
       index <- self$index_update()
       if (is.null(location)) {
@@ -127,7 +121,9 @@ outpack_root_open <- function(path) {
 
 
 read_location <- function(location, root, prev) {
-  ## TODO: If we're more relaxed here about format, then this is
+  ## TODO: If we're more relaxed here about format, then this will
+  ## need changing.  This regex will end up moving somewhere central
+  ## in the package in that case.
   re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$"
   path <- file.path(root, ".outpack", "location", location)
   ids <- dir(path, re)
@@ -164,10 +160,6 @@ read_locations <- function(locations, root, prev) {
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
 index_read <- function(locations, root, prev, refresh, verbose) {
-  ## TODO: option to validate hashes, or do we do that on import?
-
-  ## TODO: we should have a validate function somewhere that
-  ## checks all in the directory are of this form exactly
   path_index <- file.path(root, ".outpack", "index", "outpack.rds")
 
   if (refresh) {
@@ -209,4 +201,28 @@ index_read <- function(locations, root, prev, refresh, verbose) {
   }
 
   data
+}
+
+
+outpack_root_config_new <- function(path_archive, use_file_store) {
+  if (!is.null(path_archive)) {
+    assert_scalar_character(path_archive)
+  }
+  assert_scalar_logical(use_file_store)
+  if (is.null(path_archive) && !use_file_store) {
+    stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+  }
+
+  ## TODO(RFC): There's a good reason here to wonder if this _should_
+  ## be configurable.  I'll keep it here within the configuration even
+  ## though it can't be changed really.
+  hash_algorithm <- "sha256"
+
+  cfg <- list(
+    schemaVersion = scalar(outpack_schema_version()),
+    core = list(
+      path_archive = scalar(path_archive),
+      use_file_store = scalar(use_file_store),
+      hash_algorithm = scalar(hash_algorithm)))
+  to_json(cfg)
 }
