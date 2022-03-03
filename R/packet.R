@@ -1,16 +1,30 @@
-## Control over an packet as it gets built.  Names here probably want
-## changing because we'll need to support interacting with an existing
-## packet?
-
-current <- new.env(parent = emptyenv())
-
-## We might allow this function to copy files into a safe place too
+##' Start a packet build (`outpack_packet_start`), end one
+##' (`outpack_packet_cancel`, `outpack_packet_end`) and interact with
+##' the current packet (`outpack_packet_use_dependency`,
+##' `outpack_packet_run`)
+##'
+##' @title Start, interact with, and end a packet build
+##'
+##' @param path Path to the build / output directory.
+##'
+##' @param name The name of the packet
+##'
+##' @param parameters Optionally, a named list of parameters.  The
+##'   names must be unique, and the values must all be non-NA scalar
+##'   atomics (logical, integer, numeric, character)
+##'
+##' @param verbose Logical, indicating that we should be verbose. Will
+##'   be the default passed through to other `outpack_packet_*`
+##'   functions if not overridden.
+##'
+##' @param root The outpack root. Will be searched for from the
+##'   current directory if not given.
+##'
+##' @return Invisibly, a copy of the packet data
+##' @rdname outpack_packet
+##' @export
 outpack_packet_start <- function(path, name, parameters = NULL,
-                                 id = NULL, verbose = TRUE, root = NULL) {
-  if (is.null(id)) {
-    id <- outpack_id()
-  }
-
+                                 verbose = TRUE, root = NULL) {
   root <- outpack_root_locate(root)
   if (!is.null(current$packet)) {
     ## * Could make this root specific?
@@ -21,90 +35,118 @@ outpack_packet_start <- function(path, name, parameters = NULL,
     stop("Already a current packet - call outpack_packet_cancel()")
   }
 
-  time_start <- Sys.time()
+  assert_scalar_character(name)
+  assert_directory(path)
+  validate_parameters(parameters)
+  assert_scalar_logical(verbose)
 
-  ## We should decide generally what that logging/messaging process
-  ## will look like.  So if we have some rich metadata we could pass
-  ## that through lgr and convert this into nice cli-based logging I
-  ## think.  That will require a little work up front but
-  if (verbose) {
-    cli::cli_h1("{name} : {id} ({path}):")
-    cli::cli_inform("start: {time_start}")
-    if (!is.null(parameters)) {
-      ## ...etc
-    }
-  }
+  ## TODO: we could accept 'id' as an argument here, but we'd need to
+  ## validate that it matches our format (depending on what we chose
+  ## to accept) and we should check that it is not present in the
+  ## index yet.
+  id <- outpack_id()
 
-  ## TODO: validation on name, id, path, parameters
-  ## TODO: optionally scan directory for files?
+  time <- list(start = Sys.time())
+
+  ## LOGGING: name / id / path, start time, parameters
+  ##
+  ## We log these all in orderly and that's super useful
+
+  ## TODO: optionally scan directory for files so that we have pre-run hashes
+
+  ## TODO: optionally copy the directory into some scratch location,
+  ## as we do for the test runner
 
   current$packet <- list(
     name = name,
     id = id,
     path = path,
     parameters = parameters,
-    time_start = time_start,
+    time = time,
     root = root,
     verbose = verbose)
 
-  invisible()
+  invisible(current$packet)
 }
 
 
-## These might end up root or path specific.
-outpack_packet_current <- function() {
+##' @export
+##' @rdname outpack_packet
+outpack_packet_cancel <- function(verbose = NULL) {
+  p <- outpack_packet_current()
+  outpack_packet_clear()
+}
+
+
+##' @export
+##' @rdname outpack_packet
+outpack_packet_current <- function(verbose = NULL) {
   if (is.null(current$packet)) {
     stop("No current packet")
   }
   current$packet
 }
 
-
-outpack_packet_cancel <- function() {
-  if (!is.null(current$packet)) {
-    current$packet <- NULL
-  }
-}
-
-
-outpack_packet_end <- function() {
+##' @export
+##' @rdname outpack_packet
+outpack_packet_end <- function(verbose = NULL) {
   p <- outpack_packet_current()
-  p$time_end <- Sys.time()
+  verbose <- verbose %||% p$verbose
+  p$time$end <- Sys.time()
   if (p$verbose) {
     cli::cli_h2("Finishing packet")
   }
-  json <- outpack_metadata_create(p$path, p$name, p$id,
-                                  p$depends, p$parameters)
+  json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
+                                  depends = p$depends,
+                                  parameters = p$parameters)
   outpack_insert_packet(p$path, json, p$root, verbose = p$verbose)
-  ## Same as with outpack_packet_cancel, probably needs some work to
-  ## make this less weird.
-  current$packet <- NULL
+  outpack_packet_clear()
 }
 
 
-outpack_packet_run <- function(script, envir = .GlobalEnv) {
-  ## TODO: Assert that script is a relative path
-  ## TODO: Assert that script is found within packet path
+##' @export
+##' @rdname outpack_packet
+##'
+##' @param script Path to the script within the packet directory (a
+##'   relative path).  This function can be safely called multiple
+##'   times within a single packet run (or zero times!) as needed.
+outpack_packet_run <- function(script, envir = .GlobalEnv, verbose = NULL) {
+  p <- outpack_packet_current()
+  assert_relative_path(script, no_dots = TRUE)
+  assert_file_exists(script, p$path, "Script")
+
+  ## TODO: Logging
+
   ## TODO: Control over echo (as in orderly)
 
   ## TODO: Control over running in separate process (if we do that,
   ## the process should return session, too)
-  p <- outpack_packet_current()
+
+  ## TODO: What should we do/store on error?
+
   withr::with_dir(p$path, sys.source(script, envir = envir))
+
+  p$script <- c(p$script, script)
+  current$packet <- p
+
   ## What is a good return value here?
   invisible()
 }
 
 
-outpack_packet_use_depenency <- function(id, files) {
+##' @export
+##' @rdname outpack_packet
+##'
+##' @param id The id of an existing packet to use files from
+##'
+##' @param files A named character vector of files; the name
+##'   corresponds to the name within the current packet, while the
+##'   value corresponds to the name within the upstream packet
+outpack_packet_use_depenency <- function(id, files, verbose = NULL) {
   p <- outpack_packet_current()
+  verbose <- verbose %||% p$verbose
 
-  ## TODO: We need a function that will simply reflect the index, but
-  ## we also need something that will allow fetching of metadata
-  meta <- p$root$index_update()$metadata[[id]]
-  if (is.null(meta)) {
-    stop(sprintf("id '%s' not found in index", id))
-  }
+  meta <- p$root$metadata(id)
 
   ## Then validation of the request:
   i <- match(files, meta$files$path)
@@ -113,18 +155,39 @@ outpack_packet_use_depenency <- function(id, files) {
                  id, meta$name, paste(files[is.na(i)], collapse = ", ")))
   }
 
-  ## TODO: allow pattern to be used in files?
-  ## TODO: assert_named(files) # named, uniquely
-  ## TODO: check that all names are relative paths with no '..' components
-  ## TODO: check that no dependency destination exists
+  ## TODO: allow pattern to be used in files (but then how do we
+  ## translate to destination?)
 
-  ## TODO: log this process!
+  assert_named(files, unique = TRUE)
+  assert_relative_path(names(files), no_dots = TRUE)
 
-  ## TODO: we need to make it really easy to query versions
+  depends <- list(id = id,
+                  data_frame(path = data_frame(path = names(files)),
+                             source = unname(files)))
+  p$depends <- c(p$depends, list(depends))
 
-  ## Then we look for the content; this should be put into another
-  ## root method, as we will do this all over the show.
+  ## TODO: check that no dependency destination exists, or offer solution
+  ## to overwrite.
   dest <- file.path(p$path, names(files))
+
+  ## TODO: log file copy information, including hashes.  Because copy
+  ## can be slow for large files, we might want to do this file by
+  ## file?
+
+  ## TODO: currently no capacity here for *querying* to find the id
+  ## (e.g., latest(name) or something more complex).  Any progress on
+  ## this will depend on the query interface.  It's probable that we
+  ## might want to record the query here alongside the id, if one was
+  ## used?  Or should we allow a query here?
+
+  ## TODO: This copy process should be put into another root method,
+  ## as we will do this all over the show, such as in the support for
+  ## extracting things from an existing packet anywhere (outside of a
+  ## packet build process)
+
+  ## TODO: The copy should ideally all succeed or all fail wherever
+  ## possible
+
   fs::dir_create(dirname(dest))
 
   if (root$config$core$use_file_store) {
@@ -135,9 +198,23 @@ outpack_packet_use_depenency <- function(id, files) {
   } else {
     ## Here, we should really:
     ## 1. check these exist
-    ## 2. check that these have the correct hash
+    ## 2. check that these have the correct hash (this should be configurable,
+    ## with a faster alternative available)
     src <- file.path(root$path, root$config$core$path_archive,
                      meta$name, meta$id, unname(files))
     fs::file_copy(src, dest)
   }
+
+  ## Only update packet information after success, to reflect new
+  ## metadata
+  current$packet <- p
+  invisible()
 }
+
+
+outpack_packet_clear <- function() {
+  current$packet <- NULL
+}
+
+
+current <- new.env(parent = emptyenv())

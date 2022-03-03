@@ -83,6 +83,11 @@ outpack_root <- R6::R6Class(
       max_time(date)
     },
 
+    metadata = function(id) {
+      private$index_data$metadata$id %||%
+        stop(sprintf("id '%s' not found in index", id))
+    },
+
     index_update = function(locations = NULL, refresh = FALSE,
                             verbose = FALSE) {
       if (is.null(locations)) {

@@ -124,3 +124,8 @@ drop_class <- function(x) {
   class(x) <- NULL
   x
 }
+
+
+squote <- function(x) {
+  sprintf("'%s'", x)
+}

@@ -1,53 +1,20 @@
-##' Create outpack metadata.
-##'
-##' @title Create outpack metadata
-##'
-##' @param path Directory holding the packet
-##'
-##' @param name The name of the packet
-##'
-##' @param id The unique identifier
-##'
-##' @param files A character of files. If `NULL`, then all files
-##'   within `path` are considered part of the packet.
-##'
-##' @param inputs A character vector of inputs
-##'
-##' @param outputs A character vector of outputs
-##'
-##' @param depends Optionally, information about dependencies on other
-##'   packets.  This must a list of objects created by
-##'   [outpack::outpack_metadata_depends], and all files referenced
-##'   should be found within `inputs`
-##'
-##' @param parameters Optionally, a list of named key/value
-##'   parameters.  Each key must be string and each value may be a
-##'   boolean, number or string (no vectors are allowed).
-##'
-##' @param session Optionally, information about the running session.
-##'   If omitted, then default session information is included.
-##'
-##' @param extra Optionally, arbitrary additional metadata as needed.
-##'   This will be passed through `jsonlite::toJSON` with arguments
-##'   `pretty = FALSE, auto_unbox = FALSE, json_verbatim = TRUE, na =
-##'   "null", null = "null"`, so plan accordingly.
-##'
-##' @param hash_algorithm Optionally, the hash algorithm to use.  The
-##'   default is `sha256` which is what git uses and should be good
-##'   for most uses.
-##'
-##' @return A `json` string
-##'
-##' @export
-outpack_metadata_create <- function(path, name, id, files = NULL,
+## TODO: for migration from orderly we will need some API function
+## that can call into this, and that's going to require a little extra
+## work in doing lots of validation.
+
+outpack_metadata_create <- function(path, name, id, time, files = NULL,
                                     depends = NULL, parameters = NULL,
                                     session = NULL, extra = NULL,
                                     hash_algorithm = "sha256") {
-  owd <- setwd(path)
-  on.exit(setwd(owd))
-
   assert_scalar_character(name)
   assert_scalar_character(id)
+
+  assert_is(time, "list")
+  assert_is(time$start, "POSIXt")
+  assert_is(time$end, "POSIXt")
+  time$start <- scalar(time_to_num(time$start))
+  time$end <- scalar(time_to_num(time$end))
+  time$elapsed <- scalar(time$end - time$start)
 
   if (!is.null(parameters)) {
     assert_named(parameters)
@@ -85,6 +52,7 @@ outpack_metadata_create <- function(path, name, id, files = NULL,
   if (is.null(depends)) {
     depends <- list()
   } else {
+    browser()
     if (inherits(depends, "outpack_metadata_depends")) {
       depends <- list(drop_class(depends))
     } else {
@@ -129,13 +97,6 @@ outpack_metadata_create <- function(path, name, id, files = NULL,
 }
 
 
-##' @rdname outpack_metadata_create
-##'
-##' @param files A named character vector of files; the name
-##'   corresponds to the name within the current packet, while the
-##'   value corresponds to the name within the upstream packet
-##'
-##' @export
 outpack_metadata_depends <- function(id, files) {
   assert_scalar_character(id) # TODO: check format matches here
   assert_named(files)

@@ -54,11 +54,16 @@ assert_is <- function(x, what, name = deparse(substitute(x))) {
 }
 
 
-assert_relative_path <- function(x, name = deparse(substitute(x))) {
+assert_relative_path <- function(x, no_dots = FALSE,
+                                 name = deparse(substitute(x))) {
   err <- fs::is_absolute_path(x)
   if (any(err)) {
     stop(sprintf("'%s' must be relative %s",
                  name, ngettext(length(x), "path", "paths")),
+         call. = FALSE)
+  }
+  if (no_dots && any(grepl("..", x, fixed = TRUE))) {
+    stop(sprintf("'%s' must not contain '..' path components", name),
          call. = FALSE)
   }
 }
@@ -86,4 +91,12 @@ assert_file_exists <- function(x, workdir = NULL, name = "File") {
   ## generally too). (See 1170cc9)
 
   invisible(x)
+}
+
+
+assert_directory <- function(x, workdir = NULL, name = "Directory") {
+  assert_file_exists(x, workdir, name)
+  if (!fs::is_dir(x)) {
+    stop(sprintf("%s must be a directory: '%s'", name, x))
+  }
 }
