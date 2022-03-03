@@ -82,13 +82,12 @@ outpack_root <- R6::R6Class(
         stop(sprintf("id '%s' not found in index", id))
     },
 
-    index_update = function(locations = NULL, refresh = FALSE,
-                            verbose = FALSE) {
+    index_update = function(locations = NULL, refresh = FALSE) {
       if (is.null(locations)) {
         locations <- self$location_list()
       }
       private$index_data <- index_read(locations, self$path, private$index_data,
-                                       refresh, verbose)
+                                       refresh)
       invisible(private$index_data)
     }
   ))
@@ -159,7 +158,7 @@ read_locations <- function(locations, root, prev) {
 ##          name split by id)
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
-index_read <- function(locations, root, prev, refresh, verbose) {
+index_read <- function(locations, root, prev, refresh) {
   path_index <- file.path(root, ".outpack", "index", "outpack.rds")
 
   if (refresh) {
@@ -170,19 +169,14 @@ index_read <- function(locations, root, prev, refresh, verbose) {
     data <- prev
   }
 
-  if (verbose) {
-    cli::cli_progress_step("Indexing data for {length(locations)} location{?s}")
-  }
+  ## TODO: Add some logging through here.
+
   data$location <- read_locations(locations, root, data$location)
 
   ## Work out what we've not yet seen and read that:
   id_new <- setdiff(data$location$id, data$index$id)
 
   if (length(id_new) > 0) {
-    if (verbose) {
-      cli::cli_progress_step(
-        "Indexing metadata for {length(id_new)} new packet{?s}")
-    }
     files <- file.path(root, ".outpack", "metadata", id_new)
     metadata_new <- lapply(files, outpack_metadata_index_read)
     names(metadata_new) <- id_new
@@ -193,10 +187,6 @@ index_read <- function(locations, root, prev, refresh, verbose) {
     rownames(data$index) <- NULL
     data$metadata <- c(data$metadata, metadata_new)
     fs::dir_create(dirname(path_index))
-    if (verbose) {
-      total <- length(data$metadata)
-      cli::cli_progress_step("Writing index ({total} packet{?s} total)")
-    }
     saveRDS(data, path_index)
   }
 

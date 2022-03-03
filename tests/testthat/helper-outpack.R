@@ -6,13 +6,13 @@
 ## through here.
 
 test_outpack_run <- function(path, name, script = "script.R",
-                             depends = NULL, root = NULL, verbose = FALSE) {
+                             depends = NULL, root = NULL) {
   root <- outpack_root_locate(root)
 
   tmp <- tempfile()
   fs::dir_copy(path, tmp)
 
-  outpack_packet_start(tmp, name, root = root, verbose = verbose)
+  outpack_packet_start(tmp, name, root = root)
   withCallingHandlers({
     for (x in depends) {
       outpack_packet_use_depenency(x$id, x$files)

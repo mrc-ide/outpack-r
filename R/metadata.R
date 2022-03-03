@@ -1,7 +1,3 @@
-## TODO: for migration from orderly we will need some API function
-## that can call into this, and that's going to require a little extra
-## work in doing lots of validation.
-
 outpack_metadata_create <- function(path, name, id, time, files = NULL,
                                     depends = NULL, parameters = NULL,
                                     session = NULL, extra = NULL,
@@ -109,19 +105,6 @@ outpack_metadata_depends <- function(id, files) {
 }
 
 
-##' Load outpack metadata as an R object.  Note that due to the
-##' difficulties of serialising R objects to JSON this cannot be
-##' directly re-converted to JSON (but as the outpack metadata is
-##' immutable, that should not be a big limitation.
-##'
-##' @title Load outpack metadata
-##'
-##' @param json A path to generated json, or the json itself as a
-##'   string (must be of class 'json')
-##'
-##' @return A list with the deserialised metadata
-##'
-##' @export
 outpack_metadata_load <- function(json) {
   if (!inherits(json, "json")) { # could use starts with "{"
     json <- read_string(json)
@@ -142,32 +125,11 @@ outpack_metadata_load <- function(json) {
 }
 
 
-##' Validate metadata against the schema
-##'
-##' @title Validate metadata against schema
-##'
-##' @inheritParams outpack_metadata_load
-##'
-##' @return Logical `TRUE` (invisibly) if valid, error otherwise.
-##'
-##' @export
 outpack_metadata_validate <- function(json) {
   invisible(outpack_metadata_schema()$validate(json, error = TRUE))
 }
 
 
-##' Create a reasonable `session` entry using output from [sessionInfo()]
-##'
-##' @title Create session information
-##'
-##' @param info Output from [sessionInfo()]
-##'
-##' @return A list with information on the platform and packages
-##'
-##' @export
-##' @examples
-##' dat <- outpack::outpack_session_info(sessionInfo())
-##' jsonlite::toJSON(dat, pretty = TRUE)
 outpack_session_info <- function(info) {
   ## TODO: we might also add some host information here too; orderly
   ## has some of that for us.

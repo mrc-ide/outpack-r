@@ -13,10 +13,6 @@
 ##'   names must be unique, and the values must all be non-NA scalar
 ##'   atomics (logical, integer, numeric, character)
 ##'
-##' @param verbose Logical, indicating that we should be verbose. Will
-##'   be the default passed through to other `outpack_packet_*`
-##'   functions if not overridden.
-##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
@@ -24,7 +20,7 @@
 ##' @rdname outpack_packet
 ##' @export
 outpack_packet_start <- function(path, name, parameters = NULL,
-                                 verbose = TRUE, root = NULL) {
+                                 root = NULL) {
   root <- outpack_root_locate(root)
   if (!is.null(current$packet)) {
     ## * Could make this root specific?
@@ -38,7 +34,6 @@ outpack_packet_start <- function(path, name, parameters = NULL,
   assert_scalar_character(name)
   assert_directory(path)
   validate_parameters(parameters)
-  assert_scalar_logical(verbose)
 
   ## TODO: we could accept 'id' as an argument here, but we'd need to
   ## validate that it matches our format (depending on what we chose
@@ -63,8 +58,7 @@ outpack_packet_start <- function(path, name, parameters = NULL,
     path = path,
     parameters = parameters,
     time = time,
-    root = root,
-    verbose = verbose)
+    root = root)
 
   invisible(current$packet)
 }
@@ -72,7 +66,7 @@ outpack_packet_start <- function(path, name, parameters = NULL,
 
 ##' @export
 ##' @rdname outpack_packet
-outpack_packet_cancel <- function(verbose = NULL) {
+outpack_packet_cancel <- function() {
   p <- outpack_packet_current()
   outpack_packet_clear()
 }
@@ -80,7 +74,7 @@ outpack_packet_cancel <- function(verbose = NULL) {
 
 ##' @export
 ##' @rdname outpack_packet
-outpack_packet_current <- function(verbose = NULL) {
+outpack_packet_current <- function() {
   if (is.null(current$packet)) {
     stop("No current packet")
   }
@@ -89,17 +83,13 @@ outpack_packet_current <- function(verbose = NULL) {
 
 ##' @export
 ##' @rdname outpack_packet
-outpack_packet_end <- function(verbose = NULL) {
+outpack_packet_end <- function() {
   p <- outpack_packet_current()
-  verbose <- verbose %||% p$verbose
   p$time$end <- Sys.time()
-  if (p$verbose) {
-    cli::cli_h2("Finishing packet")
-  }
   json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
                                   depends = p$depends,
                                   parameters = p$parameters)
-  outpack_insert_packet(p$path, json, p$root, verbose = p$verbose)
+  outpack_insert_packet(p$path, json, p$root)
   outpack_packet_clear()
 }
 
@@ -110,7 +100,7 @@ outpack_packet_end <- function(verbose = NULL) {
 ##' @param script Path to the script within the packet directory (a
 ##'   relative path).  This function can be safely called multiple
 ##'   times within a single packet run (or zero times!) as needed.
-outpack_packet_run <- function(script, envir = .GlobalEnv, verbose = NULL) {
+outpack_packet_run <- function(script, envir = .GlobalEnv) {
   p <- outpack_packet_current()
   assert_relative_path(script, no_dots = TRUE)
   assert_file_exists(script, p$path, "Script")
@@ -142,9 +132,8 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, verbose = NULL) {
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
-outpack_packet_use_depenency <- function(id, files, verbose = NULL) {
+outpack_packet_use_dependency <- function(id, files) {
   p <- outpack_packet_current()
-  verbose <- verbose %||% p$verbose
 
   meta <- p$root$metadata(id)
 
