@@ -6,6 +6,11 @@ hash_file <- function(path, algorithm = "sha256") {
 }
 
 
+hash_files <- function(paths, algorithm = "sha256") {
+  vcapply(paths, hash_file, algorithm, USE.NAMES = FALSE)
+}
+
+
 hash_data <- function(data, algorithm) {
   assert_scalar_character(algorithm)
   value <- openssl::multihash(data, algorithm)[[algorithm]]

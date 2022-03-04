@@ -217,5 +217,5 @@ outpack_root_config_new <- function(path_archive, use_file_store) {
       path_archive = scalar(path_archive),
       use_file_store = scalar(use_file_store),
       hash_algorithm = scalar(hash_algorithm)))
-  to_json(cfg)
+  to_json(cfg, "config")
 }

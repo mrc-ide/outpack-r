@@ -27,14 +27,14 @@
             "pattern": "^([0-9]{8}-[0-9]{6})-([0-9a-f]{8})$"
         },
 
-        "date": {
-            "description": "Time that the packet was imported",
-            "type": "date-time"
+        "time": {
+            "description": "Time that the packet was imported, in seconds since 1970-01-01",
+            "type": "number"
         },
 
         "hash": {
             "$ref": "#/definitions/hash"
         }
     },
-    "required": ["schemaVersion", "id", "date", "hash"]
+    "required": ["schemaVersion", "id", "time", "hash"]
 }

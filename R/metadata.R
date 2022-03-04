@@ -67,6 +67,9 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
     ## 1, 3 and 4 require that we have the root active as they will
     ## require us to query the index, but we could do '2' here as it
     ## must be consistent within the metadata.
+
+    ## TODO: I am not very happy with path/source as the names for
+    ## keys in files (here / there is a possibility, if a bit cute)
   }
 
   if (is.null(session)) {
@@ -78,6 +81,7 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   ret <- list(schemaVersion = scalar(outpack_schema_version()),
               name = scalar(name),
               id = scalar(id),
+              time = time,
               parameters = parameters,
               files = files,
               depends = depends,
@@ -88,19 +92,7 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
     ret <- c(ret, extra)
   }
 
-  to_json(ret)
-}
-
-
-outpack_metadata_depends <- function(id, files) {
-  assert_scalar_character(id) # TODO: check format matches here
-  assert_named(files)
-  assert_character(files)
-  ret <- list(id = scalar(id),
-              files = data_frame(path = names(files),
-                                 source = unname(files)))
-  class(ret) <- "outpack_metadata_depends"
-  ret
+  to_json(ret, "metadata")
 }
 
 
@@ -124,11 +116,6 @@ outpack_metadata_load <- function(json) {
 }
 
 
-outpack_metadata_validate <- function(json) {
-  invisible(outpack_metadata_schema()$validate(json, error = TRUE))
-}
-
-
 outpack_session_info <- function(info) {
   ## TODO: we might also add some host information here too; orderly
   ## has some of that for us.
@@ -148,32 +135,6 @@ outpack_session_info <- function(info) {
 
   list(platform = platform,
        packages = packages)
-}
-
-
-outpack_schema_version <- function() {
-  if (is.null(cache$schema)) {
-    path <- outpack_file("schema/metadata.json")
-    cache$schema_version <- jsonlite::read_json(path)$version
-  }
-  cache$schema_version
-}
-
-
-outpack_metadata_schema <- function() {
-  if (is.null(cache$schema)) {
-    path <- outpack_file("schema/metadata.json")
-    cache$schema <- jsonvalidate::json_schema$new(path)
-  }
-  cache$schema
-}
-
-
-outpack_metadata_file <- function(path, hash_algorithm) {
-  assert_file_exists(path)
-  list(path = scalar(path),
-       size = scalar(file.size(path)),
-       hash = scalar(hash_file(path, hash_algorithm)))
 }
 
 

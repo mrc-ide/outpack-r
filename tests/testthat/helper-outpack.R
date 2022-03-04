@@ -1,3 +1,7 @@
+## Globally enable schema validation everywhere; really this should be
+## disabled on CRAN, and only enabled if jsonvalidate is found.
+options(outpack.schema_validate = TRUE)
+
 ## This is not really meant for use; we'll need to derive a better set
 ## of primatives here later.  However, this might be enough to get
 ## us going.

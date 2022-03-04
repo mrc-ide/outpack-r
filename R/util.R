@@ -99,9 +99,13 @@ num_to_time <- function(num) {
 }
 
 
-to_json <- function(x) {
-  jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
-                   json_verbatim = TRUE, na = "null", null = "null")
+to_json <- function(x, schema) {
+  json <- jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
+                           json_verbatim = TRUE, na = "null", null = "null")
+  if (!is.null(schema) && getOption("outpack.schema_validate")) {
+    outpack_schema(schema)$validate(json, error = TRUE)
+  }
+  json
 }
 
 

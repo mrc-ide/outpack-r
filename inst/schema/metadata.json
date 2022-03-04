@@ -39,12 +39,12 @@
         "time": {
             "description": "Information about the running time",
             "start": {
-                "description": "Time that the report was started",
-                "type": "date-time"
+                "description": "Time that the report was started, in seconds since 1970-01-01",
+                "type": "number"
             },
             "end": {
-                "description": "Time that the report was completed",
-                "type": "date-time"
+                "description": "Time that the report was completed, in seconds sinec 1970-01-01",
+                "type": "number"
             },
             "elapsed": {
                 "description": "Running time, in seconds",
@@ -53,8 +53,8 @@
             "required": ["start", "end", "elapsed"]
         },
 
-        "inputs": {
-            "description": "Information on the file inputs, excluding dependencies",
+        "files": {
+            "description": "Manifest of files present in this packet",
             "type": "array",
             "items": {
                 "type": "object",
@@ -75,39 +75,12 @@
             }
         },
 
-        "outputs": {
-            "description": "Information about file outputs",
-            "type": "array",
-            "minItems": 1,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "path": {
-                        "description": "Filename of generated file",
-                        "type": "string"
-                    },
-                    "hash": {
-                        "$ref": "#/definitions/hash"
-                    },
-                    "size": {
-                        "description": "The file size. Unlikely to be accurate for text files due to line ending differences",
-                        "type": "number"
-                    }
-                },
-                "required": ["path", "hash", "size"]
-            }
-        },
-
         "depends": {
             "description": "Information on dependencies",
             "type": "array",
             "items": {
                 "type": "object",
                 "properties": {
-                    "name": {
-                        "description": "The name of the upstream packet",
-                        "type": "string"
-                    },
                     "id": {
                         "$ref": "#/properties/id"
                     },
@@ -118,22 +91,15 @@
                             "type": "object",
                             "properties": {
                                 "path": {
-                                    "description": "The path of the file",
+                                    "description": "The path of the file in this packet",
                                     "type": "string"
-                                },
-                                "hash": {
-                                    "$ref": "#/definitions/hash"
-                                },
-                                "size": {
-                                    "description": "The file size, in bytes",
-                                    "type": "number"
                                 },
                                 "source": {
                                     "description": "The name of the source file, within the upstream packet",
                                     "type": "string"
                                 }
                             },
-                            "required": ["path", "hash", "size", "source"]
+                            "required": ["path", "source"]
                         }
                     }
                 },
@@ -145,5 +111,5 @@
             "description": "Information about the session; necessarily engine-specific format but in a standardised location"
         }
     },
-    "required": ["schemaVersion", "id", "name", "time", "inputs", "depends", "outputs", "session"]
+    "required": ["schemaVersion", "id", "name", "time", "files", "depends", "session"]
 }

@@ -88,3 +88,13 @@ test_that("outpack_root_open does not recurse", {
     outpack_root_open(p),
     "'.+/a/b/c' does not look like an outpack root")
 })
+
+
+test_that("root configuration matches schema", {
+  skip_if_not_installed("jsonvalidate")
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  r <- outpack_init(path)
+  path_config <- file.path(path, ".outpack", "config.json")
+  expect_true(outpack_schema("config")$validate(path_config))
+})

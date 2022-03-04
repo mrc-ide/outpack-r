@@ -83,7 +83,8 @@ outpack_insert_packet <- function(path, json, root = NULL) {
                    time = scalar(time_to_num(Sys.time())),
                    hash = scalar(hash_data(json, hash_algorithm)))
   fs::dir_create(dirname(path_meta_loc))
-  jsonlite::write_json(meta_loc, path_meta_loc)
+  json <- to_json(meta_loc, "location")
+  writeLines(json, path_meta_loc)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
