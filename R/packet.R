@@ -151,8 +151,8 @@ outpack_packet_use_dependency <- function(id, files) {
   assert_relative_path(names(files), no_dots = TRUE)
 
   depends <- list(id = id,
-                  data_frame(path = data_frame(path = names(files)),
-                             source = unname(files)))
+                  files = data_frame(path = data_frame(path = names(files)),
+                                     source = unname(files)))
   p$depends <- c(p$depends, list(depends))
 
   ## TODO: check that no dependency destination exists, or offer solution

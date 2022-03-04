@@ -96,7 +96,7 @@ validate_dependency <- function(id, files, index, ...) {
     stop(sprintf("Packet references unknown id as dependency: %s", id))
   }
   d <- index$metadata[[id]]$files
-  msg_src <- setdiff(files[[i]]$source, d$path)
+  msg_src <- setdiff(files$source, d$path)
   if (length(msg_src)) {
     stop(sprintf("Packet %s does not contain path %s",
                  id, paste(squote(msg_src), collapse = ", ")))

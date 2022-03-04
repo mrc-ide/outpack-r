@@ -15,7 +15,7 @@ test_outpack_run <- function(path, name, script = "script.R",
   outpack_packet_start(tmp, name, root = root)
   withCallingHandlers({
     for (x in depends) {
-      outpack_packet_use_depenency(x$id, x$files)
+      outpack_packet_use_dependency(x$id, x$files)
     }
     outpack_packet_run(script)
     outpack_packet_end()

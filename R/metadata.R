@@ -20,10 +20,10 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
 
   if (is.null(files)) {
     ## NOTE: look in current directory because of the setwd above.
-    files <- dir(".", recursive = TRUE, all.files = TRUE, no.. = TRUE)
+    files <- dir(path, recursive = TRUE, all.files = TRUE, no.. = TRUE)
   } else {
-    ## TODO: make sure that all files are inside of this directory
-    ## (and are relative paths)
+    assert_relative_path(path, no_dots = TRUE)
+    assert_file_exists(files, path)
   }
 
   ## In the most simple case we could just do nothing about inputs vs
@@ -33,10 +33,12 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   ## orderly we can handle this via additional data in 'extra'.  Not
   ## having this distinction will make doing output-only packets
   ## easier of course.
-  files <- data_frame(
-    path = files,
-    size = fs::file_size(files),
-    hash = vcapply(files, hash_file, hash_algorithm))
+  files <- withr::with_dir(
+    path,
+    data_frame(
+      path = files,
+      size = file.size(files),
+      hash = vcapply(files, hash_file, hash_algorithm, USE.NAMES = FALSE)))
 
   ## TODO: best to validate here that all elements of depends are
   ## really found in the inputs list; more generally we might verify
@@ -48,18 +50,14 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   if (is.null(depends)) {
     depends <- list()
   } else {
-    browser()
-    if (inherits(depends, "outpack_metadata_depends")) {
-      depends <- list(drop_class(depends))
-    } else {
-      assert_is(depends, "list")
-      if (!all(vlapply(depends, inherits, "outpack_metadata_depends"))) {
-        stop("All elements of 'depends' must be 'outpack_metadata_depends'")
-      }
-      depends <- unname(lapply(depends, drop_class))
+    ## TODO: nicer error here - or just some validation really. Doing
+    ## this requires working out what our validation approach really
+    ## is, and that depends on how user-facing this is.
+    for (i in seq_along(depends)) {
+      depends[[i]]$id <- scalar(depends[[i]]$id)
     }
-
-    ## TODO: Additional checks are required here:
+    ## TODO: Additional checks could be required, but will require a
+    ## root.  We do these all on insert at the moment.
     ##
     ## 1. is the id known to the system?
     ## 2. is names(depends[[i]]$files$path) present in 'path' (for all i)?
@@ -67,7 +65,8 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
     ## 4. is the file unchanged since import?
     ##
     ## 1, 3 and 4 require that we have the root active as they will
-    ## require us to query the index.
+    ## require us to query the index, but we could do '2' here as it
+    ## must be consistent within the metadata.
   }
 
   if (is.null(session)) {
@@ -138,13 +137,14 @@ outpack_session_info <- function(info) {
                    os = scalar(info$running),
                    system = scalar(info$R.version$system))
 
-  pkg_info <- function(el, attached) {
-    list(package = scalar(el$Package),
-         version = scalar(el$Version),
-         attached = scalar(attached))
-  }
-  packages <- unname(c(lapply(info$otherPkgs, pkg_info, TRUE),
-                       lapply(info$loadedOnly, pkg_info, FALSE)))
+  ## TODO: Where available, we might also include Remotes info, or
+  ## whatever renv uses?
+  pkgs <- c(info$otherPkgs, info$loadedOnly)
+  n <- c(length(info$otherPkgs), length(info$loadedOnly))
+  packages <- data_frame(
+    package = vcapply(pkgs, "[[", "Package", USE.NAMES = FALSE),
+    version = vcapply(pkgs, "[[", "Version", USE.NAMES = FALSE),
+    attached = rep(c(TRUE, FALSE), n))
 
   list(platform = platform,
        packages = packages)

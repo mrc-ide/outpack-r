@@ -78,8 +78,21 @@ outpack_root <- R6::R6Class(
     },
 
     metadata = function(id) {
-      private$index_data$metadata$id %||%
+      ## TODO: this contains more logic than ideal but attempts to
+      ## avoid updating the index if needed.  The other thing to do
+      ## would _always_ be to update the index but that feels wasteful
+      ## really.
+      ##
+      ## We could probably be much more efficient if we cached all
+      ## roots within a session, though doing that safely would
+      ## practically mean putting a key file in each root so that we
+      ## can detect directory moves.
+      meta <- private$index_data$metadata[[id]] %||%
+        self$index_update()$metadata[[id]]
+      if (is.null(meta)) {
         stop(sprintf("id '%s' not found in index", id))
+      }
+      meta
     },
 
     index_update = function(locations = NULL, refresh = FALSE) {
@@ -152,6 +165,9 @@ read_locations <- function(locations, root, prev) {
   ret
 }
 
+
+
+## TODO: confusingly this is really index_update, not read
 
 ## The index consists of a few bits:
 ## $index - data.frame of name/id pairs (could also save this as
