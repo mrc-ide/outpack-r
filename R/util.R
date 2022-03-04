@@ -129,3 +129,10 @@ drop_class <- function(x) {
 squote <- function(x) {
   sprintf("'%s'", x)
 }
+
+
+with_dir <- function(path, code) {
+  owd <- setwd(path)
+  on.exit(setwd(owd))
+  force(code)
+}

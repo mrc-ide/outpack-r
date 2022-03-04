@@ -114,7 +114,7 @@ outpack_packet_run <- function(script, envir = .GlobalEnv) {
 
   ## TODO: What should we do/store on error?
 
-  withr::with_dir(p$path, sys.source(script, envir = envir))
+  with_dir(p$path, sys.source(script, envir = envir))
 
   p$script <- c(p$script, script)
   current$packet <- p

@@ -33,7 +33,7 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   ## orderly we can handle this via additional data in 'extra'.  Not
   ## having this distinction will make doing output-only packets
   ## easier of course.
-  files <- withr::with_dir(
+  files <- with_dir(
     path,
     data_frame(
       path = files,

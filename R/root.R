@@ -66,17 +66,6 @@ outpack_root <- R6::R6Class(
       union("local", dir(file.path(self$path, ".outpack", "location")))
     },
 
-    ## TODO: remove this method until next PR?
-    location_last_update = function(location = NULL) {
-      index <- self$index_update()
-      if (is.null(location)) {
-        date <- index$location$date
-      } else {
-        date <- index$location$date[index$location$location %in% location]
-      }
-      max_time(date)
-    },
-
     metadata = function(id) {
       ## TODO: this contains more logic than ideal but attempts to
       ## avoid updating the index if needed.  The other thing to do
@@ -110,10 +99,13 @@ outpack_root_locate <- function(path) {
   if (inherits(path, "outpack_root")) {
     return(path)
   }
-  root_found <- find_file_descend(".outpack", path %||% getwd())
+  path <- path %||% "."
+  assert_scalar_character(path)
+  assert_directory(path)
+  root_found <- find_file_descend(".outpack", path)
   if (is.null(root_found)) {
     stop(sprintf("Did not find existing outpack root from directory '%s'",
-                 path %||% "."))
+                 path))
   }
   outpack_root$new(root_found)
 }
