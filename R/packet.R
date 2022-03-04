@@ -100,6 +100,8 @@ outpack_packet_end <- function() {
 ##' @param script Path to the script within the packet directory (a
 ##'   relative path).  This function can be safely called multiple
 ##'   times within a single packet run (or zero times!) as needed.
+##'
+##' @param envir Environment in which to run the script
 outpack_packet_run <- function(script, envir = .GlobalEnv) {
   p <- outpack_packet_current()
   assert_relative_path(script, no_dots = TRUE)
