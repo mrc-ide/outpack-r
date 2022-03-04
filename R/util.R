@@ -66,12 +66,6 @@ find_file_descend <- function(target, start = ".", limit = "/") {
 }
 
 
-set_names <- function(x, nms) {
-  names(x) <- nms
-  x
-}
-
-
 val_to_bytes <- function(x, nbytes) {
   n <- round((x %% 1) * 256 ^ nbytes)
   paste(packBits(intToBits(n))[nbytes:1], collapse = "")
@@ -81,11 +75,6 @@ val_to_bytes <- function(x, nbytes) {
 ## TODO: make sure we convert to UTC here
 iso_time_str <- function(time = Sys.time()) {
   strftime(time, "%Y%m%d-%H%M%S")
-}
-
-
-str_iso_time <- function(str) {
-  as.POSIXct(str, "UTC", "%Y%m%d-%H%M%S")
 }
 
 

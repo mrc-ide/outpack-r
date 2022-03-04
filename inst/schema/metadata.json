@@ -103,7 +103,7 @@
                         }
                     }
                 },
-                "required": ["name", "id", "files"]
+                "required": ["id", "files"]
             }
         },
 

@@ -134,8 +134,9 @@ outpack_packet_run <- function(script, envir = .GlobalEnv) {
 ##'   value corresponds to the name within the upstream packet
 outpack_packet_use_dependency <- function(id, files) {
   p <- outpack_packet_current()
+  root <- p$root
 
-  meta <- p$root$metadata(id)
+  meta <- root$metadata(id)
 
   ## Then validation of the request:
   i <- match(files, meta$files$path)
