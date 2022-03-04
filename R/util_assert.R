@@ -76,8 +76,9 @@ assert_file_exists <- function(x, workdir = NULL, name = "File") {
     on.exit(setwd(owd)) # nolint
   }
 
-  if (!fs::file_exists(x)) {
-    stop(sprintf("%s does not exist: '%s'", name, x))
+  ok <- fs::file_exists(x)
+  if (!all(ok)) {
+    stop(sprintf("%s does not exist: %s", name, paste(squote(x[!ok]))))
   }
 
   ## TODO: we should (as orderly does) verify that the casing is

@@ -1,4 +1,5 @@
 test_that("Can run a basic packet", {
+  on.exit(outpack_packet_clear(), add = TRUE)
   ## TODO: We'll probably want to move some of these into test
   ## fixtures (or a demo directory like in orderly) as these will get
   ## boring to copy around. At the same time, it's pretty hard to
@@ -8,6 +9,7 @@ test_that("Can run a basic packet", {
   ## A simple example where we run something.
   path_src <- tempfile()
   fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('myplot.png')",
@@ -20,6 +22,7 @@ test_that("Can run a basic packet", {
 
   path <- tempfile()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
   p <- outpack_packet_start(path_src, "example", root = root)
 
@@ -75,9 +78,11 @@ test_that("Can run a basic packet", {
 
 
 test_that("Can handle dependencies", {
+  on.exit(outpack_packet_clear(), add = TRUE)
   ## A simple example where we run something.
   path_src1 <- tempfile()
   fs::dir_create(path_src1)
+  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('myplot.png')",
@@ -90,6 +95,7 @@ test_that("Can handle dependencies", {
 
   path_src2 <- tempfile()
   fs::dir_create(path_src2)
+  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('incoming.csv')",
     "png('myplot.png')",
@@ -98,6 +104,7 @@ test_that("Can handle dependencies", {
     file.path(path_src2, "script.R"))
 
   path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
@@ -117,4 +124,84 @@ test_that("Can handle dependencies", {
     data_frame(
       id = id1,
       files = I(list(data_frame(path = "incoming.csv", source = "data.csv")))))
+})
+
+
+test_that("Can't start a packet twice", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+
+  ## A simple example where we run something.
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  p1 <- outpack_packet_start(path_src, "example", root = root)
+  ## TODO: We might expand this to indicate where the packet is
+  ## running (and if it's the same one that we're trying to restart)
+  expect_error(
+    outpack_packet_start(path_src, "example", root = root),
+    "Already a current packet - call outpack_packet_cancel()",
+    fixed = TRUE)
+  outpack_packet_cancel()
+  p2 <- outpack_packet_start(path_src, "example", root = root)
+  expect_true(p2$id != p1$id)
+})
+
+
+test_that("Can't use a nonexistant running packet", {
+  outpack_packet_clear()
+  expect_error(
+    outpack_packet_current(),
+    "No current packet")
+})
+
+
+test_that("Can't add a packet twice", {
+  on.exit(outpack_packet_clear())
+
+  ## A simple example where we run something.
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  p <- outpack_packet_start(path_src, "example", root = root)
+  outpack_packet_end()
+
+  id <- p$id
+  json <- read_string(file.path(path, ".outpack", "metadata", id))
+  class(json) <- "json"
+  expect_error(
+    outpack_insert_packet(path_src, json, root),
+    "'.+' has already been added for 'local'")
+})
+
+
+test_that("Can't use nonexistant id as dependency", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+
+  ## A simple example where we run something.
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  p1 <- outpack_packet_start(path_src, "example", root = root)
+  outpack_packet_end()
+
+  outpack_packet_start(path_src, "example", root = root)
+  expect_error(
+    outpack_packet_use_dependency(p1$id, c("a" = "b")),
+    sprintf("file not found in packet '%s' \\(example\\): b", p1$id))
+  outpack_packet_cancel()
 })

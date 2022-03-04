@@ -98,3 +98,15 @@ test_that("root configuration matches schema", {
   path_config <- file.path(path, ".outpack", "config.json")
   expect_true(outpack_schema("config")$validate(path_config))
 })
+
+
+test_that("Can't get nonexistant metadata", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  id <- outpack_id()
+  expect_error(
+    r$metadata(id),
+    sprintf("id '%s' not found in index", id))
+})

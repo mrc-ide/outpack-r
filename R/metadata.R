@@ -1,6 +1,6 @@
 outpack_metadata_create <- function(path, name, id, time, files = NULL,
                                     depends = NULL, parameters = NULL,
-                                    session = NULL, extra = NULL,
+                                    session = NULL,
                                     hash_algorithm = "sha256") {
   assert_scalar_character(name)
   assert_scalar_character(id)
@@ -13,13 +13,13 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   time$elapsed <- scalar(time$end - time$start)
 
   if (!is.null(parameters)) {
-    assert_named(parameters)
-    ## TODO: check basic types here, ensure scalar
+    ## NOTE: this validation is done both here and earlier in
+    ## outpack_packet_start
+    validate_parameters(parameters)
     parameters <- lapply(parameters, scalar)
   }
 
   if (is.null(files)) {
-    ## NOTE: look in current directory because of the setwd above.
     files <- dir(path, recursive = TRUE, all.files = TRUE, no.. = TRUE)
   } else {
     assert_relative_path(path, no_dots = TRUE)
@@ -86,11 +86,6 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
               files = files,
               depends = depends,
               session = session)
-
-  if (!is.null(extra)) {
-    assert_named(extra)
-    ret <- c(ret, extra)
-  }
 
   to_json(ret, "metadata")
 }

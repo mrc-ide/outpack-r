@@ -59,10 +59,11 @@ outpack_insert_packet <- function(path, json, root = NULL) {
     dest <- file.path(root$path, root$config$core$path_archive,
                       meta$name, meta$id)
     if (path != dest) {
-      if (file.exists(dest)) {
-        ## TODO: Not sure how we recover from this.
-        stop("destination directory exists already")
-      }
+      ## TODO: this should not ever happen, so just asserting here.
+      ## If it does happen it requires that the user has provided an
+      ## id, and also copied files around?  Not sure how we'd recover
+      ## here either.
+      stopifnot(!file.exists(dest))
       ## TODO: open question as to if we should filter this down to
       ## just the required files.  We could do a copy of
       ## file.path(path, meta$files$path) into dest, but that does
