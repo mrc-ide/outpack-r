@@ -66,14 +66,6 @@ find_file_descend <- function(target, start = ".", limit = "/") {
 }
 
 
-max_time <- function(x) {
-  if (length(x) == 0) {
-    return(NULL)
-  }
-  max(x)
-}
-
-
 set_names <- function(x, nms) {
   names(x) <- nms
   x
@@ -117,12 +109,6 @@ data_frame <- function(...) {
   ret <- data.frame(..., stringsAsFactors = FALSE, check.names = FALSE)
   rownames(ret) <- NULL
   ret
-}
-
-
-drop_class <- function(x) {
-  class(x) <- NULL
-  x
 }
 
 

@@ -79,6 +79,9 @@ test_that("outpack_root_open does not recurse", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   r <- outpack_init(path)
+  expect_identical(outpack_root_open(r), r)
+  expect_equal(outpack_root_open(path)$path, path)
+
   p <- file.path(path, "a", "b", "c")
   fs::dir_create(p)
   expect_error(

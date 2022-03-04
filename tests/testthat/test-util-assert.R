@@ -6,8 +6,16 @@ test_that("assert_scalar", {
 
 
 test_that("assert_character", {
+  expect_silent(assert_character("a"))
   expect_error(assert_character(1), "must be character")
   expect_error(assert_character(TRUE), "must be character")
+})
+
+
+test_that("assert_logical", {
+  expect_silent(assert_logical(TRUE))
+  expect_error(assert_logical(1), "must be logical")
+  expect_error(assert_logical("true"), "must be logical")
 })
 
 
@@ -35,9 +43,26 @@ test_that("assert_file_exists", {
 })
 
 
+test_that("assert_directory", {
+  tmp <- tempfile()
+  file.create(tmp)
+  expect_silent(assert_directory(dirname(tmp)))
+  expect_error(assert_directory(tmp), "Directory must be a directory")
+})
+
+
 test_that("assert_relative_path", {
   expect_error(assert_relative_path(getwd()),
                "'getwd()' must be relative path",
                fixed = TRUE)
   expect_silent(assert_relative_path("relpath"))
+
+  expect_silent(
+    assert_relative_path("../my/path"))
+  expect_error(
+    assert_relative_path("../my/path", TRUE),
+    "must not contain '..' path components")
+  expect_error(
+    assert_relative_path("my/../../path", TRUE),
+    "must not contain '..' path components")
 })

@@ -6,14 +6,6 @@ hash_file <- function(path, algorithm = "sha256") {
 }
 
 
-## It might be useful here to allow a progress bar to cope with very
-## large files
-hash_dir <- function(path, algorithm = "sha256") {
-  files <- dir(path, recursive = TRUE, all.files = TRUE, no.. = TRUE)
-  set_names(vcapply(file.path(path, files), hash_file), files)
-}
-
-
 hash_data <- function(data, algorithm) {
   assert_scalar_character(algorithm)
   value <- openssl::multihash(data, algorithm)[[algorithm]]

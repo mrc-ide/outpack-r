@@ -85,11 +85,9 @@ outpack_root <- R6::R6Class(
     },
 
     index_update = function(locations = NULL, refresh = FALSE) {
-      if (is.null(locations)) {
-        locations <- self$location_list()
-      }
-      private$index_data <- index_read(locations, self$path, private$index_data,
-                                       refresh)
+      private$index_data <- index_update(
+        locations %||% self$location_list(),
+        self$path, private$index_data, refresh)
       invisible(private$index_data)
     }
   ))
@@ -158,15 +156,12 @@ read_locations <- function(locations, root, prev) {
 }
 
 
-
-## TODO: confusingly this is really index_update, not read
-
 ## The index consists of a few bits:
 ## $index - data.frame of name/id pairs (could also save this as
 ##          name split by id)
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
-index_read <- function(locations, root, prev, refresh) {
+index_update <- function(locations, root, prev, refresh) {
   path_index <- file.path(root, ".outpack", "index", "outpack.rds")
 
   if (refresh) {
