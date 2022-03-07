@@ -267,12 +267,7 @@ file_export <- function(root, id, path, dest) {
     ## using branch, so typically would affect users running "draft"
     ## type analyses
     for (i in seq_along(dest)) {
-      hash_found <- hash_file(src[[i]], hash_parse(hash[[i]])$algorithm)
-      if (hash_found != hash[[i]]) {
-        stop(sprintf(
-          "Hash of '%s' does not match:\n - expected: %s\n - found:    %s",
-          src[[i]], hash[[i]], hash_found[[i]]))
-      }
+      hash_validate(src[[i]], hash[[i]])
     }
     fs::dir_create(dirname(dest))
     fs::file_copy(src, dest)
@@ -283,12 +278,7 @@ file_export <- function(root, id, path, dest) {
 file_import_store <- function(root, path, file_path, file_hash) {
   if (root$config$core$use_file_store) {
     for (i in seq_along(file_path)) {
-      p <- file.path(path, file_path[[i]])
-      hash_algorithm <- hash_parse(file_hash[[i]])$algorithm
-      h <- root$files$put(p, hash_algorithm)
-      if (h != file_hash[[i]]) {
-        stop("Hashes do not match") # TODO: user actionable error
-      }
+      root$files$put(file.path(path, file_path[[i]]), file_hash[[i]])
     }
   }
 }
@@ -305,9 +295,11 @@ file_import_archive <- function(root, path, file_path, name, id) {
       stopifnot(!file.exists(dest))
       ## TODO: open question as to if we should filter this down to
       ## just the required files.  We could do a copy of
-      ## file.path(path, file_path) into dest, but that does
-      ## require some care with path components that have directories,
-      ## and would differ in the in-place and out-of-place versions.
+      ## file.path(path, file_path) into dest, but that does require
+      ## some care with path components that have directories, and
+      ## would differ in the in-place and out-of-place versions, but
+      ## then we already have this problem for the file store vs
+      ## archive version.
       fs::dir_copy(path, dest)
     }
   }

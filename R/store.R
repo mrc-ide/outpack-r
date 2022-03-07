@@ -35,11 +35,13 @@ file_store <- R6::R6Class(
     },
 
     ## TODO: bulk set
-
-    ## TODO: allow verification of hashes here (but what happens if
-    ## the algorithm differs?)
-    put = function(src, hash_algorithm = "sha256") {
-      hash <- hash_file(src, hash_algorithm)
+    ##
+    ## TODO: allow computing hash here with nothing (hash = NULL),
+    ## though that requires working out what the algorithm should be.
+    ## Our current use knows the hash at the point of insertion and
+    ## the validation is very useful!
+    put = function(src, hash) {
+      hash_validate(src, hash)
       dst <- self$filename(hash)
       if (!fs::file_exists(dst)) {
         fs::dir_create(dirname(dst))

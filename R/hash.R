@@ -24,3 +24,15 @@ hash_parse <- function(hash) {
   list(algorithm = sub(re, "\\1", hash),
        value = sub(re, "\\2", hash))
 }
+
+
+hash_validate <- function(path, expected) {
+  algorithm <- hash_parse(expected)$algorithm
+  found <- hash_file(path, algorithm)
+  if (found != expected) {
+    stop(sprintf(
+      "Hash of '%s' does not match:\n - expected: %s\n - found:    %s",
+      path, expected, found))
+  }
+  invisible(found)
+}
