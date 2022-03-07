@@ -35,6 +35,11 @@ outpack_init <- function(root, path_archive = "archive",
 }
 
 
+## TODO: I am torn here on design - we could make most of the things
+## that use the root be methods, but that risks a god class.  Getting
+## access to the index does require mutability so that must be a
+## method, but it's possible that moving to free functions everywhere
+## would be best.
 outpack_root <- R6::R6Class(
   "outpack_root",
   cloneable = FALSE,
@@ -204,8 +209,8 @@ outpack_root_config_new <- function(path_archive, use_file_store) {
     stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
   }
 
-  ## TODO(RFC): There's a good reason here to wonder if this _should_
-  ## be configurable.  I'll keep it here within the configuration even
+  ## TODO: There's a good reason here to wonder if this _should_ be
+  ## configurable.  I'll keep it here within the configuration even
   ## though it can't be changed really.
   hash_algorithm <- "sha256"
 
@@ -222,8 +227,6 @@ outpack_root_config_new <- function(path_archive, use_file_store) {
 ## Not just for the file store, but this is how we can interact with
 ## the files safely:
 file_export <- function(root, id, path, dest) {
-  ## TODO: Allow overwrite control here.
-
   ## This validation *always* occurs; does the packet even claim to
   ## have this path?
   validate_packet_has_file(root, id, path)
@@ -234,14 +237,8 @@ file_export <- function(root, id, path, dest) {
   ## TODO: The copy should ideally all succeed or all fail wherever
   ## possible
 
-  ## TODO: we pass 'hash' in here, but we also know it, which is
-  ## silly.  We could do better if we allowed:
-  ##
-  ## * path to be a vector
-  ## * dest to be a vector
-
   ## TODO: check that no dependency destination exists, or offer solution
-  ## to overwrite.
+  ## to overwrite (requires argument here, flowing back to the interface)
 
   ## TODO: Additional work required to support directory based
   ## dependencies
@@ -267,7 +264,6 @@ file_export <- function(root, id, path, dest) {
     for (i in seq_along(dest)) {
       hash_validate(src[[i]], hash[[i]])
     }
-    fs::dir_create(dirname(dest))
     fs::file_copy(src, dest)
   }
 }

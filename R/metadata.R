@@ -13,8 +13,6 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   time$elapsed <- scalar(time$end - time$start)
 
   if (!is.null(parameters)) {
-    ## NOTE: this validation is done both here and earlier in
-    ## outpack_packet_start
     validate_parameters(parameters)
     parameters <- lapply(parameters, scalar)
   }
@@ -44,20 +42,17 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   ## really found in the inputs list; more generally we might verify
   ## that they really exist at all?
 
-  ## What *IS* the best way of modelling this? I think that capturing
-  ## the idea of a single dependency "event" is important, because
-  ## that's what we'd end up hanging a query against
+  ## We capture the idea of a single dependency "event" with
+  ## potentially several files coming from it.
   if (is.null(depends)) {
     depends <- list()
   } else {
-    ## TODO: nicer error here - or just some validation really. Doing
-    ## this requires working out what our validation approach really
-    ## is, and that depends on how user-facing this is.
     for (i in seq_along(depends)) {
       depends[[i]]$id <- scalar(depends[[i]]$id)
     }
     ## TODO: Additional checks could be required, but will require a
-    ## root.  We do these all on insert at the moment.
+    ## root.  We do some of these on insert and via
+    ## outpack_packet_use_dependency at the moment
     ##
     ## 1. is the id known to the system?
     ## 2. is names(depends[[i]]$files$path) present in 'path' (for all i)?
@@ -67,17 +62,12 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
     ## 1, 3 and 4 require that we have the root active as they will
     ## require us to query the index, but we could do '2' here as it
     ## must be consistent within the metadata.
-
-    ## TODO: I am not very happy with path/source as the names for
-    ## keys in files (here / there is a possibility, if a bit cute)
   }
 
   if (is.null(session)) {
     session <- outpack_session_info(utils::sessionInfo())
   }
 
-  ## TODO: make sure that zero length inputs, depends are actually
-  ## NULL; the 'all' conditions would be true for integer(0) etc.
   ret <- list(schemaVersion = scalar(outpack_schema_version()),
               name = scalar(name),
               id = scalar(id),

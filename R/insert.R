@@ -32,8 +32,6 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## LOGGING: Report on things like the number of files added to the
   ## archives
 
-  ## TODO: add a method to the store for bulk import-and-verify and/or
-  ## put the hash arg into put to request validation.
   file_import_store(root, path, meta$files$path, meta$files$hash)
   file_import_archive(root, path, meta$files$path, meta$name, meta$id)
 

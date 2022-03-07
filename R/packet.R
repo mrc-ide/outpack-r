@@ -46,12 +46,6 @@ outpack_packet_start <- function(path, name, parameters = NULL,
   ## LOGGING: name / id / path, start time, parameters
   ##
   ## We log these all in orderly and that's super useful
-
-  ## TODO: optionally scan directory for files so that we have pre-run hashes
-
-  ## TODO: optionally copy the directory into some scratch location,
-  ## as we do for the test runner
-
   current$packet <- list(
     name = name,
     id = id,
@@ -161,6 +155,9 @@ outpack_packet_use_dependency <- function(id, files) {
 
   ## Only update packet information after success, to reflect new
   ## metadata
+
+  ## TODO: I am not very happy with path/source as the names for
+  ## keys in files (here / there is a possibility, if a bit cute)
   depends <- list(id = id,
                   files = data_frame(path = names(files), source = src))
   current$packet$depends <- c(p$depends, list(depends))
