@@ -224,18 +224,11 @@ outpack_root_config_new <- function(path_archive, use_file_store) {
 ## Not just for the file store, but this is how we can interact with
 ## the files safely:
 file_export <- function(root, id, path, dest) {
-  ## TODO: Allow overwrite control
-
-  ## TODO: I've not exposed this as an argument yet because ideally we
-  ## would support a faster possibility here if requested (e.g., no
-  ## validation validate just size, validate hash); this only applies
-  ## to the non-file-store using branch.
-  validate <- TRUE
+  ## TODO: Allow overwrite control here.
 
   ## This validation *always* occurs; does the packet even claim to
   ## have this path?
   validate_packet_has_file(root, id, path)
-
   ## TODO: log file copy information, including hashes.  Because copy
   ## can be slow for large files, we might want to do this file by
   ## file?
@@ -252,12 +245,15 @@ file_export <- function(root, id, path, dest) {
   ## TODO: check that no dependency destination exists, or offer solution
   ## to overwrite.
 
+  ## TODO: Additional work required to support directory based
+  ## dependencies
+
   fs::dir_create(dirname(dest))
 
   meta <- root$metadata(id)
+  hash <- meta$files$hash[match(path, meta$files$path)]
 
   if (root$config$core$use_file_store) {
-    hash <- meta$files$hash[match(path, meta$files$path)]
     for (i in seq_along(dest)) {
       root$files$get(hash[[i]], dest[[i]])
     }
@@ -265,16 +261,20 @@ file_export <- function(root, id, path, dest) {
     src <- file.path(root$path, root$config$core$path_archive,
                      meta$name, meta$id, path)
     assert_file_exists(src)
-    if (validate) {
-      for (i in seq_along(dest)) {
-        hash_found <- hash_file(src[[i]], hash_parse(hash[[i]])$algorithm)
-        if (hash_found != hash) {
-          stop(sprintf(
-            "Hash of '%s' does not match:\n - expected: %s\n - found:    %s",
-            src, hash, hash_found))
-        }
+    ## TODO: Ideally we would have an argument/option support a faster
+    ## possibility here if requested (e.g., no validation validate just
+    ## size, validate hash); this only applies to this non-file-store
+    ## using branch, so typically would affect users running "draft"
+    ## type analyses
+    for (i in seq_along(dest)) {
+      hash_found <- hash_file(src[[i]], hash_parse(hash[[i]])$algorithm)
+      if (hash_found != hash[[i]]) {
+        stop(sprintf(
+          "Hash of '%s' does not match:\n - expected: %s\n - found:    %s",
+          src[[i]], hash[[i]], hash_found[[i]]))
       }
     }
+    fs::dir_create(dirname(dest))
     fs::file_copy(src, dest)
   }
 }

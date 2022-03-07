@@ -25,8 +25,8 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   }
 
   for (i in seq_len(nrow(meta$depends))) {
-    validate_dependency(meta$depends$id[[i]], meta$depends$files[[i]]$source,
-                        root)
+    validate_packet_has_file(root, meta$depends$id[[i]],
+                             meta$depends$files[[i]]$source)
   }
 
   ## LOGGING: Report on things like the number of files added to the
@@ -54,17 +54,4 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
   root$index_update(location)
-}
-
-
-validate_dependency <- function(id, path, root) {
-  ## TODO: wrap this in tryCatch/withCallingHandlers or similar to get
-  ## better error, or make this part of the metadata call (a 'reason'
-  ## arg?).  This issue will appear elsewhere too.
-  meta <- root$metadata(id)
-  err <- setdiff(path, meta$files$path)
-  if (length(err) > 0) {
-    stop(sprintf("Packet '%s' does not contain path %s",
-                 id, paste(squote(err), collapse = ", ")))
-  }
 }

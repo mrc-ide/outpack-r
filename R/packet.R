@@ -154,7 +154,7 @@ outpack_packet_use_dependency <- function(id, files) {
 
   ## Ensures that we can actually find all the files within this
   ## dependency (and that it exists)
-  validate_dependency(id, src, root)
+  validate_packet_has_file(root, id, src)
 
   ## Actually copy the files into the requested directory
   file_export(root, id, src, dst)

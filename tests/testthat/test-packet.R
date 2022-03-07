@@ -229,3 +229,101 @@ test_that("Can't use file that does not exist from dependency", {
     outpack_packet_use_dependency(p1$id, c("incoming.csv" = "data.csv")),
     "Packet '.+' does not contain path 'data.csv'")
 })
+
+
+test_that("Can use dependency from outpack without file store", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  ## A simple example where we run something.
+  path_src1 <- tempfile()
+  fs::dir_create(path_src1)
+  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
+  writeLines(c(
+    "d <- read.csv('data.csv')",
+    "png('myplot.png')",
+    "plot(d)",
+    "dev.off()"),
+    file.path(path_src1, "script.R"))
+  write.csv(data.frame(x = 1:10, y = runif(10)),
+            file.path(path_src1, "data.csv"),
+            row.names = FALSE)
+
+  path_src2 <- tempfile()
+  fs::dir_create(path_src2)
+  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
+  writeLines(c(
+    "d <- read.csv('incoming.csv')",
+    "png('myplot.png')",
+    "plot(d)",
+    "dev.off()"),
+    file.path(path_src2, "script.R"))
+
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  root <- outpack_init(path, path_archive = "archive", use_file_store = FALSE)
+
+  p1 <- outpack_packet_start(path_src1, "a", root = root)
+  id1 <- p1$id
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  p2 <- outpack_packet_start(path_src2, "b", root = root)
+  id2 <- p2$id
+  outpack_packet_use_dependency(id1, c("incoming.csv" = "data.csv"))
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  meta <- outpack_root_open(path)$metadata(id2)
+  expect_equal(
+    meta$depends,
+    data_frame(
+      id = id1,
+      files = I(list(data_frame(path = "incoming.csv", source = "data.csv")))))
+})
+
+
+test_that("validate dependencies from archive", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  ## A simple example where we run something.
+  path_src1 <- tempfile()
+  fs::dir_create(path_src1)
+  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
+  writeLines(c(
+    "d <- read.csv('data.csv')",
+    "png('myplot.png')",
+    "plot(d)",
+    "dev.off()"),
+    file.path(path_src1, "script.R"))
+  write.csv(data.frame(x = 1:10, y = runif(10)),
+            file.path(path_src1, "data.csv"),
+            row.names = FALSE)
+
+  path_src2 <- tempfile()
+  fs::dir_create(path_src2)
+  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
+  writeLines(c(
+    "d <- read.csv('incoming.csv')",
+    "png('myplot.png')",
+    "plot(d)",
+    "dev.off()"),
+    file.path(path_src2, "script.R"))
+
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  root <- outpack_init(path, path_archive = "archive", use_file_store = FALSE)
+
+  p1 <- outpack_packet_start(path_src1, "a", root = root)
+  id1 <- p1$id
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  ## Change the value here:
+  write.csv(data.frame(x = 1:10, y = runif(10)),
+            file.path(root$path, "archive", "a", id1, "data.csv"),
+            row.names = FALSE)
+
+  p2 <- outpack_packet_start(path_src2, "b", root = root)
+  id2 <- p2$id
+  expect_error(
+    outpack_packet_use_dependency(id1, c("incoming.csv" = "data.csv")),
+    "Hash of '.+' does not match")
+})
