@@ -225,7 +225,6 @@ outpack_root_config_new <- function(path_archive, use_file_store) {
 ## the files safely:
 file_export <- function(root, id, path, dest) {
   ## TODO: Allow overwrite control
-  meta <- root$metadata(id)
 
   ## TODO: I've not exposed this as an argument yet because ideally we
   ## would support a faster possibility here if requested (e.g., no
@@ -233,11 +232,9 @@ file_export <- function(root, id, path, dest) {
   ## to the non-file-store using branch.
   validate <- TRUE
 
-  i <- match(path, meta$files$path)
-  if (any(is.na(i))) {
-    stop(sprintf("file not found in packet '%s' (%s): %s",
-                 id, meta$name, paste(path[is.na(i)], collapse = ", ")))
-  }
+  ## This validation *always* occurs; does the packet even claim to
+  ## have this path?
+  validate_packet_has_file(root, id, path)
 
   ## TODO: log file copy information, including hashes.  Because copy
   ## can be slow for large files, we might want to do this file by
@@ -257,18 +254,20 @@ file_export <- function(root, id, path, dest) {
 
   fs::dir_create(dirname(dest))
 
+  meta <- root$metadata(id)
+
   if (root$config$core$use_file_store) {
-    hash <- meta$files$hash[i]
-    for (j in seq_along(dest)) {
-      root$files$get(hash[[j]], dest[[j]])
+    hash <- meta$files$hash[match(path, meta$files$path)]
+    for (i in seq_along(dest)) {
+      root$files$get(hash[[i]], dest[[i]])
     }
   } else {
     src <- file.path(root$path, root$config$core$path_archive,
                      meta$name, meta$id, path)
     assert_file_exists(src)
     if (validate) {
-      for (j in seq_along(dest)) {
-        hash_found <- hash_file(src[[j]], hash_parse(hash[[j]])$algorithm)
+      for (i in seq_along(dest)) {
+        hash_found <- hash_file(src[[i]], hash_parse(hash[[i]])$algorithm)
         if (hash_found != hash) {
           stop(sprintf(
             "Hash of '%s' does not match:\n - expected: %s\n - found:    %s",
@@ -311,5 +310,24 @@ file_import_archive <- function(root, path, file_path, name, id) {
       ## and would differ in the in-place and out-of-place versions.
       fs::dir_copy(path, dest)
     }
+  }
+}
+
+
+## This might move elsewhere
+validate_packet_has_file <- function(root, id, path) {
+  ## TODO: wrap this in tryCatch/withCallingHandlers or similar to get
+  ## better error, or make this part of the metadata call (a 'reason'
+  ## arg?).  This issue will appear elsewhere too.
+  meta <- root$metadata(id)
+  err <- setdiff(path, meta$files$path)
+  if (length(err) > 0) {
+    ## TODO: this might also want wrapping so that we report back
+    ## better errors.  One possibility here is that we should report
+    ## "near misses" (Did you mean: X), though that will be best to
+    ## think about fairly broadly as it will likely affect other parts
+    ## of the packge.
+    stop(sprintf("Packet '%s' does not contain path %s",
+                 id, paste(squote(err), collapse = ", ")))
   }
 }

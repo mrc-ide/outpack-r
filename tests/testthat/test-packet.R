@@ -202,6 +202,30 @@ test_that("Can't use nonexistant id as dependency", {
   outpack_packet_start(path_src, "example", root = root)
   expect_error(
     outpack_packet_use_dependency(p1$id, c("a" = "b")),
-    sprintf("file not found in packet '%s' \\(example\\): b", p1$id))
+    sprintf("Packet '%s' does not contain path 'b'", p1$id))
   outpack_packet_cancel()
+})
+
+
+test_that("Can't use file that does not exist from dependency", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  path_src1 <- tempfile()
+  fs::dir_create(path_src1)
+  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
+
+  path_src2 <- tempfile()
+  fs::dir_create(path_src2)
+  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
+
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+
+  p1 <- outpack_packet_start(path_src1, "a", root = root)
+  outpack_packet_end()
+
+  p2 <- outpack_packet_start(path_src2, "b", root = root)
+  expect_error(
+    outpack_packet_use_dependency(p1$id, c("incoming.csv" = "data.csv")),
+    "Packet '.+' does not contain path 'data.csv'")
 })

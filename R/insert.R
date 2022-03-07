@@ -15,17 +15,18 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## entire metadata store?
   id <- meta$id
 
-  ## TODO: better way of checking this:
+  ## TODO: For 'insert', rather than 'import', do we want to check for
+  ## *any* packet that exists?  For now it's academic as there's no
+  ## equivalent to "pull" so this is the only way that things might
+  ## appear.
   index <- root$index_update(location)
   if (any(index$location$id == id & index$location$location == location)) {
     stop(sprintf("'%s' has already been added for '%s'", id, location))
   }
 
-  if (nrow(meta$depends) > 0) {
-    for (i in seq_len(nrow(meta$depends))) {
-      validate_dependency(meta$depends$id[[i]], meta$depends$files[[i]],
-                          index)
-    }
+  for (i in seq_len(nrow(meta$depends))) {
+    validate_dependency(meta$depends$id[[i]], meta$depends$files[[i]]$source,
+                        root)
   }
 
   ## LOGGING: Report on things like the number of files added to the
@@ -56,17 +57,14 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 }
 
 
-validate_dependency <- function(id, files, index, ...) {
-  if (!(id %in% names(index$metadata))) {
-    stop(sprintf("Packet references unknown id as dependency: %s", id))
+validate_dependency <- function(id, path, root) {
+  ## TODO: wrap this in tryCatch/withCallingHandlers or similar to get
+  ## better error, or make this part of the metadata call (a 'reason'
+  ## arg?).  This issue will appear elsewhere too.
+  meta <- root$metadata(id)
+  err <- setdiff(path, meta$files$path)
+  if (length(err) > 0) {
+    stop(sprintf("Packet '%s' does not contain path %s",
+                 id, paste(squote(err), collapse = ", ")))
   }
-  d <- index$metadata[[id]]$files
-  msg_src <- setdiff(files$source, d$path)
-  if (length(msg_src)) {
-    stop(sprintf("Packet %s does not contain path %s",
-                 id, paste(squote(msg_src), collapse = ", ")))
-  }
-
-  ## We could check things like hash and if it's present in the final
-  ## copy here?
 }
