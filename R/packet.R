@@ -138,68 +138,28 @@ outpack_packet_use_dependency <- function(id, files) {
   p <- outpack_packet_current()
   root <- p$root
 
-  meta <- root$metadata(id)
-
-  ## Then validation of the request:
-  i <- match(files, meta$files$path)
-  if (any(is.na(i))) {
-    stop(sprintf("file not found in packet '%s' (%s): %s",
-                 id, meta$name, paste(files[is.na(i)], collapse = ", ")))
-  }
-
-  ## TODO: allow pattern to be used in files (but then how do we
-  ## translate to destination?)
-
-  assert_named(files, unique = TRUE)
-  assert_relative_path(names(files), no_dots = TRUE)
-
-  depends <- list(id = id,
-                  files = data_frame(path = data_frame(path = names(files)),
-                                     source = unname(files)))
-  p$depends <- c(p$depends, list(depends))
-
-  ## TODO: check that no dependency destination exists, or offer solution
-  ## to overwrite.
-  dest <- file.path(p$path, names(files))
-
-  ## TODO: log file copy information, including hashes.  Because copy
-  ## can be slow for large files, we might want to do this file by
-  ## file?
-
   ## TODO: currently no capacity here for *querying* to find the id
   ## (e.g., latest(name) or something more complex).  Any progress on
   ## this will depend on the query interface.  It's probable that we
   ## might want to record the query here alongside the id, if one was
   ## used?  Or should we allow a query here?
 
-  ## TODO: This copy process should be put into another root method,
-  ## as we will do this all over the show, such as in the support for
-  ## extracting things from an existing packet anywhere (outside of a
-  ## packet build process)
+  ## TODO: allow pattern to be used in files (but then how do we
+  ## translate to destination?)
+  assert_named(files, unique = TRUE)
+  assert_relative_path(names(files), no_dots = TRUE)
 
-  ## TODO: The copy should ideally all succeed or all fail wherever
-  ## possible
+  src <- unname(files)
+  dst <- file.path(p$path, names(files))
 
-  fs::dir_create(dirname(dest))
-
-  if (root$config$core$use_file_store) {
-    hash <- meta$files$hash[i]
-    for (j in seq_along(i)) {
-      root$files$get(hash[[j]], dest[[j]])
-    }
-  } else {
-    ## Here, we should really:
-    ## 1. check these exist
-    ## 2. check that these have the correct hash (this should be configurable,
-    ## with a faster alternative available)
-    src <- file.path(root$path, root$config$core$path_archive,
-                     meta$name, meta$id, unname(files))
-    fs::file_copy(src, dest)
-  }
+  file_export(root, id, src, dst)
 
   ## Only update packet information after success, to reflect new
   ## metadata
-  current$packet <- p
+  depends <- list(id = id,
+                  files = data_frame(path = names(files), source = src))
+  current$packet$depends <- c(p$depends, list(depends))
+
   invisible()
 }
 

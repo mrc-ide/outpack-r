@@ -219,3 +219,97 @@ outpack_root_config_new <- function(path_archive, use_file_store) {
       hash_algorithm = scalar(hash_algorithm)))
   to_json(cfg, "config")
 }
+
+
+## Not just for the file store, but this is how we can interact with
+## the files safely:
+file_export <- function(root, id, path, dest) {
+  ## TODO: Allow overwrite control
+  meta <- root$metadata(id)
+
+  ## TODO: I've not exposed this as an argument yet because ideally we
+  ## would support a faster possibility here if requested (e.g., no
+  ## validation validate just size, validate hash); this only applies
+  ## to the non-file-store using branch.
+  validate <- TRUE
+
+  i <- match(path, meta$files$path)
+  if (any(is.na(i))) {
+    stop(sprintf("file not found in packet '%s' (%s): %s",
+                 id, meta$name, paste(path[is.na(i)], collapse = ", ")))
+  }
+
+  ## TODO: log file copy information, including hashes.  Because copy
+  ## can be slow for large files, we might want to do this file by
+  ## file?
+
+  ## TODO: The copy should ideally all succeed or all fail wherever
+  ## possible
+
+  ## TODO: we pass 'hash' in here, but we also know it, which is
+  ## silly.  We could do better if we allowed:
+  ##
+  ## * path to be a vector
+  ## * dest to be a vector
+
+  ## TODO: check that no dependency destination exists, or offer solution
+  ## to overwrite.
+
+  fs::dir_create(dirname(dest))
+
+  if (root$config$core$use_file_store) {
+    hash <- meta$files$hash[i]
+    for (j in seq_along(dest)) {
+      root$files$get(hash[[j]], dest[[j]])
+    }
+  } else {
+    src <- file.path(root$path, root$config$core$path_archive,
+                     meta$name, meta$id, path)
+    assert_file_exists(src)
+    if (validate) {
+      for (j in seq_along(dest)) {
+        hash_found <- hash_file(src[[j]], hash_parse(hash[[j]])$algorithm)
+        if (hash_found != hash) {
+          stop(sprintf(
+            "Hash of '%s' does not match:\n - expected: %s\n - found:    %s",
+            src, hash, hash_found))
+        }
+      }
+    }
+    fs::file_copy(src, dest)
+  }
+}
+
+
+file_import_store <- function(root, path, file_path, file_hash) {
+  if (root$config$core$use_file_store) {
+    for (i in seq_along(file_path)) {
+      p <- file.path(path, file_path[[i]])
+      hash_algorithm <- hash_parse(file_hash[[i]])$algorithm
+      h <- root$files$put(p, hash_algorithm)
+      if (h != file_hash[[i]]) {
+        stop("Hashes do not match") # TODO: user actionable error
+      }
+    }
+  }
+}
+
+
+file_import_archive <- function(root, path, file_path, name, id) {
+  if (!is.null(root$config$core$path_archive)) {
+    dest <- file.path(root$path, root$config$core$path_archive, name, id)
+    if (path != dest) {
+      ## TODO: this should not ever happen, so just asserting here.
+      ## If it does happen it requires that the user has provided an
+      ## id, and also copied files around?  Not sure how we'd recover
+      ## here either.
+      stopifnot(!file.exists(dest))
+      ## TODO: open question as to if we should filter this down to
+      ## just the required files.  We could do a copy of
+      ## file.path(path, file_path) into dest, but that does
+      ## require some care with path components that have directories,
+      ## and would differ in the in-place and out-of-place versions.
+      fs::dir_copy(path, dest)
+    }
+  }
+}

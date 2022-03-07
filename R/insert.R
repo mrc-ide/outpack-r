@@ -33,45 +33,8 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   ## TODO: add a method to the store for bulk import-and-verify and/or
   ## put the hash arg into put to request validation.
-  n_files <- nrow(meta$files)
-  if (root$config$core$use_file_store) {
-    store <- root$files
-    for (i in seq_len(n_files)) {
-      p <- file.path(path, meta$files$path[[i]])
-      ## The flexible hash algorithm here could be bad because we
-      ## require that the json is created with the same algorithm as
-      ## the store uses.  We can use
-      ##
-      ## hash_parse(meta$files$hash[[i]])$algorithm though
-      ##
-      ## which would be better handled by the store as part of
-      ## validation.  We could, in this case, also hash with the
-      ## wanted algorithm and hardlink the files together (e.g., md5
-      ## and sha256 versions)
-      h <- store$put(p, hash_algorithm)
-      if (h != meta$files$hash[[i]]) {
-        stop("Hashes do not match") # TODO: user actionable error
-      }
-    }
-  }
-
-  if (!is.null(root$config$core$path_archive)) {
-    dest <- file.path(root$path, root$config$core$path_archive,
-                      meta$name, meta$id)
-    if (path != dest) {
-      ## TODO: this should not ever happen, so just asserting here.
-      ## If it does happen it requires that the user has provided an
-      ## id, and also copied files around?  Not sure how we'd recover
-      ## here either.
-      stopifnot(!file.exists(dest))
-      ## TODO: open question as to if we should filter this down to
-      ## just the required files.  We could do a copy of
-      ## file.path(path, meta$files$path) into dest, but that does
-      ## require some care with path components that have directories,
-      ## and would differ in the in-place and out-of-place versions.
-      fs::dir_copy(path, dest)
-    }
-  }
+  file_import_store(root, path, meta$files$path, meta$files$hash)
+  file_import_archive(root, path, meta$files$path, meta$name, meta$id)
 
   path_meta <- file.path(root$path, ".outpack", "metadata", id)
   writeLines(json, path_meta)
