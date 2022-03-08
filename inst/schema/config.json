@@ -16,7 +16,7 @@
             "type": "object",
             "properties": {
                 "path_archive": {
-                    "type": ["null", "string"],
+                    "type": ["null", "string"]
                 },
                 "use_file_store": {
                     "type": "boolean"
