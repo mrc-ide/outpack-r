@@ -10,7 +10,6 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
   assert_is(time$end, "POSIXt")
   time$start <- scalar(time_to_num(time$start))
   time$end <- scalar(time_to_num(time$end))
-  time$elapsed <- scalar(time$end - time$start)
 
   if (!is.null(parameters)) {
     validate_parameters(parameters)
