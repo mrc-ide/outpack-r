@@ -281,21 +281,22 @@ file_import_store <- function(root, path, file_path, file_hash) {
 file_import_archive <- function(root, path, file_path, name, id) {
   if (!is.null(root$config$core$path_archive)) {
     dest <- file.path(root$path, root$config$core$path_archive, name, id)
-    if (path != dest) {
-      ## TODO: this should not ever happen, so just asserting here.
-      ## If it does happen it requires that the user has provided an
-      ## id, and also copied files around?  Not sure how we'd recover
-      ## here either.
-      stopifnot(!file.exists(dest))
-      ## TODO: open question as to if we should filter this down to
-      ## just the required files.  We could do a copy of
-      ## file.path(path, file_path) into dest, but that does require
-      ## some care with path components that have directories, and
-      ## would differ in the in-place and out-of-place versions, but
-      ## then we already have this problem for the file store vs
-      ## archive version.
-      fs::dir_copy(path, dest)
-    }
+
+    ## TODO: These should not ever happen, so just asserting here.  If
+    ## it does happen it requires that the user has provided an id,
+    ## and also copied files around?  Not sure how we'd recover here
+    ## either.
+    stopifnot(path != dest,
+              !file.exists(dest))
+
+    ## TODO: open question as to if we should filter this down to just
+    ## the required files (as we do here); this means that if the user
+    ## has provided "files" to the metadata function we'd be leaving
+    ## some files behind.  This does match the behaviour of the file
+    ## store version, but not of orderly.
+    file_path_dest <- file.path(dest, file_path)
+    fs::dir_create(dirname(file_path_dest))
+    fs::file_copy(file.path(path, file_path), file_path_dest)
   }
 }
 
