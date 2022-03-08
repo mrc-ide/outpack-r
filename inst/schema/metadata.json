@@ -103,9 +103,17 @@
             }
         },
 
+        "script": {
+            "description": "Scripts that were used when running the packet",
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+
         "session": {
             "description": "Information about the session; necessarily engine-specific format but in a standardised location"
         }
     },
-    "required": ["schemaVersion", "id", "name", "time", "files", "depends", "session"]
+    "required": ["schemaVersion", "id", "name", "time", "files", "depends", "script", "session"]
 }

@@ -80,9 +80,14 @@ outpack_packet_current <- function() {
 outpack_packet_end <- function() {
   p <- outpack_packet_current()
   p$time$end <- Sys.time()
+  hash_algorithm <- p$root$config$core$hash_algorithm
   json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
+                                  files = NULL,
                                   depends = p$depends,
-                                  parameters = p$parameters)
+                                  parameters = p$parameters,
+                                  script = p$script,
+                                  session = NULL,
+                                  hash_algorithm = hash_algorithm)
   outpack_insert_packet(p$path, json, p$root)
   outpack_packet_clear()
 }

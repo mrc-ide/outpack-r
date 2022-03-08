@@ -1,7 +1,6 @@
-outpack_metadata_create <- function(path, name, id, time, files = NULL,
-                                    depends = NULL, parameters = NULL,
-                                    session = NULL,
-                                    hash_algorithm = "sha256") {
+outpack_metadata_create <- function(path, name, id, time, files,
+                                    depends, parameters,
+                                    script, session, hash_algorithm) {
   assert_scalar_character(name)
   assert_scalar_character(id)
 
@@ -63,6 +62,12 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
     ## must be consistent within the metadata.
   }
 
+  if (is.null(script)) {
+    script <- character()
+  } else {
+    assert_character(script)
+  }
+
   if (is.null(session)) {
     session <- outpack_session_info(utils::sessionInfo())
   }
@@ -74,6 +79,7 @@ outpack_metadata_create <- function(path, name, id, time, files = NULL,
               parameters = parameters,
               files = files,
               depends = depends,
+              script = script,
               session = session)
 
   to_json(ret, "metadata")
