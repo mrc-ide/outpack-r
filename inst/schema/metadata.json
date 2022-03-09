@@ -86,16 +86,16 @@
                         "items": {
                             "type": "object",
                             "properties": {
-                                "path": {
+                                "here": {
                                     "description": "The path of the file in this packet",
                                     "type": "string"
                                 },
-                                "source": {
-                                    "description": "The name of the source file, within the upstream packet",
+                                "there": {
+                                    "description": "The path of the file within the upstream packet",
                                     "type": "string"
                                 }
                             },
-                            "required": ["path", "source"]
+                            "required": ["here", "there"]
                         }
                     }
                 },

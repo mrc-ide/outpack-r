@@ -123,7 +123,7 @@ test_that("Can handle dependencies", {
     meta$depends,
     data_frame(
       id = id1,
-      files = I(list(data_frame(path = "incoming.csv", source = "data.csv")))))
+      files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 
 
@@ -277,7 +277,7 @@ test_that("Can use dependency from outpack without file store", {
     meta$depends,
     data_frame(
       id = id1,
-      files = I(list(data_frame(path = "incoming.csv", source = "data.csv")))))
+      files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 
 

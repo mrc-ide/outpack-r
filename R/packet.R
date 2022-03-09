@@ -161,10 +161,8 @@ outpack_packet_use_dependency <- function(id, files) {
   ## Only update packet information after success, to reflect new
   ## metadata
 
-  ## TODO: I am not very happy with path/source as the names for
-  ## keys in files (here / there is a possibility, if a bit cute)
   depends <- list(id = id,
-                  files = data_frame(path = names(files), source = src))
+                  files = data_frame(here = names(files), there = src))
   current$packet$depends <- c(p$depends, list(depends))
 
   invisible()

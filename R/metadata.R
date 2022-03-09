@@ -53,8 +53,8 @@ outpack_metadata_create <- function(path, name, id, time, files,
     ## outpack_packet_use_dependency at the moment
     ##
     ## 1. is the id known to the system?
-    ## 2. is names(depends[[i]]$files$path) present in 'path' (for all i)?
-    ## 3. is unname(depends[[i]]$files$source) present in 'id' (for all i)?
+    ## 2. is names(depends[[i]]$files$here) present in 'path' (for all i)?
+    ## 3. is unname(depends[[i]]$files$there) present in 'id' (for all i)?
     ## 4. is the file unchanged since import?
     ##
     ## 1, 3 and 4 require that we have the root active as they will
@@ -99,8 +99,8 @@ outpack_metadata_load <- function(json) {
   data$depends <- data.frame(
     id = vcapply(data$depends, "[[", "id"),
     files = I(lapply(data$depends, function(x)
-      data_frame(path = vcapply(x$files, "[[", "path"),
-                 source = vcapply(x$files, "[[", "source")))))
+      data_frame(here = vcapply(x$files, "[[", "here"),
+                 there = vcapply(x$files, "[[", "there")))))
 
   data
 }
