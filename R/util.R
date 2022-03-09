@@ -72,9 +72,8 @@ val_to_bytes <- function(x, nbytes) {
 }
 
 
-## TODO: make sure we convert to UTC here
 iso_time_str <- function(time = Sys.time()) {
-  strftime(time, "%Y%m%d-%H%M%S")
+  strftime(time, "%Y%m%d-%H%M%S", tz = "UTC")
 }
 
 
