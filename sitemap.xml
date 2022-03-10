@@ -15,4 +15,10 @@
   <url>
     <loc>/reference/index.html</loc>
   </url>
+  <url>
+    <loc>/reference/outpack_init.html</loc>
+  </url>
+  <url>
+    <loc>/reference/outpack_packet.html</loc>
+  </url>
 </urlset>
