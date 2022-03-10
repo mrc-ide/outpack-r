@@ -4,14 +4,6 @@
     "description": "This is the minimal schema, it is expected that implementations will want and need additional fields throughout",
     "version": "0.0.1",
 
-    "definitions": {
-        "hash": {
-            "description": "A hash, including the algorithm name (e.g., md5, sha256)",
-            "type": "string",
-            "pattern": "^([a-zA-Z0-9]+):([0-9a-f]{16,})$"
-        }
-    },
-
     "type": "object",
     "properties": {
         "schemaVersion": {
@@ -21,9 +13,7 @@
         },
 
         "id": {
-            "description": "Task id, globally unique",
-            "type": "string",
-            "pattern": "^([0-9]{8}-[0-9]{6})-([0-9a-f]{8})$"
+            "$ref": "id.json"
         },
 
         "name": {
@@ -60,7 +50,7 @@
                         "type": "string"
                     },
                     "hash": {
-                        "$ref": "#/definitions/hash"
+                        "$ref": "hash.json"
                     },
                     "size": {
                         "description": "The file size, in bytes",
@@ -78,7 +68,7 @@
                 "type": "object",
                 "properties": {
                     "id": {
-                        "$ref": "#/properties/id"
+                        "$ref": "id.json"
                     },
                     "files": {
                         "type": "array",
