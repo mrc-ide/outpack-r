@@ -24,12 +24,12 @@ outpack_init <- function(root, path_archive = "archive",
     stop(sprintf("outpack already initialised at '%s'", path_outpack))
   }
 
-  cfg <- outpack_root_config_new(path_archive, use_file_store)
+  config <- config_new(path_archive, use_file_store)
 
   fs::dir_create(path_outpack)
   fs::dir_create(file.path(path_outpack, "metadata"))
   fs::dir_create(file.path(path_outpack, "location"))
-  writeLines(cfg, file.path(path_outpack, "config.json"))
+  config_write(config, root)
 
   invisible(outpack_root$new(root))
 }
@@ -57,18 +57,12 @@ outpack_root <- R6::R6Class(
       assert_file_exists(path)
       assert_file_exists(file.path(path, ".outpack"))
       self$path <- path
-      self$config <- jsonlite::read_json(
-        file.path(path, ".outpack/config.json"))
+      self$config <- config_read(path)
       if (self$config$core$use_file_store) {
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
       lockBinding("path", self)
-      lockBinding("config", self)
       lockBinding("files", self)
-    },
-
-    location_list = function() {
-      union("local", dir(file.path(self$path, ".outpack", "location")))
     },
 
     metadata = function(id) {
@@ -92,7 +86,7 @@ outpack_root <- R6::R6Class(
     index_update = function(locations = NULL, refresh = FALSE) {
       prev <- if (refresh) list() else private$index_data
       private$index_data <- index_update(
-        locations %||% self$location_list(), self$path, prev)
+        locations %||% outpack_location_list(self), self$path, prev)
       invisible(private$index_data)
     }
   ))
@@ -197,30 +191,6 @@ index_update <- function(locations, root, prev) {
   }
 
   data
-}
-
-
-outpack_root_config_new <- function(path_archive, use_file_store) {
-  if (!is.null(path_archive)) {
-    assert_scalar_character(path_archive)
-  }
-  assert_scalar_logical(use_file_store)
-  if (is.null(path_archive) && !use_file_store) {
-    stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
-  }
-
-  ## TODO: There's a good reason here to wonder if this _should_ be
-  ## configurable.  I'll keep it here within the configuration even
-  ## though it can't be changed really.
-  hash_algorithm <- "sha256"
-
-  cfg <- list(
-    schemaVersion = scalar(outpack_schema_version()),
-    core = list(
-      path_archive = scalar(path_archive),
-      use_file_store = scalar(use_file_store),
-      hash_algorithm = scalar(hash_algorithm)))
-  to_json(cfg, "config")
 }
 
 

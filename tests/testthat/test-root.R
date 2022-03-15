@@ -12,7 +12,7 @@ test_that("can create new root", {
                        use_file_store = FALSE,
                        hash_algorithm = "sha256"))
   expect_false(file.exists(file.path(path, ".outpack", "files")))
-  expect_equal(r$location_list(), "local")
+  expect_equal(outpack_location_list(r), "local")
 })
 
 
