@@ -1,4 +1,6 @@
-##' Add a new location.
+##' Add a new location - a place where other packets might be found
+##' and pulled into your local archive.  Currently only file-based
+##' locations are supported.
 ##'
 ##' @section Warning:
 ##'
