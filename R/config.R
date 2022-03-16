@@ -23,7 +23,7 @@ config_new <- function(path_archive, use_file_store) {
 
 
 config_serialise <- function(config, path) {
-  config$schemaVersion <- scalar(config$schemaVersion)
+  config$schemaVersion <- scalar(config$schemaVersion) # nolint
   config$core <- lapply(config$core, scalar)
   config$location <- lapply(unname(config$location), lapply, scalar)
   to_json(config, "config")
