@@ -60,6 +60,10 @@ outpack_location_add <- function(name, path, root = NULL) {
 ##' @return A character vector of location names. The special name
 ##'   `local` will always be present.
 ##'
+##' @seealso [outpack::outpack_location_pull_metadata], which can
+##'   update your outpack index with metadata from any of the
+##'   locations listed here.
+##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
   ## TODO: similar to `git remote -v` we might support an extended
@@ -69,4 +73,89 @@ outpack_location_list <- function(root = NULL) {
   ## important.
   root <- outpack_root_locate(root)
   union("local", names(root$config$location))
+}
+
+
+
+##' Pull metadata from a location, updating the index.  This should
+##' always be relatively quick as it updates only small files that
+##' contain information about what can be found in remote packets.
+##'
+##' @title Pull metadata from a location
+##'
+##' @param location The name of a location to pull from (see
+##'   [outpack::outpack_location_list] for possible values).  If not
+##'   given, pulls from all locations.  The "local" and "orphan"
+##'   locations are always up to date and pulling metadata from them
+##'   does nothing.
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##'
+##' @export
+outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
+  root <- outpack_root_locate(root)
+  if (is.null(location)) {
+    location <- outpack_location_list(root)
+  }
+  assert_character(location)
+
+  for (name in setdiff(location, c("local", "orphan"))) {
+    location_pull_metadata(name, root)
+  }
+}
+
+
+location_driver <- function(location, root) {
+  dat <- root$config$location[[location]]
+  if (is.null(dat)) {
+    stop(sprintf("Unknown location '%s'", location))
+  }
+  ## Once we support multiple location types, we'll need to consider
+  ## this more carefully; leaving an assertion in to make it more
+  ## obvious where change is needed.
+  stopifnot(dat$type == "path")
+  outpack_location_path$new(dat$path)
+}
+
+
+location_pull_metadata <- function(name, root) {
+  driver <- location_driver(name, root)
+
+  ## All available metadata on this location:
+  dat <- driver$list()
+
+  index <- root$index_update()
+  ## Things we've never heard of from any location:
+  new_id_metadata <- setdiff(dat$id, index$index$id)
+  if (length(new_id_metadata) > 0) {
+    metadata <- driver$metadata(new_id_metadata)
+    path_metadata <- file.path(root$path, ".outpack", "metadata")
+    fs::dir_create(path_metadata)
+    filename <- file.path(path_metadata, new_id_metadata)
+    for (i in seq_along(metadata)) {
+      writeLines(metadata[[i]], filename[[i]])
+    }
+  }
+
+  known <- index$location$id[index$location$location == name]
+  new_loc <- dat[!(dat$id %in% known), ]
+
+  if (nrow(new_loc) > 0) {
+    path_location <- file.path(root$path, ".outpack", "location", name)
+    fs::dir_create(path_location)
+    filename <- file.path(path_location, new_loc$id)
+
+    ## Somewhat annoyingly we convert time at *this* point too
+    new_loc$schemaVersion <- outpack_schema_version()
+    new_loc$time <- time_to_num(new_loc$time)
+
+    for (i in seq_len(nrow(new_loc))) {
+      d <- to_json(lapply(new_loc[i, ], scalar), "location")
+      writeLines(d, filename[[i]])
+    }
+  }
+
+  root$index_update()
 }
