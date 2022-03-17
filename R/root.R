@@ -83,10 +83,9 @@ outpack_root <- R6::R6Class(
       meta
     },
 
-    index_update = function(locations = NULL, refresh = FALSE) {
+    index_update = function(refresh = FALSE) {
       prev <- if (refresh) list() else private$index_data
-      private$index_data <- index_update(
-        locations %||% outpack_location_list(self), self$path, prev)
+      private$index_data <- index_update(self, prev)
       invisible(private$index_data)
     }
   ))
@@ -121,12 +120,12 @@ outpack_root_open <- function(path) {
 }
 
 
-read_location <- function(location, root, prev) {
+read_location <- function(location, root_path, prev) {
   ## TODO: If we're more relaxed here about format, then this will
   ## need changing.  This regex will end up moving somewhere central
   ## in the package in that case.
   re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$"
-  path <- file.path(root, ".outpack", "location", location)
+  path <- file.path(root_path, ".outpack", "location", location)
   ids <- dir(path, re)
   is_new <- !(ids %in% prev$id[prev$location == location])
   if (!any(is_new)) {
@@ -141,18 +140,17 @@ read_location <- function(location, root, prev) {
 }
 
 
-read_locations <- function(locations, root, prev) {
+read_locations <- function(root, prev) {
+  locations <- outpack_location_list(root)
   if (is.null(prev)) {
     prev <- data_frame(id = character(),
                        time = empty_time(),
                        hash = character(),
                        location = character())
   } else {
-    ## TODO: this will need some thinking when doing location
-    ## deletion
     prev <- prev[prev$location %in% locations, ]
   }
-  new <- do.call(rbind, lapply(locations, read_location, root, prev))
+  new <- do.call(rbind, lapply(locations, read_location, root$path, prev))
   ret <- rbind(prev, new)
   ret <- ret[order(ret$location), ]
   ## Avoids weird computed rownames - always uses 1:n
@@ -166,8 +164,9 @@ read_locations <- function(locations, root, prev) {
 ##          name split by id)
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
-index_update <- function(locations, root, prev) {
-  path_index <- file.path(root, ".outpack", "index", "outpack.rds")
+index_update <- function(root, prev) {
+  root_path <- root$path
+  path_index <- file.path(root_path, ".outpack", "index", "outpack.rds")
 
   if (is.null(prev)) {
     data <- if (file.exists(path_index)) readRDS(path_index) else list()
@@ -177,13 +176,13 @@ index_update <- function(locations, root, prev) {
 
   ## TODO: Add some logging through here.
 
-  data$location <- read_locations(locations, root, data$location)
+  data$location <- read_locations(root, data$location)
 
   ## Work out what we've not yet seen and read that:
   id_new <- setdiff(data$location$id, data$index$id)
 
   if (length(id_new) > 0) {
-    files <- file.path(root, ".outpack", "metadata", id_new)
+    files <- file.path(root_path, ".outpack", "metadata", id_new)
     metadata_new <- lapply(files, outpack_metadata_index_read)
     names(metadata_new) <- id_new
     index_new <- data.frame(
