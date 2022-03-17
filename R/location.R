@@ -148,7 +148,7 @@ location_pull_metadata <- function(name, root) {
     filename <- file.path(path_location, new_loc$id)
 
     ## Somewhat annoyingly we convert time at *this* point too
-    new_loc$schemaVersion <- outpack_schema_version()
+    new_loc$schemaVersion <- outpack_schema_version() # nolint
     new_loc$time <- time_to_num(new_loc$time)
 
     for (i in seq_len(nrow(new_loc))) {
