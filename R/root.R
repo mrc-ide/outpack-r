@@ -142,15 +142,21 @@ read_location <- function(location, root, prev) {
 
 
 read_locations <- function(locations, root, prev) {
-  if (NROW(prev) > 0) {
+  if (is.null(prev)) {
+    prev <- data_frame(id = character(),
+                       time = empty_time(),
+                       hash = character(),
+                       location = character())
+  } else {
+    ## TODO: this will need some thinking when doing location
+    ## deletion
     prev <- prev[prev$location %in% locations, ]
   }
   new <- do.call(rbind, lapply(locations, read_location, root, prev))
   ret <- rbind(prev, new)
-  if (NROW(ret) > 0 && NROW(prev) > 0) {
-    ret <- ret[order(ret$location), ]
-    rownames(ret) <- NULL
-  }
+  ret <- ret[order(ret$location), ]
+  ## Avoids weird computed rownames - always uses 1:n
+  rownames(ret) <- NULL
   ret
 }
 

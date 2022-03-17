@@ -5,7 +5,10 @@ test_that("can construct a outpack_location_path object", {
   outpack_init(path)
   loc <- outpack_location_path$new(path)
   expect_s3_class(loc, "outpack_location_path")
-  expect_null(loc$list())
+  dat <- loc$list()
+  expect_equal(nrow(dat), 0)
+  expect_s3_class(dat, "data.frame")
+  expect_equal(names(dat), c("id", "time", "hash"))
 })
 
 
