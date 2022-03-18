@@ -23,7 +23,7 @@ outpack_location_add <- function(name, path, root = NULL) {
   root <- outpack_root_locate(root)
   assert_scalar_character(name)
 
-  if (name %in% c("local", "orphan")) {
+  if (name %in% location_reserved_name) {
     stop(sprintf("Cannot add a location with reserved name '%s'",
                  name))
   }
@@ -72,7 +72,7 @@ outpack_location_list <- function(root = NULL) {
   ## going to be called fairly frequently so the cheap version is
   ## important.
   root <- outpack_root_locate(root)
-  union("local", names(root$config$location))
+  union(local, names(root$config$location))
 }
 
 
@@ -101,7 +101,7 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
   }
   assert_character(location)
 
-  for (name in setdiff(location, c("local", "orphan"))) {
+  for (name in setdiff(location, location_reserved_name)) {
     location_pull_metadata(name, root)
   }
 }

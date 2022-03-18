@@ -6,7 +6,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## TODO(RFC): Is 'local' really the only valid choice here?  It feels
   ## like we could allow for temporary locations and implement
   ## transactions this way.
-  location <- "local"
+  location <- local
 
   hash_algorithm <- root$config$core$hash_algorithm
 
