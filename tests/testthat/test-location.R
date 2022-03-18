@@ -191,3 +191,47 @@ test_that("No-op to pull metadata from no locations", {
   expect_silent(outpack_location_pull_metadata("local", root = path))
   expect_silent(outpack_location_pull_metadata(root = path))
 })
+
+
+test_that("Can pull metadata through chain of locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b", "c", "d")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  ## More interesting topology, with a chain of locations, but d also
+  ## knowing directly about an earlier location
+  ## a -> b -> c -> d
+  ##      `--------/
+  outpack_location_add("a", root$a$path, root$b)
+  outpack_location_add("b", root$b$path, root$c)
+  outpack_location_add("c", root$c$path, root$d)
+  outpack_location_add("b", root$b$path, root$d)
+
+  ## Create a packet and make sure it's in both b and c
+  id1 <- create_random_packet(root$a)
+  outpack_location_pull_metadata(root = root$b)
+  outpack_location_pull_metadata(root = root$c)
+
+  ## And another in just 'c'
+  id2 <- create_random_packet(root$c)
+
+  ## Then when we pull from d it will simultaneously learn about the
+  ## packet from both locations:
+  outpack_location_pull_metadata(root = root$d)
+  index <- root$d$index_update()
+
+  ## Metadata is correct
+  expect_length(index$metadata, 2)
+  expect_equal(names(index$metadata), c(id1, id2))
+  expect_equal(index$metadata, root$c$index_update()$metadata)
+
+  ## Location information contains both sources
+  expect_equal(nrow(index$location), 3)
+  expect_equal(index$location$id, c(id1, id1, id2))
+  expect_equal(index$location$location, c("b", "c", "c"))
+})
