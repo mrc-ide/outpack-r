@@ -205,8 +205,8 @@ test_that("Can pull metadata through chain of locations", {
 
   ## More interesting topology, with a chain of locations, but d also
   ## knowing directly about an earlier location
-  ## a -> b -> c -> d
-  ##      `--------/
+  ## > a -> b -> c -> d
+  ## >      `--------/
   outpack_location_add("a", root$a$path, root$b)
   outpack_location_add("b", root$b$path, root$c)
   outpack_location_add("c", root$c$path, root$d)
