@@ -102,7 +102,7 @@ test_that("can pull metadata from a file base location", {
   expect_mapequal(index$metadata, root_upstream$index()$metadata)
 
   expect_s3_class(index$location, "data.frame")
-  expect_setequal(index$location$id, ids)
+  expect_setequal(index$location$packet, ids)
   expect_equal(index$location$location, rep("upstream", 3))
 })
 
@@ -232,6 +232,6 @@ test_that("Can pull metadata through chain of locations", {
 
   ## Location information contains both sources
   expect_equal(nrow(index$location), 3)
-  expect_equal(index$location$id, c(id1, id1, id2))
+  expect_equal(index$location$packet, c(id1, id1, id2))
   expect_equal(index$location$location, c("b", "c", "c"))
 })

@@ -126,14 +126,14 @@ read_location <- function(location, root_path, prev) {
   ## in the package in that case.
   re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$"
   path <- file.path(root_path, ".outpack", "location", location)
-  ids <- dir(path, re)
-  is_new <- !(ids %in% prev$id[prev$location == location])
+  packets <- dir(path, re)
+  is_new <- !(packets %in% prev$packet[prev$location == location])
   if (!any(is_new)) {
     return(NULL)
   }
 
-  dat <- lapply(file.path(path, ids[is_new]), jsonlite::read_json)
-  data_frame(id = vcapply(dat, "[[", "id"),
+  dat <- lapply(file.path(path, packets[is_new]), jsonlite::read_json)
+  data_frame(packet = vcapply(dat, "[[", "packet"),
              time = num_to_time(vnapply(dat, "[[", "time")),
              hash = vcapply(dat, "[[", "hash"),
              location = location)
@@ -143,7 +143,7 @@ read_location <- function(location, root_path, prev) {
 read_locations <- function(root, prev) {
   locations <- outpack_location_list(root)
   if (is.null(prev)) {
-    prev <- data_frame(id = character(),
+    prev <- data_frame(packet = character(),
                        time = empty_time(),
                        hash = character(),
                        location = character())
@@ -179,7 +179,7 @@ index_update <- function(root, prev) {
   data$location <- read_locations(root, data$location)
 
   ## Work out what we've not yet seen and read that:
-  id_new <- setdiff(data$location$id, data$index$id)
+  id_new <- setdiff(data$location$packet, data$index$id)
 
   if (length(id_new) > 0) {
     files <- file.path(root_path, ".outpack", "metadata", id_new)

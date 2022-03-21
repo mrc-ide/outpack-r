@@ -8,7 +8,7 @@ test_that("can construct a outpack_location_path object", {
   dat <- loc$list()
   expect_equal(nrow(dat), 0)
   expect_s3_class(dat, "data.frame")
-  expect_equal(names(dat), c("id", "time", "hash"))
+  expect_equal(names(dat), c("packet", "time", "hash"))
 })
 
 
@@ -31,7 +31,7 @@ test_that("outpack_location_path requires exact root", {
 })
 
 
-test_that("outpack_location_path returns list of ids", {
+test_that("outpack_location_path returns list of packet ids", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
 
@@ -42,7 +42,7 @@ test_that("outpack_location_path returns list of ids", {
 
   dat <- loc$list()
   expect_s3_class(dat, "data.frame")
-  expect_equal(dat$id, ids)
+  expect_equal(dat$packet, ids)
   expect_s3_class(dat$time, "POSIXt")
   str <- vcapply(file.path(path, ".outpack", "metadata", ids), read_string)
   expect_equal(
@@ -79,11 +79,11 @@ test_that("requesting nonexistant metadata is an error", {
 
   errs <- c("20220317-125935-ee5fd50e", "20220317-130038-48ffb8ba")
   expect_error(loc$metadata(errs[[1]]),
-               "Some ids not found: '20220317-125935-ee5fd50e'")
+               "Some packet ids not found: '20220317-125935-ee5fd50e'")
   expect_error(
     loc$metadata(errs),
-    "Some ids not found: '20220317-125935-ee5fd50e', '20220317") # truncated
+    "Some packet ids not found: '20220317-125935-ee5fd50e', '20220317") # +more
 
   expect_error(loc$metadata(c(ids[[1]], errs[[1]], ids[[2]])),
-               "Some ids not found: '20220317-125935-ee5fd50e'")
+               "Some packet ids not found: '20220317-125935-ee5fd50e'")
 })

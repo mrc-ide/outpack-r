@@ -128,7 +128,7 @@ location_pull_metadata <- function(name, root) {
 
   index <- root$index()
   ## Things we've never heard of from any location:
-  new_id_metadata <- setdiff(dat$id, index$index$id)
+  new_id_metadata <- setdiff(dat$packet, index$index$id)
   if (length(new_id_metadata) > 0) {
     metadata <- driver$metadata(new_id_metadata)
     path_metadata <- file.path(root$path, ".outpack", "metadata")
@@ -139,13 +139,13 @@ location_pull_metadata <- function(name, root) {
     }
   }
 
-  known <- index$location$id[index$location$location == name]
-  new_loc <- dat[!(dat$id %in% known), ]
+  known <- index$location$packet[index$location$location == name]
+  new_loc <- dat[!(dat$packet %in% known), ]
 
   if (nrow(new_loc) > 0) {
     path_location <- file.path(root$path, ".outpack", "location", name)
     fs::dir_create(path_location)
-    filename <- file.path(path_location, new_loc$id)
+    filename <- file.path(path_location, new_loc$packet)
 
     ## Somewhat annoyingly we convert time at *this* point too
     new_loc$schemaVersion <- outpack_schema_version() # nolint

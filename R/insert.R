@@ -20,7 +20,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## equivalent to "pull" so this is the only way that things might
   ## appear.
   index <- root$index()
-  if (any(index$location$id == id & index$location$location == location)) {
+  if (any(index$location$packet == id & index$location$location == location)) {
     stop(sprintf("'%s' has already been added for '%s'", id, location))
   }
 
@@ -42,7 +42,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## its own thing.
   path_meta_loc <- file.path(root$path, ".outpack", "location", location, id)
   meta_loc <- list(schemaVersion = scalar(outpack_schema_version()),
-                   id = scalar(id),
+                   packet = scalar(id),
                    time = scalar(time_to_num(Sys.time())),
                    hash = scalar(hash_data(json, hash_algorithm)))
   fs::dir_create(dirname(path_meta_loc))

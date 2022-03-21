@@ -17,21 +17,22 @@ outpack_location_path <- R6::R6Class(
       ## to request "changes since time" or similar, to reduce the
       ## total amount of information that travels across the wire.
       dat <- private$root$index()$location
-      dat[c("id", "time", "hash")]
+      dat[c("packet", "time", "hash")]
     },
 
-    metadata = function(ids) {
+    metadata = function(packet_ids) {
       ## TODO: if we're filtering based on which location we're
       ## shipping results from, then we need to validate that these
       ## ids are all found within our data.
       dat <- private$root$index()$location
-      msg <- setdiff(ids, dat$id)
+      msg <- setdiff(packet_ids, dat$packet)
       if (length(msg) > 0) {
-        stop("Some ids not found: ", paste(squote(msg), collapse = ", "))
+        stop("Some packet ids not found: ",
+             paste(squote(msg), collapse = ", "))
       }
-      paths <- file.path(private$root$path, ".outpack", "metadata", ids)
+      paths <- file.path(private$root$path, ".outpack", "metadata", packet_ids)
       ret <- vcapply(paths, read_string)
-      names(ret) <- ids
+      names(ret) <- packet_ids
       ret
     }
   ))
