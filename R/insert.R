@@ -42,6 +42,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## its own thing.
   hash <- hash_data(json, hash_algorithm)
   mark_packet_known(id, location, hash, Sys.time(), root)
+  mark_packet_unpacked(id, location, root)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
@@ -57,4 +58,15 @@ mark_packet_known <- function(packet, location, hash, time, root) {
   dest <- file.path(root$path, ".outpack", "location", location, packet)
   fs::dir_create(dirname(dest))
   writeLines(to_json(dat, "location"), dest)
+}
+
+
+mark_packet_unpacked <- function(packet, location, root) {
+  dat <- list(schemaVersion = scalar(outpack_schema_version()),
+              packet = scalar(packet),
+              time = scalar(time_to_num()),
+              location = scalar(location))
+  dest <- file.path(root$path, ".outpack", "unpacked", packet)
+  fs::dir_create(dirname(dest))
+  writeLines(to_json(dat, "unpacked"), dest)
 }

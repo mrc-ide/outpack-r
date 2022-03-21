@@ -71,6 +71,11 @@ test_that("Can run a basic packet", {
   ## Copy of the files in the file store:
   expect_setequal(root$files$list(), meta$files$hash)
 
+  expect_setequal(names(index$unpacked), c("packet", "time", "location"))
+  expect_equal(index$unpacked$packet, id)
+  expect_equal(index$unpacked$location, "local")
+  expect_s3_class(index$unpacked$time, "POSIXt")
+
   ## Easily retrieve metadata from root:
   expect_equal(root$metadata(id), index$metadata[[id]])
 })

@@ -159,6 +159,49 @@ read_locations <- function(root, prev) {
 }
 
 
+read_metadata <- function(root, prev) {
+  path <- file.path(root$path, ".outpack", "metadata")
+  id_new <- setdiff(dir(path), names(prev))
+
+  if (length(id_new) == 0) {
+    return(prev)
+  }
+
+  files <- file.path(path, id_new)
+  new <- lapply(files, outpack_metadata_index_read)
+  names(new) <- id_new
+  ret <- c(prev, new)
+  ret[order(names(ret))]
+  ret
+}
+
+
+read_unpacked <- function(root, prev) {
+  path <- file.path(root$path, ".outpack", "unpacked")
+  if (is.null(prev)) {
+    prev <- data_frame(packet = character(),
+                       time = empty_time(),
+                       location = character())
+  }
+
+  path <- file.path(root$path, ".outpack", "unpacked")
+  id_new <- setdiff(dir(path), prev$packet)
+
+  if (length(id_new) == 0) {
+    return(prev)
+  }
+
+  dat <- lapply(file.path(path, id_new), jsonlite::read_json)
+  new <- data_frame(packet = vcapply(dat, "[[", "packet"),
+                    time = num_to_time(vnapply(dat, "[[", "time")),
+                    location = vcapply(dat, "[[", "location"))
+  ret <- rbind(prev, new)
+
+  rownames(ret) <- NULL
+  ret
+}
+
+
 ## The index consists of a few bits:
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
@@ -179,15 +222,10 @@ index_update <- function(root, prev) {
   ## TODO: Add some logging through here.
 
   data$location <- read_locations(root, data$location)
+  data$metadata <- read_metadata(root, data$metadata)
+  data$unpacked <- read_unpacked(root, data$unpacked)
 
-  ## Work out what we've not yet seen and read that:
-  id_new <- setdiff(data$location$packet, names(data$metadata))
-
-  if (length(id_new) > 0) {
-    files <- file.path(root_path, ".outpack", "metadata", id_new)
-    metadata_new <- lapply(files, outpack_metadata_index_read)
-    names(metadata_new) <- id_new
-    data$metadata <- c(data$metadata, metadata_new)
+  if (!identical(data, prev)) {
     fs::dir_create(dirname(path_index))
     saveRDS(data, path_index)
   }
