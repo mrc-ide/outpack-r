@@ -40,16 +40,21 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   ## TODO: once we get more flexible remotes, this will get moved into
   ## its own thing.
-  path_meta_loc <- file.path(root$path, ".outpack", "location", location, id)
-  meta_loc <- list(schemaVersion = scalar(outpack_schema_version()),
-                   packet = scalar(id),
-                   time = scalar(time_to_num(Sys.time())),
-                   hash = scalar(hash_data(json, hash_algorithm)))
-  fs::dir_create(dirname(path_meta_loc))
-  json <- to_json(meta_loc, "location")
-  writeLines(json, path_meta_loc)
+  hash <- hash_data(json, hash_algorithm)
+  mark_packet_known(id, location, hash, Sys.time(), root)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
   root$index()
+}
+
+
+mark_packet_known <- function(packet, location, hash, time, root) {
+  dat <- list(schemaVersion = scalar(outpack_schema_version()),
+              packet = scalar(packet),
+              time = scalar(time_to_num(time)),
+              hash = scalar(hash))
+  dest <- file.path(root$path, ".outpack", "location", location, packet)
+  fs::dir_create(dirname(dest))
+  writeLines(to_json(dat, "location"), dest)
 }

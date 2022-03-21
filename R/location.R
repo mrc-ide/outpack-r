@@ -120,15 +120,14 @@ location_driver <- function(location, root) {
 }
 
 
-location_pull_metadata <- function(name, root) {
-  driver <- location_driver(name, root)
-
-  ## All available metadata on this location:
-  dat <- driver$list()
-
+location_pull_metadata <- function(location_name, root) {
   index <- root$index()
+  driver <- location_driver(location_name, root)
+
+  known_there <- driver$list()
+
   ## Things we've never heard of from any location:
-  new_id_metadata <- setdiff(dat$packet, names(index$metadata))
+  new_id_metadata <- setdiff(known_there$packet, names(index$metadata))
   if (length(new_id_metadata) > 0) {
     metadata <- driver$metadata(new_id_metadata)
     path_metadata <- file.path(root$path, ".outpack", "metadata")
@@ -139,22 +138,12 @@ location_pull_metadata <- function(name, root) {
     }
   }
 
-  known <- index$location$packet[index$location$location == name]
-  new_loc <- dat[!(dat$packet %in% known), ]
+  known_here <- index$location$packet[index$location$location == location_name]
+  new_loc <- known_there[!(known_there$packet %in% known_here), ]
 
-  if (nrow(new_loc) > 0) {
-    path_location <- file.path(root$path, ".outpack", "location", name)
-    fs::dir_create(path_location)
-    filename <- file.path(path_location, new_loc$packet)
-
-    ## Somewhat annoyingly we convert time at *this* point too
-    new_loc$schemaVersion <- outpack_schema_version() # nolint
-    new_loc$time <- time_to_num(new_loc$time)
-
-    for (i in seq_len(nrow(new_loc))) {
-      d <- to_json(lapply(new_loc[i, ], scalar), "location")
-      writeLines(d, filename[[i]])
-    }
+  for (i in seq_len(nrow(new_loc))) {
+    mark_packet_known(new_loc$packet[[i]], location_name, new_loc$hash[[i]],
+                      new_loc$time[[i]], root)
   }
 
   root$index()
