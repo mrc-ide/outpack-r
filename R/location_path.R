@@ -16,7 +16,7 @@ outpack_location_path <- R6::R6Class(
       ## Later on, it might be possible to generalise this to allow us
       ## to request "changes since time" or similar, to reduce the
       ## total amount of information that travels across the wire.
-      dat <- private$root$index_update()$location
+      dat <- private$root$index()$location
       dat[c("id", "time", "hash")]
     },
 
@@ -24,7 +24,7 @@ outpack_location_path <- R6::R6Class(
       ## TODO: if we're filtering based on which location we're
       ## shipping results from, then we need to validate that these
       ## ids are all found within our data.
-      dat <- private$root$index_update()$location
+      dat <- private$root$index()$location
       msg <- setdiff(ids, dat$id)
       if (length(msg) > 0) {
         stop("Some ids not found: ", paste(squote(msg), collapse = ", "))

@@ -19,7 +19,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## *any* packet that exists?  For now it's academic as there's no
   ## equivalent to "pull" so this is the only way that things might
   ## appear.
-  index <- root$index_update()
+  index <- root$index()
   if (any(index$location$id == id & index$location$location == location)) {
     stop(sprintf("'%s' has already been added for '%s'", id, location))
   }
@@ -51,5 +51,5 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
-  root$index_update()
+  root$index()
 }

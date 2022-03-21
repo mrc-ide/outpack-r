@@ -76,14 +76,14 @@ outpack_root <- R6::R6Class(
       ## practically mean putting a key file in each root so that we
       ## can detect directory moves.
       meta <- private$index_data$metadata[[id]] %||%
-        self$index_update()$metadata[[id]]
+        self$index()$metadata[[id]]
       if (is.null(meta)) {
         stop(sprintf("id '%s' not found in index", id))
       }
       meta
     },
 
-    index_update = function(refresh = FALSE) {
+    index = function(refresh = FALSE) {
       prev <- if (refresh) list() else private$index_data
       private$index_data <- index_update(self, prev)
       invisible(private$index_data)

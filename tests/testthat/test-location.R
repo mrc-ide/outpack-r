@@ -96,10 +96,10 @@ test_that("can pull metadata from a file base location", {
 
   ## Sensible tests here will be much easier to write once we have a
   ## decent query interface.
-  index <- outpack_root_open(path_downstream)$index_update()
+  index <- outpack_root_open(path_downstream)$index()
   expect_length(index$metadata, 3)
   expect_setequal(names(index$metadata), ids)
-  expect_mapequal(index$metadata, root_upstream$index_update()$metadata)
+  expect_mapequal(index$metadata, root_upstream$index()$metadata)
 
   expect_s3_class(index$location, "data.frame")
   expect_setequal(index$location$id, ids)
@@ -120,7 +120,7 @@ test_that("can pull empty metadata", {
   outpack_location_add("upstream", path_upstream, root = path_downstream)
   outpack_location_pull_metadata("upstream", root = path_downstream)
 
-  index <- outpack_root_open(path_downstream)$index_update()
+  index <- outpack_root_open(path_downstream)$index()
   expect_length(index$metadata, 0)
   ## This is what we need to improve, everywhere
   expect_s3_class(index$location, "data.frame")
@@ -155,20 +155,20 @@ test_that("pull metadata from subset of locations", {
   }
 
   outpack_location_pull_metadata(c("x", "y"), root = path$a)
-  index <- outpack_root_open(path$a)$index_update()
+  index <- outpack_root_open(path$a)$index()
   expect_setequal(names(index$metadata), c(ids$x, ids$y))
   expect_equal(index$location$location, rep(c("x", "y"), each = 3))
   expect_equal(index$metadata[ids$x],
-               outpack_root_open(path$x)$index_update()$metadata)
+               outpack_root_open(path$x)$index()$metadata)
   expect_equal(index$metadata[ids$y],
-               outpack_root_open(path$y)$index_update()$metadata)
+               outpack_root_open(path$y)$index()$metadata)
 
   outpack_location_pull_metadata(root = path$a)
-  index <- outpack_root_open(path$a)$index_update()
+  index <- outpack_root_open(path$a)$index()
   expect_setequal(names(index$metadata), c(ids$x, ids$y, ids$z))
   expect_equal(index$location$location, rep(c("x", "y", "z"), each = 3))
   expect_equal(index$metadata[ids$z],
-               outpack_root_open(path$z)$index_update()$metadata)
+               outpack_root_open(path$z)$index()$metadata)
 })
 
 
@@ -223,12 +223,12 @@ test_that("Can pull metadata through chain of locations", {
   ## Then when we pull from d it will simultaneously learn about the
   ## packet from both locations:
   outpack_location_pull_metadata(root = root$d)
-  index <- root$d$index_update()
+  index <- root$d$index()
 
   ## Metadata is correct
   expect_length(index$metadata, 2)
   expect_equal(names(index$metadata), c(id1, id2))
-  expect_equal(index$metadata, root$c$index_update()$metadata)
+  expect_equal(index$metadata, root$c$index()$metadata)
 
   ## Location information contains both sources
   expect_equal(nrow(index$location), 3)

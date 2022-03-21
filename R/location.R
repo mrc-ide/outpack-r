@@ -126,7 +126,7 @@ location_pull_metadata <- function(name, root) {
   ## All available metadata on this location:
   dat <- driver$list()
 
-  index <- root$index_update()
+  index <- root$index()
   ## Things we've never heard of from any location:
   new_id_metadata <- setdiff(dat$id, index$index$id)
   if (length(new_id_metadata) > 0) {
@@ -157,5 +157,5 @@ location_pull_metadata <- function(name, root) {
     }
   }
 
-  root$index_update()
+  root$index()
 }
