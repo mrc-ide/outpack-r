@@ -76,17 +76,16 @@ outpack_root <- R6::R6Class(
       ## practically mean putting a key file in each root so that we
       ## can detect directory moves.
       meta <- private$index_data$metadata[[id]] %||%
-        self$index_update()$metadata[[id]]
+        self$index()$metadata[[id]]
       if (is.null(meta)) {
         stop(sprintf("id '%s' not found in index", id))
       }
       meta
     },
 
-    index_update = function(locations = NULL, refresh = FALSE) {
+    index = function(refresh = FALSE) {
       prev <- if (refresh) list() else private$index_data
-      private$index_data <- index_update(
-        locations %||% outpack_location_list(self), self$path, prev)
+      private$index_data <- index_update(self, prev)
       invisible(private$index_data)
     }
   ))
@@ -121,47 +120,55 @@ outpack_root_open <- function(path) {
 }
 
 
-read_location <- function(location, root, prev) {
+read_location <- function(location, root_path, prev) {
   ## TODO: If we're more relaxed here about format, then this will
   ## need changing.  This regex will end up moving somewhere central
   ## in the package in that case.
   re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$"
-  path <- file.path(root, ".outpack", "location", location)
-  ids <- dir(path, re)
-  is_new <- !(ids %in% prev$id[prev$location == location])
+  path <- file.path(root_path, ".outpack", "location", location)
+  packets <- dir(path, re)
+  is_new <- !(packets %in% prev$packet[prev$location == location])
   if (!any(is_new)) {
     return(NULL)
   }
 
-  dat <- lapply(file.path(path, ids[is_new]), jsonlite::read_json)
-  data_frame(id = vcapply(dat, "[[", "id"),
+  dat <- lapply(file.path(path, packets[is_new]), jsonlite::read_json)
+  data_frame(packet = vcapply(dat, "[[", "packet"),
              time = num_to_time(vnapply(dat, "[[", "time")),
              hash = vcapply(dat, "[[", "hash"),
              location = location)
 }
 
 
-read_locations <- function(locations, root, prev) {
-  if (NROW(prev) > 0) {
+read_locations <- function(root, prev) {
+  locations <- outpack_location_list(root)
+  if (is.null(prev)) {
+    prev <- data_frame(packet = character(),
+                       time = empty_time(),
+                       hash = character(),
+                       location = character())
+  } else {
     prev <- prev[prev$location %in% locations, ]
   }
-  new <- do.call(rbind, lapply(locations, read_location, root, prev))
+  new <- do.call(rbind, lapply(locations, read_location, root$path, prev))
   ret <- rbind(prev, new)
-  if (NROW(ret) > 0 && NROW(prev) > 0) {
-    ret <- ret[order(ret$location), ]
-    rownames(ret) <- NULL
-  }
+  ret <- ret[order(ret$location), ]
+  ## Avoids weird computed rownames - always uses 1:n
+  rownames(ret) <- NULL
   ret
 }
 
 
 ## The index consists of a few bits:
-## $index - data.frame of name/id pairs (could also save this as
-##          name split by id)
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
-index_update <- function(locations, root, prev) {
-  path_index <- file.path(root, ".outpack", "index", "outpack.rds")
+##
+## Later on we'll want to have some sort of index over this (e.g.,
+## name/id/parameters) to support the query interface, but that can
+## wait.
+index_update <- function(root, prev) {
+  root_path <- root$path
+  path_index <- file.path(root_path, ".outpack", "index", "outpack.rds")
 
   if (is.null(prev)) {
     data <- if (file.exists(path_index)) readRDS(path_index) else list()
@@ -171,20 +178,15 @@ index_update <- function(locations, root, prev) {
 
   ## TODO: Add some logging through here.
 
-  data$location <- read_locations(locations, root, data$location)
+  data$location <- read_locations(root, data$location)
 
   ## Work out what we've not yet seen and read that:
-  id_new <- setdiff(data$location$id, data$index$id)
+  id_new <- setdiff(data$location$packet, names(data$metadata))
 
   if (length(id_new) > 0) {
-    files <- file.path(root, ".outpack", "metadata", id_new)
+    files <- file.path(root_path, ".outpack", "metadata", id_new)
     metadata_new <- lapply(files, outpack_metadata_index_read)
     names(metadata_new) <- id_new
-    index_new <- data.frame(
-      data.frame(name = vcapply(metadata_new, "[[", "name"),
-                 id = vcapply(metadata_new, "[[", "id")))
-    data$index <- rbind(data$index, index_new)
-    rownames(data$index) <- NULL
     data$metadata <- c(data$metadata, metadata_new)
     fs::dir_create(dirname(path_index))
     saveRDS(data, path_index)

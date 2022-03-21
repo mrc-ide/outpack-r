@@ -2,6 +2,7 @@
 
 export(outpack_location_add)
 export(outpack_location_list)
+export(outpack_location_pull_metadata)
 export(outpack_packet_cancel)
 export(outpack_packet_current)
 export(outpack_packet_end)

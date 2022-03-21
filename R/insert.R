@@ -6,7 +6,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## TODO(RFC): Is 'local' really the only valid choice here?  It feels
   ## like we could allow for temporary locations and implement
   ## transactions this way.
-  location <- "local"
+  location <- local
 
   hash_algorithm <- root$config$core$hash_algorithm
 
@@ -19,8 +19,8 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## *any* packet that exists?  For now it's academic as there's no
   ## equivalent to "pull" so this is the only way that things might
   ## appear.
-  index <- root$index_update(location)
-  if (any(index$location$id == id & index$location$location == location)) {
+  index <- root$index()
+  if (any(index$location$packet == id & index$location$location == location)) {
     stop(sprintf("'%s' has already been added for '%s'", id, location))
   }
 
@@ -40,16 +40,21 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   ## TODO: once we get more flexible remotes, this will get moved into
   ## its own thing.
-  path_meta_loc <- file.path(root$path, ".outpack", "location", location, id)
-  meta_loc <- list(schemaVersion = scalar(outpack_schema_version()),
-                   id = scalar(id),
-                   time = scalar(time_to_num(Sys.time())),
-                   hash = scalar(hash_data(json, hash_algorithm)))
-  fs::dir_create(dirname(path_meta_loc))
-  json <- to_json(meta_loc, "location")
-  writeLines(json, path_meta_loc)
+  hash <- hash_data(json, hash_algorithm)
+  mark_packet_known(id, location, hash, Sys.time(), root)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
-  root$index_update(location)
+  root$index()
+}
+
+
+mark_packet_known <- function(packet, location, hash, time, root) {
+  dat <- list(schemaVersion = scalar(outpack_schema_version()),
+              packet = scalar(packet),
+              time = scalar(time_to_num(time)),
+              hash = scalar(hash))
+  dest <- file.path(root$path, ".outpack", "location", location, packet)
+  fs::dir_create(dirname(dest))
+  writeLines(to_json(dat, "location"), dest)
 }

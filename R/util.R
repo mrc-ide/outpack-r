@@ -87,6 +87,11 @@ num_to_time <- function(num) {
 }
 
 
+empty_time <- function() {
+  num_to_time(numeric(0))
+}
+
+
 to_json <- function(x, schema) {
   json <- jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
                            json_verbatim = TRUE, na = "null", null = "null")

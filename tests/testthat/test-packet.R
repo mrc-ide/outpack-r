@@ -32,8 +32,7 @@ test_that("Can run a basic packet", {
 
   outpack_packet_end()
 
-  ## TODO: Still need a nice way of doing this:
-  index <- root$index_update()
+  index <- root$index()
   expect_length(index$metadata, 1)
   id <- p$id
 

@@ -12,7 +12,7 @@
             "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
         },
 
-        "id": {
+        "packet": {
             "$ref": "id.json"
         },
 
@@ -25,5 +25,5 @@
             "$ref": "hash.json"
         }
     },
-    "required": ["schemaVersion", "id", "time", "hash"]
+    "required": ["schemaVersion", "packet", "time", "hash"]
 }
