@@ -80,9 +80,10 @@ test_that("requesting nonexistant metadata is an error", {
   errs <- c("20220317-125935-ee5fd50e", "20220317-130038-48ffb8ba")
   expect_error(loc$metadata(errs[[1]]),
                "Some packet ids not found: '20220317-125935-ee5fd50e'")
+  ## Truncating this error, will comma-separate all ids
   expect_error(
     loc$metadata(errs),
-    "Some packet ids not found: '20220317-125935-ee5fd50e', '20220317") # +more
+    "Some packet ids not found: '20220317-125935-ee5fd50e', '20220317")
 
   expect_error(loc$metadata(c(ids[[1]], errs[[1]], ids[[2]])),
                "Some packet ids not found: '20220317-125935-ee5fd50e'")
