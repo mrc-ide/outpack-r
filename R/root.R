@@ -160,10 +160,12 @@ read_locations <- function(root, prev) {
 
 
 ## The index consists of a few bits:
-## $index - data.frame of name/id pairs (could also save this as
-##          name split by id)
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
+##
+## Later on we'll want to have some sort of index over this (e.g.,
+## name/id/parameters) to support the query interface, but that can
+## wait.
 index_update <- function(root, prev) {
   root_path <- root$path
   path_index <- file.path(root_path, ".outpack", "index", "outpack.rds")
@@ -179,17 +181,12 @@ index_update <- function(root, prev) {
   data$location <- read_locations(root, data$location)
 
   ## Work out what we've not yet seen and read that:
-  id_new <- setdiff(data$location$packet, data$index$id)
+  id_new <- setdiff(data$location$packet, names(data$metadata))
 
   if (length(id_new) > 0) {
     files <- file.path(root_path, ".outpack", "metadata", id_new)
     metadata_new <- lapply(files, outpack_metadata_index_read)
     names(metadata_new) <- id_new
-    index_new <- data.frame(
-      data.frame(name = vcapply(metadata_new, "[[", "name"),
-                 id = vcapply(metadata_new, "[[", "id")))
-    data$index <- rbind(data$index, index_new)
-    rownames(data$index) <- NULL
     data$metadata <- c(data$metadata, metadata_new)
     fs::dir_create(dirname(path_index))
     saveRDS(data, path_index)

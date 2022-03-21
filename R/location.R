@@ -128,7 +128,7 @@ location_pull_metadata <- function(name, root) {
 
   index <- root$index()
   ## Things we've never heard of from any location:
-  new_id_metadata <- setdiff(dat$packet, index$index$id)
+  new_id_metadata <- setdiff(dat$packet, names(index$metadata))
   if (length(new_id_metadata) > 0) {
     metadata <- driver$metadata(new_id_metadata)
     path_metadata <- file.path(root$path, ".outpack", "metadata")
