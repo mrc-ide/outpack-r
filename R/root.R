@@ -311,6 +311,30 @@ file_import_archive <- function(root, path, file_path, name, id) {
 }
 
 
+find_file_by_hash <- function(root, hash) {
+  index <- root$index()
+
+  path_archive <- file.path(root$path, root$config$core$path_archive)
+  algorithm <- hash_parse(hash)$algorithm
+
+  ## TODO: allow short circuiting validation (e.g., check only the
+  ## size matches, or check nothing)
+  for (id in index$unpacked$packet) {
+    meta <- index$metadata[[id]]
+    for (i in which(meta$files$hash == hash)) {
+      path <- file.path(path_archive, meta$name, id, meta$files$path[[i]])
+      if (file.exists(path) && hash_file(path, algorithm) == hash) {
+        return(path)
+      }
+      ## TODO: drop this into logging later:
+      message(sprintf("Rejecting file in %s/%s", meta$name, id))
+    }
+  }
+
+  NULL
+}
+
+
 ## This might move elsewhere
 validate_packet_has_file <- function(root, id, path) {
   ## TODO: wrap this in tryCatch/withCallingHandlers or similar to get

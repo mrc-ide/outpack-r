@@ -34,6 +34,10 @@ file_store <- R6::R6Class(
       invisible(dst)
     },
 
+    exists = function(hash) {
+      file.exists(self$filename(hash))
+    },
+
     ## TODO: bulk set
     ##
     ## TODO: allow computing hash here with nothing (hash = NULL),

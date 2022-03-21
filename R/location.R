@@ -107,6 +107,55 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 }
 
 
+##' Pull a packet (all files) from a location into this archive. This
+##' will make files available for use as dependencies (e.g., with
+##' [outpack::outpack_packet_use_dependency])
+##'
+##' The behaviour of this function will vary depending on whether or
+##' not the destination outpack repository (i.e., `root`) uses a file
+##' store or not.  If it does, then we simply import the unknown files
+##' into the store, and this will always be fairly efficient.  If no
+##' file store is used then for the time being we pull all files from
+##' the upstream location, even if this means copying a file we
+##' already know about elsewhere in the outpack archive.  We will
+##' improve this in a future version.
+##'
+##' @title Pull a single packet from a location
+##'
+##' @param id The id of the packet to pull
+##'
+##' @param location The name of the location to pull from.  Later we
+##'   will relax this (see mrc-3030)
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##' @export
+outpack_location_pull_packet <- function(id, location, root = NULL) {
+  root <- outpack_root_locate(root)
+  assert_character(id)
+  index <- root$index()
+
+  ## TODO: we can relax this once we introduce the concept of
+  ## validating a packet, I think?
+  if (id %in% index$unpacked$packet) {
+    stop(sprintf("packet '%s' has already been unpacked", id))
+  }
+  if (!any(index$location$packet == id & index$location$location == location)) {
+    stop(sprintf(
+      "packet '%s' not known at location '%s' (consider pulling metadata)",
+      id, location))
+  }
+
+  driver <- location_driver(location, root)
+  location_pull_files_store(root, driver, id)
+  location_pull_files_archive(root, driver, id)
+  mark_packet_unpacked(id, location, root)
+
+  invisible()
+}
+
+
 location_driver <- function(location, root) {
   dat <- root$config$location[[location]]
   if (is.null(dat)) {
@@ -147,4 +196,44 @@ location_pull_metadata <- function(location_name, root) {
   }
 
   root$index()
+}
+
+
+## This will work across any number of packets at once with a small
+## amount of change.
+location_pull_files_store <- function(root, driver, id) {
+  if (root$config$core$use_file_store) {
+    meta <- root$metadata(id)
+    files_exist <- root$files$exists(meta$files$hash)
+    for (h in meta$files$hash[!files_exist]) {
+      ## * What should we fetch here? Just the hash I think is fine,
+      ##   and not retport id
+      ## * Should we support bulk download?
+      root$files$put(driver$fetch_file(h), h)
+    }
+  }
+}
+
+location_pull_files_archive <- function(root, driver, id) {
+  if (!is.null(root$config$core$path_archive)) {
+    meta <- root$metadata(id)
+    dest <- file.path(root$path, root$config$core$path_archive, meta$name, id,
+                      meta$files$path)
+    if (root$config$core$use_file_store) {
+      for (i in seq_len(nrow(meta$files))) {
+        root$files$get(meta$files$hash[[i]], dest[[i]])
+      }
+    } else {
+      ## TODO: some special care needed here if we want to avoid
+      ## downloading the same file twice from _this_ packet as we
+      ## won't be able to use find_file_by_hash function to resolve
+      ## that.
+      fs::dir_create(dirname(dest))
+      for (i in seq_len(nrow(meta$files))) {
+        hash <- meta$files$hash[[i]]
+        src <- find_file_by_hash(root, hash) %||% driver$fetch_file(hash)
+        fs::file_copy(src, dest[[i]])
+      }
+    }
+  }
 }

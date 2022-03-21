@@ -235,3 +235,50 @@ test_that("Can pull metadata through chain of locations", {
   expect_equal(index$location$packet, c(id1, id1, id2))
   expect_equal(index$location$location, c("b", "c", "c"))
 })
+
+
+test_that("can pull a packet from one location to another, using file store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  outpack_location_pull_packet(id, "src", root = root$dst)
+
+  index <- root$dst$index()
+  expect_equal(index$unpacked$packet, id)
+  expect_equal(index$unpacked$location, "src")
+  expect_true(file.exists(
+    file.path(root$dst$path, "archive", "data", id, "data.rds")))
+  expect_true(root$dst$files$exists(root$dst$metadata(id)$files$hash))
+})
+
+
+test_that("can pull a packet from one location to another, archive only", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = FALSE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  outpack_location_pull_packet(id, "src", root = root$dst)
+
+  index <- root$dst$index()
+  expect_equal(index$unpacked$packet, id)
+  expect_equal(index$unpacked$location, "src")
+  expect_true(file.exists(
+    file.path(root$dst$path, "archive", "data", id, "data.rds")))
+})
