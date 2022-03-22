@@ -321,3 +321,41 @@ test_that("detect and avoid modified files in source repository", {
     hash_file(file.path(root$dst$path, "archive", "data", id[[1]], "b.rds")),
     hash_file(file.path(root$src$path, "archive", "data", id[[2]], "b.rds")))
 })
+
+
+test_that("Do not unpack a packet twice", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  outpack_location_pull_packet(id, "src", root = root$dst)
+  expect_error(
+    outpack_location_pull_packet(id, "src", root = root$dst),
+    "packet '.+' has already been unpacked")
+})
+
+
+test_that("Sensible error if packet not known", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  expect_error(
+    outpack_location_pull_packet(id, "src", root = root$dst),
+    "packet '.+' not known at location 'src'")
+})
