@@ -88,3 +88,60 @@ test_that("requesting nonexistant metadata is an error", {
   expect_error(loc$metadata(c(ids[[1]], errs[[1]], ids[[2]])),
                "Some packet ids not found: '20220317-125935-ee5fd50e'")
 })
+
+
+test_that("can locate files from the store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  outpack_init(path, use_file_store = TRUE)
+  loc <- outpack_location_path$new(path)
+  ids <- vcapply(1:3, function(i) create_random_packet(path))
+  root <- outpack_root_open(path)
+  idx <- root$index()
+
+  h <- idx$metadata[[1]]$files$hash
+  expect_equal(loc$fetch_file(h), root$files$filename(h))
+})
+
+
+test_that("sensible error if file not found in store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  outpack_init(path, use_file_store = TRUE)
+  loc <- outpack_location_path$new(path)
+  h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
+  expect_error(
+    loc$fetch_file(h),
+    "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
+})
+
+
+test_that("Can find file from archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  outpack_init(path, use_file_store = FALSE)
+  loc <- outpack_location_path$new(path)
+  ids <- vcapply(1:3, function(i) create_random_packet(path))
+  root <- outpack_root_open(path)
+  idx <- root$index()
+
+  h <- idx$metadata[[1]]$files$hash
+  expect_equal(loc$fetch_file(h),
+               file.path(path, "archive", "data", ids[[1]], "data.rds"))
+})
+
+
+test_that("sensible error if file not found in archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  outpack_init(path, use_file_store = FALSE)
+  loc <- outpack_location_path$new(path)
+  h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
+  expect_error(
+    loc$fetch_file(h),
+    "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
+})

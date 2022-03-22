@@ -37,6 +37,9 @@ outpack_location_path <- R6::R6Class(
     },
 
     fetch_file = function(hash) {
+      ## TODO: we might need to give some better hints here as to what
+      ## the user was looking for, but almost certainly that's better
+      ## done by the calling function.
       if (private$root$config$core$use_file_store) {
         path <- private$root$files$filename(hash)
         if (!file.exists(path)) {
