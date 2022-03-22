@@ -326,8 +326,9 @@ find_file_by_hash <- function(root, hash) {
       if (file.exists(path) && hash_file(path, algorithm) == hash) {
         return(path)
       }
-      ## TODO: drop this into logging later:
-      message(sprintf("Rejecting file in %s/%s", meta$name, id))
+      ## TODO: incorporate this into logging later:
+      message(sprintf("Rejecting file '%s' in '%s/%s'",
+                      meta$files$path[[i]], meta$name, id))
     }
   }
 
