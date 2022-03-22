@@ -206,9 +206,9 @@ location_pull_files_store <- function(root, driver, id) {
     meta <- root$metadata(id)
     files_exist <- root$files$exists(meta$files$hash)
     for (h in meta$files$hash[!files_exist]) {
-      ## * What should we fetch here? Just the hash I think is fine,
-      ##   and not retport id
-      ## * Should we support bulk download?
+      ## TODO: Should we support bulk download? This might be more
+      ## efficient for some drivers (e.g., async http or streaming a
+      ## single zip)
       root$files$put(driver$fetch_file(h), h)
     }
   }

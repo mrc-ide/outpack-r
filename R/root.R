@@ -177,7 +177,6 @@ read_metadata <- function(root, prev) {
 
 
 read_unpacked <- function(root, prev) {
-  path <- file.path(root$path, ".outpack", "unpacked")
   if (is.null(prev)) {
     prev <- data_frame(packet = character(),
                        time = empty_time(),
