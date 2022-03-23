@@ -86,7 +86,7 @@ outpack_root <- R6::R6Class(
     index = function(refresh = FALSE) {
       prev <- if (refresh) list() else private$index_data
       private$index_data <- index_update(self, prev)
-      invisible(private$index_data)
+      private$index_data
     }
   ))
 
