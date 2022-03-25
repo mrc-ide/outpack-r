@@ -398,4 +398,6 @@ test_that("Can pull a tree recursively", {
   expect_equal(index$unpacked$packet,
                root$src$index()$unpacked$packet)
   expect_equal(index$unpacked$location, rep("src", 3))
+
+  expect_silent(outpack_location_pull_tree(id$c, "src", root = root$dst))
 })
