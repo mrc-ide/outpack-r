@@ -337,9 +337,10 @@ test_that("Do not unpack a packet twice", {
   outpack_location_add("src", root$src$path, root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
   outpack_location_pull_packet(id, "src", root = root$dst)
-  expect_error(
+
+  expect_equal(
     outpack_location_pull_packet(id, "src", root = root$dst),
-    "packet '.+' has already been unpacked")
+    character(0))
 })
 
 
@@ -395,12 +396,18 @@ test_that("Can pull a tree recursively", {
 
   outpack_location_add("src", root$src$path, root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
-  outpack_location_pull_tree(id$c, "src", root = root$dst)
+  expect_equal(
+    outpack_location_pull_packet(id$c, "src", recursive = TRUE,
+                                 root = root$dst),
+    c(id$a, id$b, id$c))
 
   index <- root$dst$index()
   expect_equal(index$unpacked$packet,
                root$src$index()$unpacked$packet)
   expect_equal(index$unpacked$location, rep("src", 3))
 
-  expect_silent(outpack_location_pull_tree(id$c, "src", root = root$dst))
+  expect_equal(
+    outpack_location_pull_packet(id$c, "src", recursive = TRUE,
+                                 root = root$dst),
+    character(0))
 })

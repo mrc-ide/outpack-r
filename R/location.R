@@ -122,64 +122,42 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'
 ##' @title Pull a single packet from a location
 ##'
-##' @param id The id of the packet to pull
+##' @param id The id of the packet(s) to pull
 ##'
 ##' @param location The name of the location to pull from.  Later we
 ##'   will relax this (see mrc-3030)
 ##'
+##' @param recursive Logical, indicating if we should recursively pull
+##'   all packets that are referenced by the packets specified in
+##'   `id`.  This might copy a lot of data!
+##'
 ##' @inheritParams outpack_location_list
 ##'
-##' @return Nothing
+##' @return Invisibly, the ids of packets that were pulled
 ##' @export
-outpack_location_pull_packet <- function(id, location, root = NULL) {
+outpack_location_pull_packet <- function(id, location, recursive = FALSE,
+                                         root = NULL) {
   root <- outpack_root_locate(root)
-  assert_scalar_character(id)
+  assert_character(id)
   index <- root$index()
 
-  ## TODO: we can relax this once we introduce the concept of
-  ## validating a packet, I think (mrc-3052)
-  if (id %in% index$unpacked$packet) {
-    stop(sprintf("packet '%s' has already been unpacked", id))
-  }
+  ## We are restricting this to a single location, but if all
+  ## locations are trustable, then we might want instead to look over
+  ## all known locations as the files are just files (mrc-3030)
   if (!any(index$location$packet == id & index$location$location == location)) {
     stop(sprintf(
       "packet '%s' not known at location '%s' (consider pulling metadata)",
       id, location))
   }
-
   driver <- location_driver(location, root)
-  location_pull_files_store(root, driver, id)
-  location_pull_files_archive(root, driver, id)
-  mark_packet_unpacked(id, location, root)
 
-  invisible()
-}
-
-
-##' Pull a consistent tree of packets from a location. Unlike
-##' [outpack::outpack_location_pull_packet], this pulls all packets
-##' that were used in creating the target packet, and pulling a packet
-##' that is already unpacked is not an error.
-##'
-##' @title Pull tree of packets
-##'
-##' @inheritParams outpack_location_pull_packet
-##'
-##' @return Nothing
-##' @export
-outpack_location_pull_tree <- function(id, location, root = NULL) {
-  root <- outpack_root_locate(root)
-  assert_character(id)
-  index <- root$index()
-  ## This function turns out to work fine with zero or >1 id - that
-  ## feels ok but I've not advertised it yet.  We could limit to a
-  ## scalar id but that feels pointlessly restrictive (should we
-  ## extend outpack_location_pull_packet to allow multiple too?)
-  ids <- find_all_dependencies(id, index$metadata)
+  if (recursive) {
+    id <- find_all_dependencies(id, index$metadata)
+  }
 
   ## Later, it might be better if we did not skip over unpacked
   ## packets, but instead validate and/or repair them (see mrc-3052)
-  ids_missing <- setdiff(ids, index$unpacked$packet)
+  id <- setdiff(id, index$unpacked$packet)
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
@@ -195,9 +173,13 @@ outpack_location_pull_tree <- function(id, location, root = NULL) {
   ##
   ## However, the exposed interface to the user (aside from progress
   ## reporting) will not change.
-  for (id in ids_missing) {
-    outpack_location_pull_packet(id, location, root)
+  for (i in id) {
+    location_pull_files_store(root, driver, i)
+    location_pull_files_archive(root, driver, i)
+    mark_packet_unpacked(i, location, root)
   }
+
+  invisible(id)
 }
 
 
