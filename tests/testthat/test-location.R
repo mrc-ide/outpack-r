@@ -235,3 +235,127 @@ test_that("Can pull metadata through chain of locations", {
   expect_equal(index$location$packet, c(id1, id1, id2))
   expect_equal(index$location$location, c("b", "c", "c"))
 })
+
+
+test_that("can pull a packet from one location to another, using file store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  outpack_location_pull_packet(id, "src", root = root$dst)
+
+  index <- root$dst$index()
+  expect_equal(index$unpacked$packet, id)
+  expect_equal(index$unpacked$location, "src")
+  expect_true(file.exists(
+    file.path(root$dst$path, "archive", "data", id, "data.rds")))
+  expect_true(root$dst$files$exists(root$dst$metadata(id)$files$hash))
+})
+
+
+test_that("can pull a packet from one location to another, archive only", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = FALSE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  outpack_location_pull_packet(id, "src", root = root$dst)
+
+  index <- root$dst$index()
+  expect_equal(index$unpacked$packet, id)
+  expect_equal(index$unpacked$location, "src")
+  expect_true(file.exists(
+    file.path(root$dst$path, "archive", "data", id, "data.rds")))
+})
+
+
+test_that("detect and avoid modified files in source repository", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = FALSE)
+  }
+
+  tmp <- fs::dir_create(tempfile())
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  saveRDS(runif(10), file.path(tmp, "a.rds"))
+  saveRDS(runif(10), file.path(tmp, "b.rds"))
+  id <- character(2)
+  for (i in seq_along(id)) {
+    id[[i]] <- outpack_packet_start(tmp, "data", root = root$src)$id
+    outpack_packet_end()
+  }
+
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+
+  ## Corrupt the file in the first id by truncating it:
+  file.create(file.path(root$src$path, "archive", "data", id[[1]], "a.rds"))
+  expect_message(
+    outpack_location_pull_packet(id[[1]], "src", root = root$dst),
+    sprintf("Rejecting file 'a.rds' in 'data/%s'", id[[1]]))
+
+  expect_equal(
+    hash_file(file.path(root$dst$path, "archive", "data", id[[1]], "a.rds")),
+    hash_file(file.path(root$src$path, "archive", "data", id[[2]], "a.rds")))
+  expect_equal(
+    hash_file(file.path(root$dst$path, "archive", "data", id[[1]], "b.rds")),
+    hash_file(file.path(root$src$path, "archive", "data", id[[2]], "b.rds")))
+})
+
+
+test_that("Do not unpack a packet twice", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  outpack_location_pull_packet(id, "src", root = root$dst)
+  expect_error(
+    outpack_location_pull_packet(id, "src", root = root$dst),
+    "packet '.+' has already been unpacked")
+})
+
+
+test_that("Sensible error if packet not known", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- create_random_packet(root$src)
+  outpack_location_add("src", root$src$path, root = root$dst)
+  expect_error(
+    outpack_location_pull_packet(id, "src", root = root$dst),
+    "packet '.+' not known at location 'src'")
+})

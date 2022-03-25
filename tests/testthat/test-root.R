@@ -110,3 +110,16 @@ test_that("Can't get nonexistant metadata", {
     r$metadata(id),
     sprintf("id '%s' not found in index", id))
 })
+
+
+test_that("empty root has nothing unpacked", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  r <- outpack_init(path)
+  index <- r$index()
+  expect_equal(index$unpacked,
+               data_frame(packet = character(),
+                          time = empty_time(),
+                          location = character()))
+})

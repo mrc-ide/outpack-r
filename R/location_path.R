@@ -34,5 +34,23 @@ outpack_location_path <- R6::R6Class(
       ret <- vcapply(paths, read_string)
       names(ret) <- packet_ids
       ret
+    },
+
+    fetch_file = function(hash) {
+      ## TODO: we might need to give some better hints here as to what
+      ## the user was looking for, but almost certainly that's better
+      ## done by the calling function.
+      if (private$root$config$core$use_file_store) {
+        path <- private$root$files$filename(hash)
+        if (!file.exists(path)) {
+          stop(sprintf("Hash '%s' not found at location", hash))
+        }
+      } else {
+        path <- find_file_by_hash(private$root, hash)
+        if (is.null(path)) {
+          stop(sprintf("Hash '%s' not found at location", hash))
+        }
+      }
+      path
     }
   ))

@@ -1,0 +1,29 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "outpack location download schema",
+
+    "description": "Information about when a packet was unpacked",
+
+    "type": "object",
+    "properties": {
+        "schemaVersion": {
+            "description": "Schema version, used to manage migrations",
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+
+        "packet": {
+            "$ref": "id.json"
+        },
+
+        "time": {
+            "description": "Time that the packet was unpacked, in seconds since 1970-01-01",
+            "type": "number"
+        },
+
+        "location": {
+            "description": "The name of the location that the packet was pulled from"
+        }
+    },
+    "required": ["schemaVersion", "packet", "time"]
+}
