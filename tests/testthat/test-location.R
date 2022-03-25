@@ -374,18 +374,21 @@ test_that("Can pull a tree recursively", {
   }
 
   id <- list(a = create_random_packet(root$src, "a"))
-  tmp <- file.path(path, "tmp")
-  fs::dir_create(tmp)
-  code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
-  writeLines(code, file.path(tmp, "script.R"))
 
-  id$b <- outpack_packet_start(tmp, "b", root = root$src)$id
+  src_b <- file.path(path, "src_b")
+  fs::dir_create(src_b)
+  code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
+  writeLines(code, file.path(src_b, "script.R"))
+  id$b <- outpack_packet_start(src_b, "b", root = root$src)$id
   outpack_packet_use_dependency(id$a, c("input.rds" = "data.rds"))
   outpack_packet_run("script.R")
   outpack_packet_end()
-  file.remove(file.path(tmp, "input.rds"))
 
-  id$c <- outpack_packet_start(tmp, "c", root = root$src)$id
+  src_c <- file.path(path, "src_c")
+  fs::dir_create(src_c)
+  code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
+  writeLines(code, file.path(src_c, "script.R"))
+  id$c <- outpack_packet_start(src_c, "c", root = root$src)$id
   outpack_packet_use_dependency(id$b, c("input.rds" = "output.rds"))
   outpack_packet_run("script.R")
   outpack_packet_end()
