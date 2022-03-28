@@ -11,3 +11,10 @@ create_random_packet <- function(root, name = "data") {
   outpack_packet_end()
   id
 }
+
+
+mock_metadata_depends <- function(id, depends = character(0)) {
+  ret <- list(list(id = id, depends = data_frame(id = depends)))
+  names(ret) <- id
+  ret
+}
