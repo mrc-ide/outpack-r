@@ -4,19 +4,23 @@
 \alias{outpack_location_pull_packet}
 \title{Pull a single packet from a location}
 \usage{
-outpack_location_pull_packet(id, location, root = NULL)
+outpack_location_pull_packet(id, location, recursive = FALSE, root = NULL)
 }
 \arguments{
-\item{id}{The id of the packet to pull}
+\item{id}{The id of the packet(s) to pull}
 
 \item{location}{The name of the location to pull from.  Later we
 will relax this (see mrc-3030)}
+
+\item{recursive}{Logical, indicating if we should recursively pull
+all packets that are referenced by the packets specified in
+\code{id}.  This might copy a lot of data!}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
 }
 \value{
-Nothing
+Invisibly, the ids of packets that were pulled
 }
 \description{
 Pull a packet (all files) from a location into this archive. This

@@ -122,37 +122,64 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'
 ##' @title Pull a single packet from a location
 ##'
-##' @param id The id of the packet to pull
+##' @param id The id of the packet(s) to pull
 ##'
 ##' @param location The name of the location to pull from.  Later we
 ##'   will relax this (see mrc-3030)
 ##'
+##' @param recursive Logical, indicating if we should recursively pull
+##'   all packets that are referenced by the packets specified in
+##'   `id`.  This might copy a lot of data!
+##'
 ##' @inheritParams outpack_location_list
 ##'
-##' @return Nothing
+##' @return Invisibly, the ids of packets that were pulled
 ##' @export
-outpack_location_pull_packet <- function(id, location, root = NULL) {
+outpack_location_pull_packet <- function(id, location, recursive = FALSE,
+                                         root = NULL) {
   root <- outpack_root_locate(root)
   assert_character(id)
   index <- root$index()
 
-  ## TODO: we can relax this once we introduce the concept of
-  ## validating a packet, I think?
-  if (id %in% index$unpacked$packet) {
-    stop(sprintf("packet '%s' has already been unpacked", id))
-  }
+  ## We are restricting this to a single location, but if all
+  ## locations are trustable, then we might want instead to look over
+  ## all known locations as the files are just files (mrc-3030)
   if (!any(index$location$packet == id & index$location$location == location)) {
     stop(sprintf(
       "packet '%s' not known at location '%s' (consider pulling metadata)",
       id, location))
   }
-
   driver <- location_driver(location, root)
-  location_pull_files_store(root, driver, id)
-  location_pull_files_archive(root, driver, id)
-  mark_packet_unpacked(id, location, root)
 
-  invisible()
+  if (recursive) {
+    id <- find_all_dependencies(id, index$metadata)
+  }
+
+  ## Later, it might be better if we did not skip over unpacked
+  ## packets, but instead validate and/or repair them (see mrc-3052)
+  id <- setdiff(id, index$unpacked$packet)
+
+  ## At this point we should really be providing logging about how
+  ## many packets, files, etc are being copied.  I've done this as a
+  ## single loop, but there's also no real reason why we might not
+  ## present this as a single update operation for pulling all files
+  ## across all packets.  This is the simplest implementation for now
+  ## though.
+  ##
+  ## Making this nicer might be easiest to do by updating
+  ## outpack_location_pull_packet to accept a vector of ids and having
+  ## it resolve all missing files at once, which would complicate that
+  ## a little?
+  ##
+  ## However, the exposed interface to the user (aside from progress
+  ## reporting) will not change.
+  for (i in id) {
+    location_pull_files_store(root, driver, i)
+    location_pull_files_archive(root, driver, i)
+    mark_packet_unpacked(i, location, root)
+  }
+
+  invisible(id)
 }
 
 

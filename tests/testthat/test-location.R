@@ -337,9 +337,10 @@ test_that("Do not unpack a packet twice", {
   outpack_location_add("src", root$src$path, root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
   outpack_location_pull_packet(id, "src", root = root$dst)
-  expect_error(
+
+  expect_equal(
     outpack_location_pull_packet(id, "src", root = root$dst),
-    "packet '.+' has already been unpacked")
+    character(0))
 })
 
 
@@ -358,4 +359,55 @@ test_that("Sensible error if packet not known", {
   expect_error(
     outpack_location_pull_packet(id, "src", root = root$dst),
     "packet '.+' not known at location 'src'")
+})
+
+
+test_that("Can pull a tree recursively", {
+  ## Bit of tedious setup here; this just does a simple graph
+  ## >  a -> b -> c
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), use_file_store = TRUE)
+  }
+
+  id <- list(a = create_random_packet(root$src, "a"))
+
+  src_b <- file.path(path, "src_b")
+  fs::dir_create(src_b)
+  code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
+  writeLines(code, file.path(src_b, "script.R"))
+  id$b <- outpack_packet_start(src_b, "b", root = root$src)$id
+  outpack_packet_use_dependency(id$a, c("input.rds" = "data.rds"))
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  src_c <- file.path(path, "src_c")
+  fs::dir_create(src_c)
+  code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
+  writeLines(code, file.path(src_c, "script.R"))
+  id$c <- outpack_packet_start(src_c, "c", root = root$src)$id
+  outpack_packet_use_dependency(id$b, c("input.rds" = "output.rds"))
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_pull_metadata(root = root$dst)
+  expect_equal(
+    outpack_location_pull_packet(id$c, "src", recursive = TRUE,
+                                 root = root$dst),
+    c(id$a, id$b, id$c))
+
+  index <- root$dst$index()
+  expect_equal(index$unpacked$packet,
+               root$src$index()$unpacked$packet)
+  expect_equal(index$unpacked$location, rep("src", 3))
+
+  expect_equal(
+    outpack_location_pull_packet(id$c, "src", recursive = TRUE,
+                                 root = root$dst),
+    character(0))
 })

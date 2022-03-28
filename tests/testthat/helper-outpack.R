@@ -3,11 +3,18 @@
 options(outpack.schema_validate = TRUE)
 
 
-create_random_packet <- function(root) {
+create_random_packet <- function(root, name = "data") {
   src <- fs::dir_create(tempfile())
   on.exit(unlink(src, recursive = TRUE))
   saveRDS(runif(10), file.path(src, "data.rds"))
-  id <- outpack_packet_start(src, "data", root = root)$id
+  id <- outpack_packet_start(src, name, root = root)$id
   outpack_packet_end()
   id
+}
+
+
+mock_metadata_depends <- function(id, depends = character(0)) {
+  ret <- list(list(id = id, depends = data_frame(id = depends)))
+  names(ret) <- id
+  ret
 }
