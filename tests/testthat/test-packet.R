@@ -50,6 +50,11 @@ test_that("Can run a basic packet", {
   expect_mapequal(index$metadata[[id]],
                   meta[c("name", "id", "parameters", "files", "depends")])
 
+  expect_setequal(
+    names(meta),
+    c("schemaVersion", "name", "id", "time", "parameters", "files",
+      "depends", "script", "session", "custom", "hash"))
+
   expect_equal(meta$schemaVersion, outpack_schema_version())
   expect_equal(meta$name, "example")
   expect_equal(meta$id, id)
@@ -60,6 +65,7 @@ test_that("Can run a basic packet", {
                file.size(file.path(path_src, meta$files$path)))
   expect_equal(meta$files$hash,
                hash_files(file.path(path_src, meta$files$path)))
+  expect_null(meta$custom)
 
   ## Copy of the files in human readable archive:
   expect_true(all(file.exists(
@@ -330,4 +336,116 @@ test_that("validate dependencies from archive", {
   expect_error(
     outpack_packet_use_dependency(id1, c("incoming.csv" = "data.csv")),
     "Hash of '.+' does not match")
+})
+
+
+test_that("Can add additional data", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  path_root <- file.path(tmp, "root")
+  root <- outpack_init(path_root)
+
+  src <- fs::dir_create(file.path(tmp, "src"))
+  saveRDS(runif(10), file.path(src, "data.rds"))
+  id <- outpack_packet_start(src, "example", root = root)$id
+  custom <- '{"a": 1, "b": 2}'
+  outpack_packet_add_custom("potato", custom)
+  outpack_packet_end()
+
+  ## See mrc-3091 - this should be made easier
+  path_metadata <- file.path(path_root, ".outpack", "metadata", id)
+  meta <- outpack_metadata_load(path_metadata)
+  expect_equal(meta$custom, list(potato = list(a = 1, b = 2)))
+})
+
+
+test_that("Can add multiple copies of extra data", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  path_root <- file.path(tmp, "root")
+  root <- outpack_init(path_root)
+
+  src <- fs::dir_create(file.path(tmp, "src"))
+  saveRDS(runif(10), file.path(src, "data.rds"))
+  id <- outpack_packet_start(src, "example", root = root)$id
+  outpack_packet_add_custom("app1", '{"a": 1, "b": 2}')
+  outpack_packet_add_custom("app2", '{"c": [1, 2, 3]}')
+  outpack_packet_end()
+
+  path_metadata <- file.path(path_root, ".outpack", "metadata", id)
+  meta <- outpack_metadata_load(path_metadata)
+  expect_equal(meta$custom,
+               list(app1 = list(a = 1, b = 2),
+                    app2 = list(c = list(1, 2, 3))))
+})
+
+
+test_that("Can't add custom data for same app twice", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  path_root <- file.path(tmp, "root")
+  root <- outpack_init(path_root)
+
+  src <- fs::dir_create(file.path(tmp, "src"))
+  saveRDS(runif(10), file.path(src, "data.rds"))
+  id <- outpack_packet_start(src, "example", root = root)$id
+  outpack_packet_add_custom("app1", '{"a": 1, "b": 2}')
+  outpack_packet_add_custom("app2", '{"a": 1, "b": 2}')
+  expect_error(
+    outpack_packet_add_custom("app1", '{"c": [1, 2, 3]}'),
+    "metadata for 'app1' has already been added for this packet")
+  expect_error(
+    outpack_packet_add_custom("app2", '{"c": [1, 2, 3]}'),
+    "metadata for 'app2' has already been added for this packet")
+})
+
+
+test_that("Can validate custom metadata against schema", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  schema <- '{
+    "type": "object",
+    "properties": {"a": { "type": "string" }, "b": { "type": "number" }}}'
+
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  path_root <- file.path(tmp, "root")
+  root <- outpack_init(path_root)
+
+  src <- fs::dir_create(file.path(tmp, "src"))
+  saveRDS(runif(10), file.path(src, "data.rds"))
+  id <- outpack_packet_start(src, "example", root = root)$id
+  expect_error(
+    outpack_packet_add_custom("app1", '{"a": 1, "b": 2}', schema),
+    "Validating custom metadata failed:")
+  ## No error
+  outpack_packet_add_custom("app1", '{"a": "str", "b": 2}', schema)
+  outpack_packet_end()
+
+  path_metadata <- file.path(path_root, ".outpack", "metadata", id)
+  meta <- outpack_metadata_load(path_metadata)
+  expect_equal(meta$custom,
+               list(app1 = list(a = "str", b = 2)))
+})
+
+
+test_that("Can report nicely about json syntax errors", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+
+  path_root <- file.path(tmp, "root")
+  root <- outpack_init(path_root)
+
+  src <- fs::dir_create(file.path(tmp, "src"))
+  saveRDS(runif(10), file.path(src, "data.rds"))
+  id <- outpack_packet_start(src, "example", root = root)$id
+  expect_error(
+    outpack_packet_add_custom("app1", '{"a": 1, "b": 2'),
+    "Syntax error in custom metadata:")
 })

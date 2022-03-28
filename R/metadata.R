@@ -1,6 +1,6 @@
 outpack_metadata_create <- function(path, name, id, time, files,
                                     depends, parameters,
-                                    script, session, hash_algorithm) {
+                                    script, custom, session, hash_algorithm) {
   assert_scalar_character(name)
   assert_scalar_character(id)
 
@@ -26,7 +26,7 @@ outpack_metadata_create <- function(path, name, id, time, files,
   ## outputs; we don't even need a list of them (we just have files
   ## and that's all there is to it).  I am not 100% sure if that's
   ## sensible, but it will be easy enough to extend this later.  For
-  ## orderly we can handle this via additional data in 'extra'.  Not
+  ## orderly we can handle this via additional data in 'custom'.  Not
   ## having this distinction will make doing output-only packets
   ## easier of course.
   files <- with_dir(
@@ -72,6 +72,15 @@ outpack_metadata_create <- function(path, name, id, time, files,
     session <- outpack_session_info(utils::sessionInfo())
   }
 
+  if (!is.null(custom)) {
+    ## There's no obvious way of adding the schema information here
+    ## because we probably hold either a machine-specific filename or
+    ## the entire schema object, neither of which is useful to
+    ## serialise.
+    custom <- set_names(lapply(custom, function(x) set_class(x$data, "json")),
+                        vcapply(custom, "[[", "application"))
+  }
+
   ret <- list(schemaVersion = scalar(outpack_schema_version()),
               name = scalar(name),
               id = scalar(id),
@@ -80,7 +89,8 @@ outpack_metadata_create <- function(path, name, id, time, files,
               files = files,
               depends = depends,
               script = script,
-              session = session)
+              session = session,
+              custom = custom)
 
   to_json(ret, "metadata")
 }

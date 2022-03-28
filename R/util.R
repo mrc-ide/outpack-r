@@ -119,3 +119,15 @@ with_dir <- function(path, code) {
   on.exit(setwd(owd))
   force(code)
 }
+
+
+set_names <- function(x, nms) {
+  names(x) <- nms
+  x
+}
+
+
+set_class <- function(x, cls) {
+  class(x) <- cls
+  x
+}
