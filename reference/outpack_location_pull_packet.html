@@ -54,23 +54,27 @@ will make files available for use as dependencies (e.g., with
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">outpack_location_pull_packet</span><span class="op">(</span><span class="va">id</span>, <span class="va">location</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">outpack_location_pull_packet</span><span class="op">(</span><span class="va">id</span>, <span class="va">location</span>, recursive <span class="op">=</span> <span class="cn">FALSE</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
     <dl><dt>id</dt>
-<dd><p>The id of the packet to pull</p></dd>
+<dd><p>The id of the packet(s) to pull</p></dd>
 <dt>location</dt>
 <dd><p>The name of the location to pull from.  Later we
 will relax this (see mrc-3030)</p></dd>
+<dt>recursive</dt>
+<dd><p>Logical, indicating if we should recursively pull
+all packets that are referenced by the packets specified in
+<code>id</code>.  This might copy a lot of data!</p></dd>
 <dt>root</dt>
 <dd><p>The outpack root. Will be searched for from the
 current directory if not given.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Nothing</p>
+    <p>Invisibly, the ids of packets that were pulled</p>
     </div>
     <div id="details">
     <h2>Details</h2>
