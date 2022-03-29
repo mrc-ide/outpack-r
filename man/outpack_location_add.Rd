@@ -4,7 +4,7 @@
 \alias{outpack_location_add}
 \title{Add a new location}
 \usage{
-outpack_location_add(name, path, root = NULL)
+outpack_location_add(name, path, priority = 0, root = NULL)
 }
 \arguments{
 \item{name}{The short name of the location to use.  Cannot be in
@@ -12,6 +12,14 @@ use, and cannot be one of \code{local} or \code{orphan}}
 
 \item{path}{The path to the directory containing another outpack
 archive.}
+
+\item{priority}{The priority of the location. This is used when
+deciding where to pull packets from
+(\link{outpack_location_pull_packet}), and will be used in
+the query interface. A priority of 0 corresponds to the same
+priority as local packets, while larger numbers have higher
+priority and negative numbers have lower priority.  Ties will be
+resolved in an arbitrary order.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}

@@ -12,6 +12,13 @@ test_that("assert_character", {
 })
 
 
+test_that("assert_numeric", {
+  expect_silent(assert_numeric(1))
+  expect_error(assert_numeric("one"), "must be numeric")
+  expect_error(assert_numeric(TRUE), "must be numeric")
+})
+
+
 test_that("assert_logical", {
   expect_silent(assert_logical(TRUE))
   expect_error(assert_logical(1), "must be logical")
@@ -30,6 +37,17 @@ test_that("assert_named", {
 test_that("assert_is", {
   expect_error(assert_is("x", "foo"), "must be a foo")
   expect_silent(assert_is(structure("x", class = "foo"), "foo"))
+})
+
+
+test_that("assert_scalar_numeric", {
+  expect_silent(assert_scalar_numeric(1))
+  expect_error(assert_scalar_numeric(numeric(0)),
+               "must be a scalar")
+  expect_error(assert_scalar_numeric(c(1, 2)),
+               "must be a scalar")
+  expect_error(assert_scalar_numeric("one"),
+               "must be numeric")
 })
 
 

@@ -40,11 +40,14 @@
                     "type": {
                         "const": "path"
                     },
+                    "priority": {
+                        "type": "number"
+                    },
                     "path": {
                         "type": "string"
                     }
                 },
-                "required": ["name", "type", "path"]
+                "required": ["name", "type", "path", "priority"]
             }
         }
     },

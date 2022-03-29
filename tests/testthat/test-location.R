@@ -16,10 +16,10 @@ test_that("Can add a location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root$a)
+  outpack_location_add("b", root$b$path, root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
 
-  outpack_location_add("c", root$c$path, root$a)
+  outpack_location_add("c", root$c$path, root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
 })
 
@@ -34,7 +34,7 @@ test_that("Can't add a location with reserved name", {
   upstream <- outpack_init(path_upstream)
 
   expect_error(
-    outpack_location_add("local", path_upstream, path),
+    outpack_location_add("local", path_upstream, root = path),
     "Cannot add a location with reserved name 'local'")
 })
 
@@ -207,10 +207,10 @@ test_that("Can pull metadata through chain of locations", {
   ## knowing directly about an earlier location
   ## > a -> b -> c -> d
   ## >      `--------/
-  outpack_location_add("a", root$a$path, root$b)
-  outpack_location_add("b", root$b$path, root$c)
-  outpack_location_add("c", root$c$path, root$d)
-  outpack_location_add("b", root$b$path, root$d)
+  outpack_location_add("a", root$a$path, root = root$b)
+  outpack_location_add("b", root$b$path, root = root$c)
+  outpack_location_add("c", root$c$path, root = root$d)
+  outpack_location_add("b", root$b$path, root = root$d)
 
   ## Create a packet and make sure it's in both b and c
   id1 <- create_random_packet(root$a)
@@ -410,4 +410,25 @@ test_that("Can pull a tree recursively", {
     outpack_location_pull_packet(id$c, "src", recursive = TRUE,
                                  root = root$dst),
     character(0))
+})
+
+
+test_that("Can add locations with different priorities", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b", "c")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  outpack_location_add("b", root$b$path, priority = 5, root = root$a)
+  outpack_location_add("c", root$b$path, priority = 10, root = root$a)
+  expect_equal(root$a$config$location$b$priority, 5)
+  expect_equal(root$a$config$location$c$priority, 10)
+
+  outpack_root_open(root$a$path)
+  expect_equal(outpack_location_list(root$a),
+               c("c", "b", "local"))
 })

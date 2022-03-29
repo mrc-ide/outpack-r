@@ -15,13 +15,22 @@
 ##' @param path The path to the directory containing another outpack
 ##'   archive.
 ##'
+##' @param priority The priority of the location. This is used when
+##'   deciding where to pull packets from
+##'   ([outpack::outpack_location_pull_packet]), and will be used in
+##'   the query interface. A priority of 0 corresponds to the same
+##'   priority as local packets, while larger numbers have higher
+##'   priority and negative numbers have lower priority.  Ties will be
+##'   resolved in an arbitrary order.
+##'
 ##' @inheritParams outpack_location_list
 ##'
 ##' @return Nothing
 ##' @export
-outpack_location_add <- function(name, path, root = NULL) {
+outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   root <- outpack_root_locate(root)
   assert_scalar_character(name)
+  assert_scalar_numeric(priority)
 
   if (name %in% location_reserved_name) {
     stop(sprintf("Cannot add a location with reserved name '%s'",
@@ -41,7 +50,7 @@ outpack_location_add <- function(name, path, root = NULL) {
 
   config <- root$config
 
-  loc <- list(name = name, type = "path", path = path)
+  loc <- list(name = name, type = "path", path = path, priority = priority)
   config$location <- c(unname(config$location), list(loc))
   config_write(config, root$path)
 
@@ -72,9 +81,10 @@ outpack_location_list <- function(root = NULL) {
   ## going to be called fairly frequently so the cheap version is
   ## important.
   root <- outpack_root_locate(root)
-  union(local, names(root$config$location))
+  location <- c(local = 0,
+                vnapply(root$config$location, "[[", "priority"))
+  names(location[order(location, decreasing = TRUE)])
 }
-
 
 
 ##' Pull metadata from a location, updating the index.  This should
