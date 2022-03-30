@@ -7,6 +7,7 @@
 \alias{outpack_packet_end}
 \alias{outpack_packet_run}
 \alias{outpack_packet_use_dependency}
+\alias{outpack_packet_add_custom}
 \title{Start, interact with, and end a packet build}
 \usage{
 outpack_packet_start(path, name, parameters = NULL, root = NULL)
@@ -20,6 +21,8 @@ outpack_packet_end()
 outpack_packet_run(script, envir = .GlobalEnv)
 
 outpack_packet_use_dependency(id, files)
+
+outpack_packet_add_custom(application, data, schema = NULL)
 }
 \arguments{
 \item{path}{Path to the build / output directory.}
@@ -44,6 +47,18 @@ times within a single packet run (or zero times!) as needed.}
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the
 value corresponds to the name within the upstream packet}
+
+\item{application}{The name of the application (used to organise
+the data and query it later, see Details)}
+
+\item{data}{Additional metadata to add to the packet. This must be
+a string representing already-serialised json data.}
+
+\item{schema}{Optionally, but recommended, a schema to validate
+\code{data} against.  Validation will only happen if the option
+\code{outpack.schema_validate} is \code{TRUE}, as for the main schema
+validation.  Will be passed to \link[jsonvalidate:json_schema]{jsonvalidate::json_schema}, so
+can be a string containing the schema or a path to the schema.}
 }
 \value{
 Invisibly, a copy of the packet data
@@ -54,3 +69,55 @@ Start a packet build (\code{outpack_packet_start}), end one
 the current packet (\code{outpack_packet_use_dependency},
 \code{outpack_packet_run})
 }
+\section{Custom metadata}{
+
+
+The \code{outpack_packet_add_custom} function adds arbitrary
+additional metadata into a packet. It is primarily designed for
+use with applications that build on outpack to provide
+additional information beyond the minimal set provided by
+outpack.
+
+For example, orderly tracks "artefacts" which collect groups of
+file outputs into logical bundles.  To support this it needs to
+register additional data for each artefact with:
+\itemize{
+\item the description of the artefect (a short phrase)
+\item the format of the artefact (a string describing the data type)
+\item the contents of the artefact (an array of filenames)
+}
+
+JSON for this might look like:\if{html}{\out{<div class="sourceCode json">}}\preformatted{\{
+  "artefacts": [
+    \{
+      "description": "Data for onward use",
+      "format": "data",
+      "contents": ["results.rds", "summary.rds"]
+    \},
+    \{
+      "description": "Diagnostic figures",
+      "format": "staticgraph",
+      "contents": ["fits.png", "inputs.png"]
+    \}
+  ]
+\}
+}\if{html}{\out{</div>}}
+
+Here, we describe two artefacts, together collecting four files.
+
+We need to store these in outpack's final metadata, and we want to
+do this in a way that allows easy querying later on while
+scoping the data to your application.  To allow for this we
+group all data your application adds under an application key
+(e.g., \code{orderly}).  You can then store whatever data you want
+beneath this key.
+
+\strong{NOTE1}: A limitation here is that the filenames above cannot be
+checked against the outpack list of files because outpack does
+not know that \code{contents} here refers to filenames.
+
+\strong{NOTE2}: To allow for predictable serialisation to JSON, you
+must serialise your own data before passing through to
+\code{outpack_packet_add_custom}.
+}
+

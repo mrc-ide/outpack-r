@@ -86,6 +86,7 @@ outpack_packet_end <- function() {
                                   depends = p$depends,
                                   parameters = p$parameters,
                                   script = p$script,
+                                  custom = p$custom,
                                   session = NULL,
                                   hash_algorithm = hash_algorithm)
   outpack_insert_packet(p$path, json, p$root)
@@ -165,6 +166,104 @@ outpack_packet_use_dependency <- function(id, files) {
                   files = data_frame(here = names(files), there = src))
   current$packet$depends <- c(p$depends, list(depends))
 
+  invisible()
+}
+
+
+##' @section Custom metadata:
+##'
+##' The `outpack_packet_add_custom` function adds arbitrary
+##'   additional metadata into a packet. It is primarily designed for
+##'   use with applications that build on outpack to provide
+##'   additional information beyond the minimal set provided by
+##'   outpack.
+##'
+##' For example, orderly tracks "artefacts" which collect groups of
+##'   file outputs into logical bundles.  To support this it needs to
+##'   register additional data for each artefact with:
+##'
+##' * the description of the artefect (a short phrase)
+##' * the format of the artefact (a string describing the data type)
+##' * the contents of the artefact (an array of filenames)
+##'
+##' JSON for this might look like:
+##'
+##' ```json
+##' {
+##'   "artefacts": [
+##'     {
+##'       "description": "Data for onward use",
+##'       "format": "data",
+##'       "contents": ["results.rds", "summary.rds"]
+##'     },
+##'     {
+##'       "description": "Diagnostic figures",
+##'       "format": "staticgraph",
+##'       "contents": ["fits.png", "inputs.png"]
+##'     }
+##'   ]
+##' }
+##' ```
+##'
+##' Here, we describe two artefacts, together collecting four files.
+##'
+##' We need to store these in outpack's final metadata, and we want to
+##'   do this in a way that allows easy querying later on while
+##'   scoping the data to your application.  To allow for this we
+##'   group all data your application adds under an application key
+##'   (e.g., `orderly`).  You can then store whatever data you want
+##'   beneath this key.
+##'
+##' **NOTE1**: A limitation here is that the filenames above cannot be
+##'   checked against the outpack list of files because outpack does
+##'   not know that `contents` here refers to filenames.
+##'
+##' **NOTE2**: To allow for predictable serialisation to JSON, you
+##'   must serialise your own data before passing through to
+##'   `outpack_packet_add_custom`.
+##'
+##' @export
+##' @rdname outpack_packet
+##'
+##' @param application The name of the application (used to organise
+##'   the data and query it later, see Details)
+##'
+##' @param data Additional metadata to add to the packet. This must be
+##'   a string representing already-serialised json data.
+##'
+##' @param schema Optionally, but recommended, a schema to validate
+##'   `data` against.  Validation will only happen if the option
+##'   `outpack.schema_validate` is `TRUE`, as for the main schema
+##'   validation.  Will be passed to [jsonvalidate::json_schema], so
+##'   can be a string containing the schema or a path to the schema.
+outpack_packet_add_custom <- function(application, data, schema = NULL) {
+  p <- outpack_packet_current()
+
+  assert_scalar_character(application)
+  assert_scalar_character(data)
+  if (!is.null(schema)) {
+    assert_scalar_character(data)
+  }
+
+  tryCatch(
+    jsonlite::parse_json(data),
+    error = function(e)
+      stop("Syntax error in custom metadata: ", e$message, call. = FALSE))
+
+  if (!is.null(schema) && getOption("outpack.schema_validate")) {
+    tryCatch(
+      custom_schema(schema)$validate(data, error = TRUE),
+      error = function(e)
+        stop("Validating custom metadata failed: ", e$message, call. = FALSE))
+  }
+
+  if (application %in% vcapply(p$custom, "[[", "application")) {
+    stop(sprintf("metadata for '%s' has already been added for this packet",
+                 application))
+  }
+
+  custom <- list(application = application, data = data)
+  current$packet$custom <- c(p$custom, list(custom))
   invisible()
 }
 

@@ -101,9 +101,14 @@
             }
         },
 
+        "custom": {
+            "description": "Optional custom metadata, grouped under application keys",
+            "type": ["null", "object"]
+        },
+
         "session": {
             "description": "Information about the session; necessarily engine-specific format but in a standardised location"
         }
     },
-    "required": ["schemaVersion", "id", "name", "time", "files", "depends", "script", "session"]
+    "required": ["schemaVersion", "id", "name", "time", "files", "depends", "script", "custom", "session"]
 }

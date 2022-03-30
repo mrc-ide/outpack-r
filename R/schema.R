@@ -8,12 +8,21 @@ outpack_schema_version <- function() {
 
 
 outpack_schema <- function(name) {
-  if (is.null(cache$schema[[name]])) {
+  load_schema(name, outpack_file(sprintf("schema/%s.json", name)))
+}
+
+
+custom_schema <- function(schema) {
+  load_schema(hash_data(schema, "sha1"), schema)
+}
+
+
+load_schema <- function(key, schema) {
+  if (is.null(cache$schema[[key]])) {
     if (is.null(cache$schema)) {
       cache$schema <- list()
     }
-    path <- outpack_file(sprintf("schema/%s.json", name))
-    cache$schema[[name]] <- jsonvalidate::json_schema$new(path)
+    cache$schema[[key]] <- jsonvalidate::json_schema$new(schema)
   }
-  cache$schema[[name]]
+  cache$schema[[key]]
 }
