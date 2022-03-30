@@ -66,7 +66,9 @@ the current packet (<code>outpack_packet_use_dependency</code>,
 
 <span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span><span class="op">)</span>
 
-<span class="fu">outpack_packet_use_dependency</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span><span class="op">)</span></code></pre></div>
+<span class="fu">outpack_packet_use_dependency</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span><span class="op">)</span>
+
+<span class="fu">outpack_packet_add_custom</span><span class="op">(</span><span class="va">application</span>, <span class="va">data</span>, schema <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -94,10 +96,65 @@ times within a single packet run (or zero times!) as needed.</p></dd>
 <dd><p>A named character vector of files; the name
 corresponds to the name within the current packet, while the
 value corresponds to the name within the upstream packet</p></dd>
+<dt>application</dt>
+<dd><p>The name of the application (used to organise
+the data and query it later, see Details)</p></dd>
+<dt>data</dt>
+<dd><p>Additional metadata to add to the packet. This must be
+a string representing already-serialised json data.</p></dd>
+<dt>schema</dt>
+<dd><p>Optionally, but recommended, a schema to validate
+<code>data</code> against.  Validation will only happen if the option
+<code>outpack.schema_validate</code> is <code>TRUE</code>, as for the main schema
+validation.  Will be passed to <a href="https://docs.ropensci.org/jsonvalidate/reference/json_schema.html" class="external-link">jsonvalidate::json_schema</a>, so
+can be a string containing the schema or a path to the schema.</p></dd>
 </dl></div>
     <div id="value">
     <h2>Value</h2>
     <p>Invisibly, a copy of the packet data</p>
+    </div>
+    <div id="custom-metadata">
+    <h2>Custom metadata</h2>
+    
+
+
+<p>The <code>outpack_packet_add_custom</code> function adds arbitrary
+additional metadata into a packet. It is primarily designed for
+use with applications that build on outpack to provide
+additional information beyond the minimal set provided by
+outpack.</p>
+<p>For example, orderly tracks "artefacts" which collect groups of
+file outputs into logical bundles.  To support this it needs to
+register additional data for each artefact with:</p><ul><li><p>the description of the artefect (a short phrase)</p></li>
+<li><p>the format of the artefact (a string describing the data type)</p></li>
+<li><p>the contents of the artefact (an array of filenames)</p></li>
+</ul><p>JSON for this might look like:</p><div class="sourceCode json"><pre><code><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">{</span></span>
+<span id="cb1-2"><a href="#cb1-2"></a>  <span class="dt">"artefacts"</span><span class="fu">:</span> <span class="ot">[</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a>    <span class="fu">{</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a>      <span class="dt">"description"</span><span class="fu">:</span> <span class="st">"Data for onward use"</span><span class="fu">,</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a>      <span class="dt">"format"</span><span class="fu">:</span> <span class="st">"data"</span><span class="fu">,</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a>      <span class="dt">"contents"</span><span class="fu">:</span> <span class="ot">[</span><span class="st">"results.rds"</span><span class="ot">,</span> <span class="st">"summary.rds"</span><span class="ot">]</span></span>
+<span id="cb1-7"><a href="#cb1-7"></a>    <span class="fu">}</span><span class="ot">,</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a>    <span class="fu">{</span></span>
+<span id="cb1-9"><a href="#cb1-9"></a>      <span class="dt">"description"</span><span class="fu">:</span> <span class="st">"Diagnostic figures"</span><span class="fu">,</span></span>
+<span id="cb1-10"><a href="#cb1-10"></a>      <span class="dt">"format"</span><span class="fu">:</span> <span class="st">"staticgraph"</span><span class="fu">,</span></span>
+<span id="cb1-11"><a href="#cb1-11"></a>      <span class="dt">"contents"</span><span class="fu">:</span> <span class="ot">[</span><span class="st">"fits.png"</span><span class="ot">,</span> <span class="st">"inputs.png"</span><span class="ot">]</span></span>
+<span id="cb1-12"><a href="#cb1-12"></a>    <span class="fu">}</span></span>
+<span id="cb1-13"><a href="#cb1-13"></a>  <span class="ot">]</span></span>
+<span id="cb1-14"><a href="#cb1-14"></a><span class="fu">}</span></span></code></pre><p></p></div>
+<p>Here, we describe two artefacts, together collecting four files.</p>
+<p>We need to store these in outpack's final metadata, and we want to
+do this in a way that allows easy querying later on while
+scoping the data to your application.  To allow for this we
+group all data your application adds under an application key
+(e.g., <code>orderly</code>).  You can then store whatever data you want
+beneath this key.</p>
+<p><strong>NOTE1</strong>: A limitation here is that the filenames above cannot be
+checked against the outpack list of files because outpack does
+not know that <code>contents</code> here refers to filenames.</p>
+<p><strong>NOTE2</strong>: To allow for predictable serialisation to JSON, you
+must serialise your own data before passing through to
+<code>outpack_packet_add_custom</code>.</p>
     </div>
 
   </div>
