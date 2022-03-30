@@ -75,15 +75,27 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 ##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
-  ## TODO: similar to `git remote -v` we might support an extended
-  ## mode here (returning a data.frame) or a second function that
-  ## returns richer information about the locations.  This function is
-  ## going to be called fairly frequently so the cheap version is
-  ## important.
+  names(outpack_location_priority(root))
+}
+
+
+## TODO: similar to `git remote -v` we might support an extended mode
+## here (returning a data.frame) or a second function that returns
+## richer information about the locations.  This function is going to
+## be called fairly frequently so the cheap version here and above is
+## important.
+##
+## Probably something like this needs exporting, but holding off for now:
+## * would be simplified if we kept something for local in the main
+##   set of locations
+## * probably want a function that returns a data.frame of location
+##   information - could construct this when we load the config I suspect?
+## * we'll want to report information about where the location points at
+##   and that will be easiest once we have more than one type.
+outpack_location_priority <- function(root = NULL) {
   root <- outpack_root_locate(root)
-  priority <- c(local = 0,
-                vnapply(root$config$location, "[[", "priority"))
-  names(priority[order(priority, decreasing = TRUE)])
+  priority <- c(local = 0, vnapply(root$config$location, "[[", "priority"))
+  priority[order(priority, decreasing = TRUE)]
 }
 
 
@@ -292,14 +304,12 @@ location_resolve_valid <- function(location, root, include_local) {
         "If 'location' is numeric it must be a scalar (but was length %d)",
         length(location)))
     }
-    priority <- sort(c(local = 0,
-                       vnapply(root$config$location, "[[", "priority")),
-                     decreasing = TRUE)
+    priority <- outpack_location_priority(root)
     keep <- priority >= location
     if (!any(keep)) {
       stop(sprintf("No locations found with priority of at least %s", location))
     }
-    location <- names(which(keep))
+    location <- names(priority)[keep]
   } else {
     stop("Invalid input for 'location'; expected NULL, character or numeric")
   }
