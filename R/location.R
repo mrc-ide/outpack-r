@@ -166,45 +166,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = FALSE,
     return(id)
   }
 
-  ## Then see if we can satisfy this across all location:
-  location <- location_resolve_valid(location, root)
-
-  ## For each packet we'll use the location with the highest priority.
-  ## This is a bit of a faff:
-  candidates <- index$location[index$location$location %in% location, ]
-  select_location <- function(packet) {
-    pos <- candidates$location[candidates$packet == packet]
-    if (length(pos) == 0) {
-      NA_character_
-    } else {
-      location[match(pos, location)]
-    }
-  }
-  id_location <- vcapply(id, select_location)
-
-
-  match(index$location$location, location)
-
-
-  id_location <- found$location[match(id, found$packet)]
-
-  priority <- match(index$location$location, location)
-  function(i)
-    match(index$location$location[index$location$packet == i], location)
-
-  function(i)
-    match(
-
-  if (anyNA(id_location)) {
-    ## Providing a really good error message here is super hard because:
-    ## * id might be a vector or not
-    ## * location might a vector or not
-    ## * id might be a dependency of what was asked for or directly asked for
-    stop("write a good error")
-    stop(sprintf(
-      "packet '%s' not known at location '%s' (consider pulling metadata)",
-      msg, location))
-  }
+  plan <- location_pull_plan(id, location, root)
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
@@ -213,11 +175,19 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = FALSE,
   ## across all packets (within a single location where more than one
   ## is required).  This is the simplest implementation for now
   ## though.
-  for (i in seq_along(id)) {
-    driver <- location_driver(id_location[i], root)
-    location_pull_files_store(root, driver, id[i])
-    location_pull_files_archive(root, driver, id[i])
-    mark_packet_unpacked(id[i], id_location[i], root)
+  ##
+  ## Even though we look across all locations for places we can find a
+  ## packet, we don't look across all locations for a given file (that
+  ## is, if a location fails to provide the expected file, we will
+  ## error and not try and recover).  That's probably reasonable
+  ## behaviour as this should be pretty rare if people have sensible
+  ## workflows, but there's also an argument that we might try looking
+  ## for a given file in any location at some point.
+  for (i in seq_len(nrow(plan))) {
+    driver <- location_driver(plan$location[i], root)
+    location_pull_files_store(root, driver, plan$packet[i])
+    location_pull_files_archive(root, driver, plan$packet[i])
+    mark_packet_unpacked(plan$packet[i], plan$location[i], root)
   }
 
   invisible(id)
@@ -308,7 +278,7 @@ location_pull_files_archive <- function(root, driver, id) {
 
 
 ## Tidy up this logic with the same in outpack_location_list
-location_resolve_valid <- function(location, root) {
+location_resolve_valid <- function(location, root, include_local) {
   if (is.null(location)) {
     location <- outpack_location_list(root)
   } else if (is.character(location)) {
@@ -333,5 +303,55 @@ location_resolve_valid <- function(location, root) {
   } else {
     stop("Invalid input for 'location'; expected NULL, character or numeric")
   }
+
+  ## In some cases we won't want local, make this easy to do:
+  if (!include_local) {
+    location <- setdiff(location, local)
+  }
+
   location
+}
+
+
+location_pull_plan <- function(id, location, root) {
+  ## For each packet we'll use the location with the highest priority
+  ## based on the list of locations
+  location <- location_resolve_valid(location, root, include_local = FALSE)
+
+  index <- root$index()
+
+  ## Things that are found in any location:
+  candidates <- index$location[index$location$location %in% location,
+                               c("packet", "location")]
+
+  ## Sort by priority
+  candidates <- candidates[order(match(candidates$location, location)), ]
+
+  ## Then find the highest priority location where a packet can be found
+  plan <- data_frame(
+    packet = id,
+    location = candidates$location[match(id, candidates$packet)])
+
+  if (anyNA(plan$location)) {
+    ## This is going to want eventual improvement before we face
+    ## users.  The issues here are that:
+    ## * id or location might be vectors (and potentially) quite long
+    ##   so formatting the message nicely is not
+    ##   straightforward. Better would be to throw an error object
+    ##   that takes care of formatting as we can test that more easily
+    ## * the id above might include things that the user did not
+    ##   directly ask for (but were included as dependencies) and we
+    ##   don't capture that intent.
+    ## * we might also want to include the human readable name of the
+    ##   packet here too (we can get that easily from the index)
+    ## * we don't report back how the set of candidate locations was
+    ##   resolved (e.g., explicitly given, default, min priority)
+    msg <- id[is.na(plan$location)]
+    stop(sprintf("Failed to find %s at location %s: %s",
+                 ngettext(length(msg), "packet", "packets"),
+                 paste(squote(location), collapse = ", "),
+                 paste(squote(msg), collapse = ", ")))
+  }
+
+  plan
 }

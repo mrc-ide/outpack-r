@@ -209,8 +209,8 @@ test_that("Can pull metadata through chain of locations", {
   ## >      `--------/
   outpack_location_add("a", root$a$path, root = root$b)
   outpack_location_add("b", root$b$path, root = root$c)
-  outpack_location_add("c", root$c$path, root = root$d)
   outpack_location_add("b", root$b$path, root = root$d)
+  outpack_location_add("c", root$c$path, root = root$d)
 
   ## Create a packet and make sure it's in both b and c
   id1 <- create_random_packet(root$a)
@@ -224,6 +224,8 @@ test_that("Can pull metadata through chain of locations", {
   ## packet from both locations:
   outpack_location_pull_metadata(root = root$d)
   index <- root$d$index()
+
+  outpack_location_list(root$d)
 
   ## Metadata is correct
   expect_length(index$metadata, 2)
@@ -274,7 +276,7 @@ test_that("can pull a packet from one location to another, archive only", {
   id <- create_random_packet(root$src)
   outpack_location_add("src", root$src$path, root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
-  outpack_location_pull_packet(id, "src", root = root$dst)
+  outpack_location_pull_packet(id, root = root$dst)
 
   index <- root$dst$index()
   expect_equal(index$unpacked$packet, id)
@@ -358,7 +360,7 @@ test_that("Sensible error if packet not known", {
   outpack_location_add("src", root$src$path, root = root$dst)
   expect_error(
     outpack_location_pull_packet(id, "src", root = root$dst),
-    "packet '.+' not known at location 'src'")
+    "Failed to find packet at location 'src': '.+'")
 })
 
 
@@ -431,4 +433,130 @@ test_that("Can add locations with different priorities", {
   outpack_root_open(root$a$path)
   expect_equal(outpack_location_list(root$a),
                c("c", "b", "local"))
+})
+
+
+test_that("Can resolve locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b", "c", "d", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  priority <- c(a = -5, b = 20, c = 10, d = 15)
+  for (i in names(priority)) {
+    outpack_location_add(i, root[[i]]$path, priority = priority[[i]],
+                         root = root$dst)
+  }
+
+  expect_equal(
+    location_resolve_valid(NULL, root$dst, FALSE),
+    c("b", "d", "c", "a"))
+  expect_equal(
+    location_resolve_valid(NULL, root$dst, TRUE),
+    c("b", "d", "c", "local", "a"))
+  expect_equal(
+    location_resolve_valid(15, root$dst, FALSE),
+    c("b", "d"))
+  expect_equal(
+    location_resolve_valid(0, root$dst, FALSE),
+    c("b", "d", "c"))
+  expect_equal(
+    location_resolve_valid(0, root$dst, TRUE),
+    c("b", "d", "c", "local"))
+  expect_equal(
+    location_resolve_valid(c("a", "b", "local", "d"), root$dst, FALSE),
+    c("a", "b", "d"))
+  expect_equal(
+    location_resolve_valid(c("a", "b", "local", "d"), root$dst, TRUE),
+    c("a", "b", "local", "d"))
+
+  expect_error(
+    location_resolve_valid(TRUE, root$dst, TRUE),
+    "Invalid input for 'location'; expected NULL, character or numeric")
+  expect_error(
+    location_resolve_valid(c(1, 2), root$dst, TRUE),
+    "If 'location' is numeric it must be a scalar (but was length 2)",
+    fixed = TRUE)
+  expect_error(
+    location_resolve_valid(50, root$dst, TRUE),
+    "No locations found with priority of at least 50")
+  expect_error(
+    location_resolve_valid("other", root$dst, TRUE),
+    "Unknown location: 'other'")
+  expect_error(
+    location_resolve_valid(c("a", "b", "f", "g"), root$dst, TRUE),
+    "Unknown location: 'f', 'g'")
+})
+
+
+## The test setup here is hard to do because we don't yet support
+## having location_path filtering metadata to the packets that it can
+## actually provide.
+test_that("Can filter locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b", "c", "d", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  ids_a <- vcapply(1:3, function(i) create_random_packet(root$a$path))
+  outpack_location_add("a", root$a$path, root = root$b)
+  outpack_location_pull_metadata(root = root$b)
+  ids_b <- c(ids_a,
+             vcapply(1:3, function(i) create_random_packet(root$b$path)))
+  ids_c <- vcapply(1:3, function(i) create_random_packet(root$c$path))
+  outpack_location_add("a", root$a$path, root = root$d)
+  outpack_location_add("c", root$c$path, root = root$d)
+  outpack_location_pull_metadata(root = root$d)
+  ids_d <- c(ids_c,
+             vcapply(1:3, function(i) create_random_packet(root$d$path)))
+
+  priority <- c(a = 20, b = 15, c = 10, d = 5)
+  for (i in names(priority)) {
+    outpack_location_add(i, root[[i]]$path, priority = priority[[i]],
+                         root = root$dst)
+  }
+  outpack_location_pull_metadata(root = root$dst)
+
+  ids <- unique(c(ids_a, ids_b, ids_c, ids_d))
+
+  expect_equal(
+    location_pull_plan(ids, NULL, root = root$dst),
+    data_frame(
+      packet = ids,
+      location = c("a", "a", "a", "b", "b", "b", "c", "c", "c", "d", "d", "d")))
+  ## Invert priority order:
+  expect_equal(
+    location_pull_plan(ids, c("d", "c", "b", "a"), root = root$dst),
+    data_frame(
+      packet = ids,
+      location = c("d", "d", "d", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
+  ## Drop redundant locations
+  expect_equal(
+    location_pull_plan(ids, c("b", "d"), root = root$dst),
+    data_frame(
+      packet = ids,
+      location = c("b", "b", "b", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
+  ## Some corner cases:
+  expect_equal(
+    location_pull_plan(ids_a[[1]], NULL, root = root$dst),
+    data_frame(packet = ids_a[[1]], location = "a"))
+  expect_equal(
+    location_pull_plan(character(), NULL, root = root$dst),
+    data_frame(packet = character(), location = character()))
+
+  ## Failure to find things:
+  err <- expect_error(
+    location_pull_plan(ids, c("a", "b", "c"), root = root$dst),
+    "Failed to find packets at location 'a', 'b', 'c'")
+  expect_error(
+    location_pull_plan(ids, 10, root = root$dst),
+    err$message, fixed = TRUE)
 })
