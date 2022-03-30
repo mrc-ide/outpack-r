@@ -152,7 +152,8 @@ read_locations <- function(root, prev) {
   }
   new <- do.call(rbind, lapply(locations, read_location, root$path, prev))
   ret <- rbind(prev, new)
-  ret <- ret[order(ret$location), ]
+  ## Always sort by location (highest priority first) then id
+  ret <- ret[order(match(ret$location, locations), ret$packet), ]
   ## Avoids weird computed rownames - always uses 1:n
   rownames(ret) <- NULL
   ret

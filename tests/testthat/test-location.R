@@ -250,7 +250,7 @@ test_that("can pull a packet from one location to another, using file store", {
   id <- create_random_packet(root$src)
   outpack_location_add("src", root$src$path, root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
-  outpack_location_pull_packet(id, "src", root = root$dst)
+  outpack_location_pull_packet(id, root = root$dst)
 
   index <- root$dst$index()
   expect_equal(index$unpacked$packet, id)

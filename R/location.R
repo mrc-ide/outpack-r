@@ -81,9 +81,9 @@ outpack_location_list <- function(root = NULL) {
   ## going to be called fairly frequently so the cheap version is
   ## important.
   root <- outpack_root_locate(root)
-  location <- c(local = 0,
+  priority <- c(local = 0,
                 vnapply(root$config$location, "[[", "priority"))
-  names(location[order(location, decreasing = TRUE)])
+  names(priority[order(priority, decreasing = TRUE)])
 }
 
 
@@ -134,8 +134,12 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'
 ##' @param id The id of the packet(s) to pull
 ##'
-##' @param location The name of the location to pull from.  Later we
-##'   will relax this (see mrc-3030)
+##' @param location Control the location that the packet can be pulled
+##'   from.  The default (`NULL`) will try and pull the packet from
+##'   anywhere it can be found, starting with locations that have the
+##'   highest priority.  Provide a string to limit the search to a
+##'   particular location, or provide a number to limit to locations
+##'   with at least this priority.
 ##'
 ##' @param recursive Logical, indicating if we should recursively pull
 ##'   all packets that are referenced by the packets specified in
@@ -145,21 +149,11 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'
 ##' @return Invisibly, the ids of packets that were pulled
 ##' @export
-outpack_location_pull_packet <- function(id, location, recursive = FALSE,
+outpack_location_pull_packet <- function(id, location = NULL, recursive = FALSE,
                                          root = NULL) {
   root <- outpack_root_locate(root)
   assert_character(id)
   index <- root$index()
-
-  ## We are restricting this to a single location, but if all
-  ## locations are trustable, then we might want instead to look over
-  ## all known locations as the files are just files (mrc-3030)
-  if (!any(index$location$packet == id & index$location$location == location)) {
-    stop(sprintf(
-      "packet '%s' not known at location '%s' (consider pulling metadata)",
-      id, location))
-  }
-  driver <- location_driver(location, root)
 
   if (recursive) {
     id <- find_all_dependencies(id, index$metadata)
@@ -168,25 +162,62 @@ outpack_location_pull_packet <- function(id, location, recursive = FALSE,
   ## Later, it might be better if we did not skip over unpacked
   ## packets, but instead validate and/or repair them (see mrc-3052)
   id <- setdiff(id, index$unpacked$packet)
+  if (length(id) == 0) {
+    return(id)
+  }
+
+  ## Then see if we can satisfy this across all location:
+  location <- location_resolve_valid(location, root)
+
+  ## For each packet we'll use the location with the highest priority.
+  ## This is a bit of a faff:
+  candidates <- index$location[index$location$location %in% location, ]
+  select_location <- function(packet) {
+    pos <- candidates$location[candidates$packet == packet]
+    if (length(pos) == 0) {
+      NA_character_
+    } else {
+      location[match(pos, location)]
+    }
+  }
+  id_location <- vcapply(id, select_location)
+
+
+  match(index$location$location, location)
+
+
+  id_location <- found$location[match(id, found$packet)]
+
+  priority <- match(index$location$location, location)
+  function(i)
+    match(index$location$location[index$location$packet == i], location)
+
+  function(i)
+    match(
+
+  if (anyNA(id_location)) {
+    ## Providing a really good error message here is super hard because:
+    ## * id might be a vector or not
+    ## * location might a vector or not
+    ## * id might be a dependency of what was asked for or directly asked for
+    stop("write a good error")
+    stop(sprintf(
+      "packet '%s' not known at location '%s' (consider pulling metadata)",
+      msg, location))
+  }
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
   ## single loop, but there's also no real reason why we might not
   ## present this as a single update operation for pulling all files
-  ## across all packets.  This is the simplest implementation for now
+  ## across all packets (within a single location where more than one
+  ## is required).  This is the simplest implementation for now
   ## though.
-  ##
-  ## Making this nicer might be easiest to do by updating
-  ## outpack_location_pull_packet to accept a vector of ids and having
-  ## it resolve all missing files at once, which would complicate that
-  ## a little?
-  ##
-  ## However, the exposed interface to the user (aside from progress
-  ## reporting) will not change.
-  for (i in id) {
-    location_pull_files_store(root, driver, i)
-    location_pull_files_archive(root, driver, i)
-    mark_packet_unpacked(i, location, root)
+  for (i in seq_along(id)) {
+    driver <- location_driver(id_location[i], root)
+    location_pull_files_store(root, driver, id[i])
+    location_pull_files_archive(root, driver, id[i])
+    mark_packet_unpacked(id[i], id_location[i], root)
   }
 
   invisible(id)
@@ -273,4 +304,34 @@ location_pull_files_archive <- function(root, driver, id) {
       }
     }
   }
+}
+
+
+## Tidy up this logic with the same in outpack_location_list
+location_resolve_valid <- function(location, root) {
+  if (is.null(location)) {
+    location <- outpack_location_list(root)
+  } else if (is.character(location)) {
+    err <- setdiff(location, outpack_location_list(root))
+    if (length(err) > 0) {
+      stop(sprintf("Unknown location: %s", paste(squote(err), collapse = ", ")))
+    }
+  } else if (is.numeric(location)) {
+    if (length(location) != 1) {
+      stop(sprintf(
+        "If 'location' is numeric it must be a scalar (but was length %d)",
+        length(location)))
+    }
+    priority <- sort(c(local = 0,
+                       vnapply(root$config$location, "[[", "priority")),
+                     decreasing = TRUE)
+    keep <- priority >= location
+    if (!any(keep)) {
+      stop(sprintf("No locations found with priority of at least %s", location))
+    }
+    location <- names(which(keep))
+  } else {
+    stop("Invalid input for 'location'; expected NULL, character or numeric")
+  }
+  location
 }
