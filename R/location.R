@@ -53,6 +53,9 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   config$location <- rbind(
     config$location,
     new_location_entry(name, priority, "path", list(path = path)))
+  config$location <- config$location[
+    order(config$location$priority, decreasing = TRUE), ]
+  rownames(config$location) <- NULL
   config_write(config, root$path)
 
   root$config <- config_read(root$path)
@@ -191,10 +194,10 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
   ## workflows, but there's also an argument that we might try looking
   ## for a given file in any location at some point.
   for (i in seq_len(nrow(plan))) {
-    driver <- location_driver(plan$location[i], root)
+    driver <- location_driver(plan$location_name[i], root)
     location_pull_files_store(root, driver, plan$packet[i])
     location_pull_files_archive(root, driver, plan$packet[i])
-    mark_packet_unpacked(plan$packet[i], plan$location[i], root)
+    mark_packet_unpacked(plan$packet[i], plan$location_id[i], root)
   }
 
   invisible(id)
@@ -332,23 +335,24 @@ location_resolve_valid <- function(location, root, include_local) {
 location_build_pull_plan <- function(id, location, root) {
   ## For each packet we'll use the location with the highest priority
   ## based on the list of locations
-  location <- location_resolve_valid(location, root, include_local = FALSE)
+  location_name <- location_resolve_valid(location, root, include_local = FALSE)
+  location_id <- lookup_location_id(location_name, root)
 
   index <- root$index()
 
   ## Things that are found in any location:
-  candidates <- index$location[index$location$location %in% location,
+  candidates <- index$location[index$location$location %in% location_id,
                                c("packet", "location")]
 
   ## Sort by priority
-  candidates <- candidates[order(match(candidates$location, location)), ]
+  candidates <- candidates[order(match(candidates$location, location_id)), ]
 
-  ## Then find the highest priority location where a packet can be found
   plan <- data_frame(
     packet = id,
-    location = candidates$location[match(id, candidates$packet)])
+    location_id = candidates$location[match(id, candidates$packet)])
+  plan$location_name <- location_name[match(plan$location_id, location_id)]
 
-  if (anyNA(plan$location)) {
+  if (anyNA(plan$location_name)) {
     ## This is going to want eventual improvement before we face
     ## users.  The issues here are that:
     ## * id or location might be vectors (and potentially) quite long
@@ -362,10 +366,10 @@ location_build_pull_plan <- function(id, location, root) {
     ##   packet here too (we can get that easily from the index)
     ## * we don't report back how the set of candidate locations was
     ##   resolved (e.g., explicitly given, default, min priority)
-    msg <- id[is.na(plan$location)]
+    msg <- id[is.na(plan$location_name)]
     stop(sprintf("Failed to find %s at location %s: %s",
                  ngettext(length(msg), "packet", "packets"),
-                 paste(squote(location), collapse = ", "),
+                 paste(squote(location_name), collapse = ", "),
                  paste(squote(msg), collapse = ", ")))
   }
 
