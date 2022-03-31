@@ -1,3 +1,37 @@
+test_that("Validate inputs to config set", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+
+  expect_error(
+    outpack_config_set(TRUE, root = root),
+    "'options' must be named")
+  expect_error(
+    outpack_config_set(a = 1, options = list(b = 2), root = root),
+    "If 'options' is given, no dot arguments are allowed")
+})
+
+
+test_that("Setting no options does nothing", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  config <- root$config
+  outpack_config_set(root = root)
+  expect_identical(outpack_root_open(path)$config, config)
+})
+
+
+test_that("Disallow unknown configuration options", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(
+    outpack_config_set(whatever = TRUE, root = root),
+    "Can't set configuration option: 'whatever'")
+})
+
+
 test_that("Can update core.require_pull_recursive in empty archive", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
@@ -31,4 +65,20 @@ test_that("Enabling recursive pulls forces pulling missing packets", {
   expect_setequal(root$dst$index()$unpacked$packet, id)
   expect_true(
     outpack_root_open(root$dst$path)$config$core$require_pull_recursive)
+})
+
+
+test_that("Unchanged require_pull_recursive prints message", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_false(root$config$core$require_pull_recursive)
+  expect_message(
+    outpack_config_set(core.require_pull_recursive = FALSE, root = root),
+    "'core.require_pull_recursive' was unchanged")
+  expect_silent(
+    outpack_config_set(core.require_pull_recursive = TRUE, root = root))
+  expect_message(
+    outpack_config_set(core.require_pull_recursive = TRUE, root = root),
+    "'core.require_pull_recursive' was unchanged")
 })
