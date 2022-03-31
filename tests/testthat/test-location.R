@@ -573,3 +573,49 @@ test_that("Can filter locations", {
     location_build_pull_plan(ids, 10, root = root$dst),
     err$message, fixed = TRUE)
 })
+
+
+test_that("nonrecursive pulls are prevented by configuration", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("src", "dst")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p), require_pull_recursive = TRUE)
+  }
+
+  id <- create_random_packet_chain(root$src, 3)
+
+
+
+  expect_error(
+    outpack_location_pull_packet(id[["c"]], recursive = FALSE, root = root$dst),
+    "'recursive' must be TRUE (or NULL) with your configuration",
+    fixed = TRUE)
+})
+
+
+test_that("if recursive pulls are required, pulls are recursive by default", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  root$src <- outpack_init(file.path(path, "src"))
+  root$shallow <- outpack_init(file.path(path, "shallow"))
+  root$deep <- outpack_init(file.path(path, "deep"),
+                            require_pull_recursive = TRUE)
+
+  id <- create_random_packet_chain(root$src, 3)
+
+  for (r in root[c("shallow", "deep")]) {
+    outpack_location_add("src", root$src$path, root = r)
+    outpack_location_pull_metadata(root = r)
+  }
+
+  outpack_location_pull_packet(id[["c"]], recursive = NULL, root = root$shallow)
+  expect_equal(root$shallow$index()$unpacked$packet, id[["c"]])
+
+  outpack_location_pull_packet(id[["c"]], recursive = NULL, root = root$deep)
+  expect_setequal(root$deep$index()$unpacked$packet, id)
+})
