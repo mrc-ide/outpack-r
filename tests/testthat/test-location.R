@@ -528,35 +528,35 @@ test_that("Can filter locations", {
   ids <- unique(c(ids_a, ids_b, ids_c, ids_d))
 
   expect_equal(
-    location_pull_plan(ids, NULL, root = root$dst),
+    location_build_pull_plan(ids, NULL, root = root$dst),
     data_frame(
       packet = ids,
       location = c("a", "a", "a", "b", "b", "b", "c", "c", "c", "d", "d", "d")))
   ## Invert priority order:
   expect_equal(
-    location_pull_plan(ids, c("d", "c", "b", "a"), root = root$dst),
+    location_build_pull_plan(ids, c("d", "c", "b", "a"), root = root$dst),
     data_frame(
       packet = ids,
       location = c("d", "d", "d", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
   ## Drop redundant locations
   expect_equal(
-    location_pull_plan(ids, c("b", "d"), root = root$dst),
+    location_build_pull_plan(ids, c("b", "d"), root = root$dst),
     data_frame(
       packet = ids,
       location = c("b", "b", "b", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
   ## Some corner cases:
   expect_equal(
-    location_pull_plan(ids_a[[1]], NULL, root = root$dst),
+    location_build_pull_plan(ids_a[[1]], NULL, root = root$dst),
     data_frame(packet = ids_a[[1]], location = "a"))
   expect_equal(
-    location_pull_plan(character(), NULL, root = root$dst),
+    location_build_pull_plan(character(), NULL, root = root$dst),
     data_frame(packet = character(), location = character()))
 
   ## Failure to find things:
   err <- expect_error(
-    location_pull_plan(ids, c("a", "b", "c"), root = root$dst),
+    location_build_pull_plan(ids, c("a", "b", "c"), root = root$dst),
     "Failed to find packets at location 'a', 'b', 'c'")
   expect_error(
-    location_pull_plan(ids, 10, root = root$dst),
+    location_build_pull_plan(ids, 10, root = root$dst),
     err$message, fixed = TRUE)
 })

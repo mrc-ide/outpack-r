@@ -178,7 +178,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = FALSE,
     return(id)
   }
 
-  plan <- location_pull_plan(id, location, root)
+  plan <- location_build_pull_plan(id, location, root)
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
@@ -323,7 +323,7 @@ location_resolve_valid <- function(location, root, include_local) {
 }
 
 
-location_pull_plan <- function(id, location, root) {
+location_build_pull_plan <- function(id, location, root) {
   ## For each packet we'll use the location with the highest priority
   ## based on the list of locations
   location <- location_resolve_valid(location, root, include_local = FALSE)
