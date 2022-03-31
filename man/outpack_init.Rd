@@ -25,7 +25,7 @@ packets.  If \code{archive} is non-\code{NULL}, the file-store will be
 used as the source of truth and the duplicated files in archive
 exist only for convenience.}
 
-\item{require_pull_archive}{Logical, indicating if
+\item{require_pull_recursive}{Logical, indicating if
 \link{outpack_location_pull_packet} should always operate in
 recursive mode.  This is \code{FALSE} by default, but set to \code{TRUE}
 if you want your archive to behave well as a location.}

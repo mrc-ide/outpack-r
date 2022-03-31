@@ -15,7 +15,7 @@
 ##'   used as the source of truth and the duplicated files in archive
 ##'   exist only for convenience.
 ##'
-##' @param require_pull_archive Logical, indicating if
+##' @param require_pull_recursive Logical, indicating if
 ##'   [outpack::outpack_location_pull_packet] should always operate in
 ##'   recursive mode.  This is `FALSE` by default, but set to `TRUE`
 ##'   if you want your archive to behave well as a location.
