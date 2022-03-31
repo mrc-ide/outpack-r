@@ -40,7 +40,9 @@ test_that("Can run a basic packet", {
   expect_true(file.exists(path_metadata))
   outpack_schema("metadata")$validate(path_metadata)
 
-  path_location <- file.path(path, ".outpack", "location", "local", id)
+  location_id <- root$config$location$id
+
+  path_location <- file.path(path, ".outpack", "location", location_id, id)
   expect_true(file.exists(path_location))
   outpack_schema("location")$validate(path_location)
 
@@ -79,7 +81,7 @@ test_that("Can run a basic packet", {
 
   expect_setequal(names(index$unpacked), c("packet", "time", "location"))
   expect_equal(index$unpacked$packet, id)
-  expect_equal(index$unpacked$location, "local")
+  expect_equal(index$unpacked$location, location_id)
   expect_s3_class(index$unpacked$time, "POSIXt")
 
   ## Easily retrieve metadata from root:

@@ -50,7 +50,8 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 
   config <- root$config
 
-  loc <- list(name = name, type = "path", path = path, priority = priority)
+  loc <- list(name = name, id = location_id(), priority = priority,
+              type = "path", args = list(path = path))
   config$location <- c(unname(config$location), list(loc))
   config_write(config, root$path)
 
@@ -75,27 +76,13 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 ##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
-  names(outpack_location_priority(root))
+  outpack_root_locate(root)$location$name
 }
 
 
-## TODO: similar to `git remote -v` we might support an extended mode
-## here (returning a data.frame) or a second function that returns
-## richer information about the locations.  This function is going to
-## be called fairly frequently so the cheap version here and above is
-## important.
-##
-## Probably something like this needs exporting, but holding off for now:
-## * would be simplified if we kept something for local in the main
-##   set of locations
-## * probably want a function that returns a data.frame of location
-##   information - could construct this when we load the config I suspect?
-## * we'll want to report information about where the location points at
-##   and that will be easiest once we have more than one type.
 outpack_location_priority <- function(root = NULL) {
   root <- outpack_root_locate(root)
-  priority <- c(local = 0, vnapply(root$config$location, "[[", "priority"))
-  priority[order(priority, decreasing = TRUE)]
+  set_names(root$config$location$priority, root$config$location$name)
 }
 
 
@@ -381,4 +368,9 @@ location_build_pull_plan <- function(id, location, root) {
   }
 
   plan
+}
+
+
+location_id <- function() {
+  paste(as.character(openssl::rand_bytes(4)), collapse = "")
 }

@@ -37,17 +37,17 @@
                     "name": {
                         "type": "string"
                     },
-                    "type": {
-                        "const": "path"
+                    "id": {
+                        "$ref": "locationId.json"
                     },
                     "priority": {
                         "type": "number"
                     },
-                    "path": {
-                        "type": "string"
+                    "type": {
+                        "enum": ["local", "path"]
                     }
                 },
-                "required": ["name", "type", "path", "priority"]
+                "required": ["name", "id", "priority", "type"]
             }
         }
     },

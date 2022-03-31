@@ -96,7 +96,9 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
       use_file_store = use_file_store,
       require_complete_tree = require_complete_tree,
       hash_algorithm = hash_algorithm),
-    location = list())
+    location = list(list(
+      name = local, id = location_id(), priority = 0,
+      type = "local")))
 }
 
 
@@ -116,6 +118,11 @@ config_write <- function(config, root_path) {
 
 config_read <- function(root_path) {
   config <- jsonlite::read_json(file.path(root_path, ".outpack/config.json"))
-  names(config$location) <- vcapply(config$location, "[[", "name")
+  config$location <- data_frame(
+    name = vcapply(config$location, "[[", "name"),
+    id = vcapply(config$location, "[[", "id"),
+    priority = vnapply(config$location, "[[", "priority"),
+    type = vcapply(config$location, "[[", "type"),
+    args = I(lapply(config$location, "[[", "args")))
   config
 }

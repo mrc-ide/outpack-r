@@ -6,7 +6,9 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## TODO(RFC): Is 'local' really the only valid choice here?  It feels
   ## like we could allow for temporary locations and implement
   ## transactions this way.
-  location <- local
+  location_name <- local
+  location_id <- root$config$location$id[
+    root$config$location$name == location_name]
 
   hash_algorithm <- root$config$core$hash_algorithm
 
@@ -20,8 +22,10 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## equivalent to "pull" so this is the only way that things might
   ## appear.
   index <- root$index()
-  if (any(index$location$packet == id & index$location$location == location)) {
-    stop(sprintf("'%s' has already been added for '%s'", id, location))
+  exists <- any(index$location$packet == id &
+                index$location$location == location_id)
+  if (exists) {
+    stop(sprintf("'%s' has already been added for '%s'", id, location_name))
   }
 
   for (i in seq_len(nrow(meta$depends))) {
@@ -41,8 +45,8 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## TODO: once we get more flexible remotes, this will get moved into
   ## its own thing.
   hash <- hash_data(json, hash_algorithm)
-  mark_packet_known(id, location, hash, Sys.time(), root)
-  mark_packet_unpacked(id, location, root)
+  mark_packet_known(id, location_id, hash, Sys.time(), root)
+  mark_packet_unpacked(id, location_id, root)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
@@ -50,23 +54,23 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 }
 
 
-mark_packet_known <- function(packet, location, hash, time, root) {
+mark_packet_known <- function(packet_id, location_id, hash, time, root) {
   dat <- list(schemaVersion = scalar(outpack_schema_version()),
-              packet = scalar(packet),
+              packet = scalar(packet_id),
               time = scalar(time_to_num(time)),
               hash = scalar(hash))
-  dest <- file.path(root$path, ".outpack", "location", location, packet)
+  dest <- file.path(root$path, ".outpack", "location", location_id, packet_id)
   fs::dir_create(dirname(dest))
   writeLines(to_json(dat, "location"), dest)
 }
 
 
-mark_packet_unpacked <- function(packet, location, root) {
+mark_packet_unpacked <- function(packet_id, location_id, root) {
   dat <- list(schemaVersion = scalar(outpack_schema_version()),
-              packet = scalar(packet),
+              packet = scalar(packet_id),
               time = scalar(time_to_num()),
-              location = scalar(location))
-  dest <- file.path(root$path, ".outpack", "unpacked", packet)
+              location = scalar(location_id))
+  dest <- file.path(root$path, ".outpack", "unpacked", packet_id)
   fs::dir_create(dirname(dest))
   writeLines(to_json(dat, "unpacked"), dest)
 }
