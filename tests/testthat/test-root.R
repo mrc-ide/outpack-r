@@ -10,6 +10,7 @@ test_that("can create new root", {
   expect_mapequal(r$config$core,
                   list(path_archive = "archive",
                        use_file_store = FALSE,
+                       require_pull_recursive = FALSE,
                        hash_algorithm = "sha256"))
   expect_false(file.exists(file.path(path, ".outpack", "files")))
   expect_equal(outpack_location_list(r), "local")
@@ -30,10 +31,12 @@ test_that("Can control root config on initialisation", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
 
-  r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE,
+                    require_pull_recursive = TRUE)
   expect_mapequal(r$config$core,
                   list(path_archive = NULL,
                        use_file_store = TRUE,
+                       require_pull_recursive = TRUE,
                        hash_algorithm = "sha256"))
   expect_true(file.exists(file.path(path, ".outpack", "files")))
 })

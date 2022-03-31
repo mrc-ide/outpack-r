@@ -1,37 +1,76 @@
+##' Set configuration options. Not all can currently be set; this will
+##' be expanded over time. See Details.
+##'
+##' Options are set in the order that they are provided.  Currently,
+##' if setting one option fails, no further options will be processed
+##' but previous ones will not be (do not rely on this behaviour, it
+##' may change).
+##'
+##' Currently you can set:
+##'
+##' * `core.require_pull_recursive`
+##'
+##' See [outpack::outpack_init] for description of these options.
+##'
+##' @title Set configuration options
+##'
+##' @param ... Named options to set (e.g., pass the argument
+##'   `core.require_pull_recursive = TRUE`)
+##'
+##' @param options As an alternative to `...`, you can pass a list of
+##'   named options here (e.g., `list(core.require_pull_recursive =
+##'   TRUE)`).  This interface is typically easier to program against.
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##' @export
 outpack_config_set <- function(..., options = list(...), root = NULL) {
   root <- outpack_root_locate(root)
-  assert_named(options, unique = TRUE)
-  nms <- names(options)
-  valid <- "core.require_pull_recursive"
-  unknown <- setdiff(nms, valid)
+  if (!missing(options) && ...length() > 0) {
+    stop("If 'options' is given, no dot arguments are allowed")
+  }
+  if (length(options) == 0) {
+    return(invisible())
+  }
+
+  assert_is(options, "list")
+  assert_named(options)
+
+  setters <- list(
+    "core.require_pull_recursive" = config_set_require_pull_recursive)
+
+  unknown <- setdiff(names(options), names(setters))
   if (length(unknown)) {
     stop("Can't set configuration option: ",
          paste(squote(unknown), collapse = ", "))
   }
 
+  for (nm in names(options)) {
+    root <- setters[[nm]](options[[nm]], root)
+  }
+
+  invisible()
 }
 
 
-config_set_require_pull_recursive <- function(root, value) {
-  if (root$config$core$require_pull_recursive == value) {
+config_set_require_pull_recursive <- function(value, root) {
+  config <- root$config
+
+  if (config$core$require_pull_recursive == value) {
     message("'core.require_pull_recursive' was unchanged")
     return()
   }
 
-  config <- root$config
-
   if (value) {
-    ## Here, we need to make sure that we can fulfil all packets by
-    ## pulling any referenced but missing packets.  This would be
-    ## nicest to do from "any" location, following the chain of trust.
-    browser()
+    id <- root$index()$unpacked$packet
+    outpack_location_pull_packet(id, recursive = TRUE, root = root)
   }
 
   config$core$require_pull_recursive <- value
   config_write(config, root$path)
   root$config <- config
 }
-
 
 
 config_new <- function(path_archive, use_file_store, require_pull_recursive) {
