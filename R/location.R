@@ -15,13 +15,22 @@
 ##' @param path The path to the directory containing another outpack
 ##'   archive.
 ##'
+##' @param priority The priority of the location. This is used when
+##'   deciding where to pull packets from
+##'   ([outpack::outpack_location_pull_packet]), and will be used in
+##'   the query interface. A priority of 0 corresponds to the same
+##'   priority as local packets, while larger numbers have higher
+##'   priority and negative numbers have lower priority.  Ties will be
+##'   resolved in an arbitrary order.
+##'
 ##' @inheritParams outpack_location_list
 ##'
 ##' @return Nothing
 ##' @export
-outpack_location_add <- function(name, path, root = NULL) {
+outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   root <- outpack_root_locate(root)
   assert_scalar_character(name)
+  assert_scalar_numeric(priority)
 
   if (name %in% location_reserved_name) {
     stop(sprintf("Cannot add a location with reserved name '%s'",
@@ -41,7 +50,7 @@ outpack_location_add <- function(name, path, root = NULL) {
 
   config <- root$config
 
-  loc <- list(name = name, type = "path", path = path)
+  loc <- list(name = name, type = "path", path = path, priority = priority)
   config$location <- c(unname(config$location), list(loc))
   config_write(config, root$path)
 
@@ -66,15 +75,28 @@ outpack_location_add <- function(name, path, root = NULL) {
 ##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
-  ## TODO: similar to `git remote -v` we might support an extended
-  ## mode here (returning a data.frame) or a second function that
-  ## returns richer information about the locations.  This function is
-  ## going to be called fairly frequently so the cheap version is
-  ## important.
-  root <- outpack_root_locate(root)
-  union(local, names(root$config$location))
+  names(outpack_location_priority(root))
 }
 
+
+## TODO: similar to `git remote -v` we might support an extended mode
+## here (returning a data.frame) or a second function that returns
+## richer information about the locations.  This function is going to
+## be called fairly frequently so the cheap version here and above is
+## important.
+##
+## Probably something like this needs exporting, but holding off for now:
+## * would be simplified if we kept something for local in the main
+##   set of locations
+## * probably want a function that returns a data.frame of location
+##   information - could construct this when we load the config I suspect?
+## * we'll want to report information about where the location points at
+##   and that will be easiest once we have more than one type.
+outpack_location_priority <- function(root = NULL) {
+  root <- outpack_root_locate(root)
+  priority <- c(local = 0, vnapply(root$config$location, "[[", "priority"))
+  priority[order(priority, decreasing = TRUE)]
+}
 
 
 ##' Pull metadata from a location, updating the index.  This should
@@ -124,8 +146,12 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'
 ##' @param id The id of the packet(s) to pull
 ##'
-##' @param location The name of the location to pull from.  Later we
-##'   will relax this (see mrc-3030)
+##' @param location Control the location that the packet can be pulled
+##'   from.  The default (`NULL`) will try and pull the packet from
+##'   anywhere it can be found, starting with locations that have the
+##'   highest priority.  Provide a string to limit the search to a
+##'   particular location, or provide a number to limit to locations
+##'   with at least this priority.
 ##'
 ##' @param recursive Logical, indicating if we should recursively pull
 ##'   all packets that are referenced by the packets specified in
@@ -135,21 +161,11 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'
 ##' @return Invisibly, the ids of packets that were pulled
 ##' @export
-outpack_location_pull_packet <- function(id, location, recursive = FALSE,
+outpack_location_pull_packet <- function(id, location = NULL, recursive = FALSE,
                                          root = NULL) {
   root <- outpack_root_locate(root)
   assert_character(id)
   index <- root$index()
-
-  ## We are restricting this to a single location, but if all
-  ## locations are trustable, then we might want instead to look over
-  ## all known locations as the files are just files (mrc-3030)
-  if (!any(index$location$packet == id & index$location$location == location)) {
-    stop(sprintf(
-      "packet '%s' not known at location '%s' (consider pulling metadata)",
-      id, location))
-  }
-  driver <- location_driver(location, root)
 
   if (recursive) {
     id <- find_all_dependencies(id, index$metadata)
@@ -158,25 +174,32 @@ outpack_location_pull_packet <- function(id, location, recursive = FALSE,
   ## Later, it might be better if we did not skip over unpacked
   ## packets, but instead validate and/or repair them (see mrc-3052)
   id <- setdiff(id, index$unpacked$packet)
+  if (length(id) == 0) {
+    return(id)
+  }
+
+  plan <- location_build_pull_plan(id, location, root)
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
   ## single loop, but there's also no real reason why we might not
   ## present this as a single update operation for pulling all files
-  ## across all packets.  This is the simplest implementation for now
+  ## across all packets (within a single location where more than one
+  ## is required).  This is the simplest implementation for now
   ## though.
   ##
-  ## Making this nicer might be easiest to do by updating
-  ## outpack_location_pull_packet to accept a vector of ids and having
-  ## it resolve all missing files at once, which would complicate that
-  ## a little?
-  ##
-  ## However, the exposed interface to the user (aside from progress
-  ## reporting) will not change.
-  for (i in id) {
-    location_pull_files_store(root, driver, i)
-    location_pull_files_archive(root, driver, i)
-    mark_packet_unpacked(i, location, root)
+  ## Even though we look across all locations for places we can find a
+  ## packet, we don't look across all locations for a given file (that
+  ## is, if a location fails to provide the expected file, we will
+  ## error and not try and recover).  That's probably reasonable
+  ## behaviour as this should be pretty rare if people have sensible
+  ## workflows, but there's also an argument that we might try looking
+  ## for a given file in any location at some point.
+  for (i in seq_len(nrow(plan))) {
+    driver <- location_driver(plan$location[i], root)
+    location_pull_files_store(root, driver, plan$packet[i])
+    location_pull_files_archive(root, driver, plan$packet[i])
+    mark_packet_unpacked(plan$packet[i], plan$location[i], root)
   }
 
   invisible(id)
@@ -263,4 +286,91 @@ location_pull_files_archive <- function(root, driver, id) {
       }
     }
   }
+}
+
+
+## Tidy up this logic with the same in outpack_location_list
+location_resolve_valid <- function(location, root, include_local) {
+  if (is.null(location)) {
+    location <- outpack_location_list(root)
+  } else if (is.character(location)) {
+    err <- setdiff(location, outpack_location_list(root))
+    if (length(err) > 0) {
+      stop(sprintf("Unknown location: %s", paste(squote(err), collapse = ", ")))
+    }
+  } else if (is.numeric(location)) {
+    if (length(location) != 1) {
+      stop(sprintf(
+        "If 'location' is numeric it must be a scalar (but was length %d)",
+        length(location)))
+    }
+    priority <- outpack_location_priority(root)
+    keep <- priority >= location
+    if (!any(keep)) {
+      stop(sprintf("No locations found with priority of at least %s", location))
+    }
+    location <- names(priority)[keep]
+  } else {
+    stop("Invalid input for 'location'; expected NULL, character or numeric")
+  }
+
+  ## In some cases we won't want local, make this easy to do:
+  if (!include_local) {
+    location <- setdiff(location, local)
+  }
+
+  ## We could throw nicer errors here if we included this check (and
+  ## the setdiff) in every one of the above the three branches above,
+  ## but that makes things pretty hard to follow. We'll do some work
+  ## on nicer errors later once we get this ready for people to
+  ## actually use.
+  if (length(location) == 0) {
+    stop("No suitable location found")
+  }
+
+  location
+}
+
+
+location_build_pull_plan <- function(id, location, root) {
+  ## For each packet we'll use the location with the highest priority
+  ## based on the list of locations
+  location <- location_resolve_valid(location, root, include_local = FALSE)
+
+  index <- root$index()
+
+  ## Things that are found in any location:
+  candidates <- index$location[index$location$location %in% location,
+                               c("packet", "location")]
+
+  ## Sort by priority
+  candidates <- candidates[order(match(candidates$location, location)), ]
+
+  ## Then find the highest priority location where a packet can be found
+  plan <- data_frame(
+    packet = id,
+    location = candidates$location[match(id, candidates$packet)])
+
+  if (anyNA(plan$location)) {
+    ## This is going to want eventual improvement before we face
+    ## users.  The issues here are that:
+    ## * id or location might be vectors (and potentially) quite long
+    ##   so formatting the message nicely is not
+    ##   straightforward. Better would be to throw an error object
+    ##   that takes care of formatting as we can test that more easily
+    ## * the id above might include things that the user did not
+    ##   directly ask for (but were included as dependencies) and we
+    ##   don't capture that intent.
+    ## * we might also want to include the human readable name of the
+    ##   packet here too (we can get that easily from the index)
+    ## * we don't report back how the set of candidate locations was
+    ##   resolved (e.g., explicitly given, default, min priority)
+    msg <- id[is.na(plan$location)]
+    stop(sprintf("Failed to find %s at location %s: %s",
+                 ngettext(length(msg), "packet", "packets"),
+                 paste(squote(location), collapse = ", "),
+                 paste(squote(msg), collapse = ", ")))
+  }
+
+  plan
 }

@@ -4,13 +4,22 @@
 \alias{outpack_location_pull_packet}
 \title{Pull a single packet from a location}
 \usage{
-outpack_location_pull_packet(id, location, recursive = FALSE, root = NULL)
+outpack_location_pull_packet(
+  id,
+  location = NULL,
+  recursive = FALSE,
+  root = NULL
+)
 }
 \arguments{
 \item{id}{The id of the packet(s) to pull}
 
-\item{location}{The name of the location to pull from.  Later we
-will relax this (see mrc-3030)}
+\item{location}{Control the location that the packet can be pulled
+from.  The default (\code{NULL}) will try and pull the packet from
+anywhere it can be found, starting with locations that have the
+highest priority.  Provide a string to limit the search to a
+particular location, or provide a number to limit to locations
+with at least this priority.}
 
 \item{recursive}{Logical, indicating if we should recursively pull
 all packets that are referenced by the packets specified in
