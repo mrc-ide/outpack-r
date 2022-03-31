@@ -4,7 +4,12 @@
 \alias{outpack_init}
 \title{Create outpack root}
 \usage{
-outpack_init(root, path_archive = "archive", use_file_store = FALSE)
+outpack_init(
+  root,
+  path_archive = "archive",
+  use_file_store = FALSE,
+  require_pull_recursive = FALSE
+)
 }
 \arguments{
 \item{root}{Path to use.  This path may exist, but it is an error
@@ -19,6 +24,11 @@ content-addressable file-store as the source of truth for
 packets.  If \code{archive} is non-\code{NULL}, the file-store will be
 used as the source of truth and the duplicated files in archive
 exist only for convenience.}
+
+\item{require_pull_archive}{Logical, indicating if
+\link{outpack_location_pull_packet} should always operate in
+recursive mode.  This is \code{FALSE} by default, but set to \code{TRUE}
+if you want your archive to behave well as a location.}
 }
 \value{
 Invisibly, an \code{outpack_root} object; these will be
