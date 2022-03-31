@@ -493,6 +493,19 @@ test_that("Can resolve locations", {
 })
 
 
+test_that("informative error message when no locations configured", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(
+    location_resolve_valid(NULL, root, FALSE),
+    "No suitable location found")
+  expect_error(
+    outpack_location_pull_packet(outpack_id(), root = root),
+    "No suitable location found")
+})
+
+
 ## The test setup here is hard to do because we don't yet support
 ## having location_path filtering metadata to the packets that it can
 ## actually provide.

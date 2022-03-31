@@ -319,6 +319,15 @@ location_resolve_valid <- function(location, root, include_local) {
     location <- setdiff(location, local)
   }
 
+  ## We could throw nicer errors here if we included this check (and
+  ## the setdiff) in every one of the above the three branches above,
+  ## but that makes things pretty hard to follow. We'll do some work
+  ## on nicer errors later once we get this ready for people to
+  ## actually use.
+  if (length(location) == 0) {
+    stop("No suitable location found")
+  }
+
   location
 }
 
