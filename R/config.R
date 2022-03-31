@@ -96,16 +96,21 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
       use_file_store = use_file_store,
       require_complete_tree = require_complete_tree,
       hash_algorithm = hash_algorithm),
-    location = list(list(
-      name = local, id = location_id(), priority = 0,
-      type = "local")))
+    location = new_location_entry(local, 0, "local", NULL))
 }
 
 
 config_serialise <- function(config, path) {
   config$schemaVersion <- scalar(config$schemaVersion) # nolint
   config$core <- lapply(config$core, scalar)
-  config$location <- lapply(unname(config$location), lapply, scalar)
+
+  prepare_location <- function(loc) {
+    c(lapply(loc[setdiff(names(loc), "args")], scalar),
+      list(args = lapply(loc$args[[1]], scalar)))
+  }
+  config$location <- lapply(seq_len(nrow(config$location)), function(i)
+    prepare_location(config$location[i, ]))
+
   to_json(config, "config")
 }
 
@@ -118,6 +123,7 @@ config_write <- function(config, root_path) {
 
 config_read <- function(root_path) {
   config <- jsonlite::read_json(file.path(root_path, ".outpack/config.json"))
+  ## NOTE: make sure that this matches the order in new_location_entry
   config$location <- data_frame(
     name = vcapply(config$location, "[[", "name"),
     id = vcapply(config$location, "[[", "id"),

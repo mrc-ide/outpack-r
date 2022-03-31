@@ -50,9 +50,9 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 
   config <- root$config
 
-  loc <- list(name = name, id = location_id(), priority = priority,
-              type = "path", args = list(path = path))
-  config$location <- c(unname(config$location), list(loc))
+  config$location <- rbind(
+    config$location,
+    new_location_entry(name, priority, "path", list(path = path)))
   config_write(config, root$path)
 
   root$config <- config_read(root$path)
@@ -76,7 +76,7 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 ##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
-  outpack_root_locate(root)$location$name
+  outpack_root_locate(root)$config$location$name
 }
 
 
@@ -201,16 +201,17 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 }
 
 
-location_driver <- function(location, root) {
-  dat <- root$config$location[[location]]
-  if (is.null(dat)) {
-    stop(sprintf("Unknown location '%s'", location))
+location_driver <- function(location_name, root) {
+  i <- match(location_name, root$config$location$name)
+  if (is.na(i)) {
+    stop(sprintf("Unknown location '%s'", location_name))
   }
   ## Once we support multiple location types, we'll need to consider
   ## this more carefully; leaving an assertion in to make it more
   ## obvious where change is needed.
-  stopifnot(dat$type == "path")
-  outpack_location_path$new(dat$path)
+  stopifnot(root$config$location$type[[i]] == "path")
+  path <- root$config$location$args[[i]]$path
+  outpack_location_path$new(path)
 }
 
 
@@ -235,8 +236,9 @@ location_pull_metadata <- function(location_name, root) {
   known_here <- index$location$packet[index$location$location == location_name]
   new_loc <- known_there[!(known_there$packet %in% known_here), ]
 
+  location_id <- lookup_location_id(location_name, root)
   for (i in seq_len(nrow(new_loc))) {
-    mark_packet_known(new_loc$packet[[i]], location_name, new_loc$hash[[i]],
+    mark_packet_known(new_loc$packet[[i]], location_id, new_loc$hash[[i]],
                       new_loc$time[[i]], root)
   }
 
@@ -371,6 +373,17 @@ location_build_pull_plan <- function(id, location, root) {
 }
 
 
-location_id <- function() {
-  paste(as.character(openssl::rand_bytes(4)), collapse = "")
+new_location_entry <- function(name, priority, type, args) {
+  location_id <- paste(as.character(openssl::rand_bytes(4)), collapse = "")
+  ## NOTE: make sure this matches the order in config_read
+  data_frame(name = name,
+             id = location_id,
+             priority = priority,
+             type = type,
+             args = I(list(args)))
+}
+
+
+lookup_location_id <- function(name, root) {
+  root$config$location$id[match(name, root$config$location$name)]
 }

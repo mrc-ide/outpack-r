@@ -129,14 +129,14 @@ outpack_root_open <- function(path) {
 }
 
 
-read_location <- function(location, root_path, prev) {
+read_location <- function(location_id, root_path, prev) {
   ## TODO: If we're more relaxed here about format, then this will
   ## need changing.  This regex will end up moving somewhere central
   ## in the package in that case.
   re <- "^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$"
-  path <- file.path(root_path, ".outpack", "location", location)
+  path <- file.path(root_path, ".outpack", "location", location_id)
   packets <- dir(path, re)
-  is_new <- !(packets %in% prev$packet[prev$location == location])
+  is_new <- !(packets %in% prev$packet[prev$location == location_id])
   if (!any(is_new)) {
     return(NULL)
   }
@@ -145,24 +145,22 @@ read_location <- function(location, root_path, prev) {
   data_frame(packet = vcapply(dat, "[[", "packet"),
              time = num_to_time(vnapply(dat, "[[", "time")),
              hash = vcapply(dat, "[[", "hash"),
-             location = location)
+             location = location_id)
 }
 
 
 read_locations <- function(root, prev) {
-  locations <- outpack_location_list(root)
+  location_id <- root$config$location$id
   if (is.null(prev)) {
     prev <- data_frame(packet = character(),
                        time = empty_time(),
                        hash = character(),
                        location = character())
-  } else {
-    prev <- prev[prev$location %in% locations, ]
   }
-  new <- do.call(rbind, lapply(locations, read_location, root$path, prev))
+  new <- do.call(rbind, lapply(location_id, read_location, root$path, prev))
   ret <- rbind(prev, new)
   ## Always sort by location (highest priority first) then id
-  ret <- ret[order(match(ret$location, locations), ret$packet), ]
+  ret <- ret[order(match(ret$location, location_id), ret$packet), ]
   ## Avoids weird computed rownames - always uses 1:n
   rownames(ret) <- NULL
   ret
