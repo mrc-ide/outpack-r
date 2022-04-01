@@ -26,7 +26,7 @@ be expanded over time. See Details.
 \details{
 Options are set in the order that they are provided.  Currently,
 if setting one option fails, no further options will be processed
-but previous ones will not be (do not rely on this behaviour, it
+but previous ones will be (do not rely on this behaviour, it
 may change).
 
 Currently you can set:
