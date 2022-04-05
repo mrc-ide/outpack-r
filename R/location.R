@@ -157,7 +157,7 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'   recursively pull all packets that are referenced by the packets
 ##'   specified in `id`.  This might copy a lot of data!  If `NULL`,
 ##'   we default to the value given by the the configuration option
-##'   `require_pull_recursive`.
+##'   `require_complete_tree`.
 ##'
 ##' @inheritParams outpack_location_list
 ##'
@@ -169,9 +169,9 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
   assert_character(id)
   index <- root$index()
 
-  recursive <- recursive %||% root$config$core$require_pull_recursive
+  recursive <- recursive %||% root$config$core$require_complete_tree
   assert_scalar_logical(recursive)
-  if (root$config$core$require_pull_recursive && !recursive) {
+  if (root$config$core$require_complete_tree && !recursive) {
     stop("'recursive' must be TRUE (or NULL) with your configuration")
   }
 

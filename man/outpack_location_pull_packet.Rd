@@ -25,7 +25,7 @@ with at least this priority.}
 recursively pull all packets that are referenced by the packets
 specified in \code{id}.  This might copy a lot of data!  If \code{NULL},
 we default to the value given by the the configuration option
-\code{require_pull_recursive}.}
+\code{require_complete_tree}.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}

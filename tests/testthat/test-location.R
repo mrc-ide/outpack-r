@@ -582,7 +582,7 @@ test_that("nonrecursive pulls are prevented by configuration", {
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
-    root[[p]] <- outpack_init(file.path(path, p), require_pull_recursive = TRUE)
+    root[[p]] <- outpack_init(file.path(path, p), require_complete_tree = TRUE)
   }
 
   id <- create_random_packet_chain(root$src, 3)
@@ -604,7 +604,7 @@ test_that("if recursive pulls are required, pulls are recursive by default", {
   root$src <- outpack_init(file.path(path, "src"))
   root$shallow <- outpack_init(file.path(path, "shallow"))
   root$deep <- outpack_init(file.path(path, "deep"),
-                            require_pull_recursive = TRUE)
+                            require_complete_tree = TRUE)
 
   id <- create_random_packet_chain(root$src, 3)
 

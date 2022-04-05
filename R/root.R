@@ -15,22 +15,25 @@
 ##'   used as the source of truth and the duplicated files in archive
 ##'   exist only for convenience.
 ##'
-##' @param require_pull_recursive Logical, indicating if
-##'   [outpack::outpack_location_pull_packet] should always operate in
-##'   recursive mode.  This is `FALSE` by default, but set to `TRUE`
-##'   if you want your archive to behave well as a location.
+##' @param require_complete_tree Logical, indicating if we require a
+##'   complete tree of packets.  This currently affects
+##'   [outpack::outpack_location_pull_packet], by requiring that it
+##'   always operates in recursive mode.  This is `FALSE` by default,
+##'   but set to `TRUE` if you want your archive to behave well as a
+##'   location; if `TRUE` you will always have all the packets that
+##'   you hold metadata about.
 ##'
 ##' @return Invisibly, an `outpack_root` object; these will be
 outpack_init <- function(root, path_archive = "archive",
                          use_file_store = FALSE,
-                         require_pull_recursive = FALSE) {
+                         require_complete_tree = FALSE) {
   ## Logging: print information about what we're doing here.
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
     stop(sprintf("outpack already initialised at '%s'", path_outpack))
   }
 
-  config <- config_new(path_archive, use_file_store, require_pull_recursive)
+  config <- config_new(path_archive, use_file_store, require_complete_tree)
 
   fs::dir_create(path_outpack)
   fs::dir_create(file.path(path_outpack, "metadata"))

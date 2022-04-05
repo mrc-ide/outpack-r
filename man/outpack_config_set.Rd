@@ -8,10 +8,10 @@ outpack_config_set(..., options = list(...), root = NULL)
 }
 \arguments{
 \item{...}{Named options to set (e.g., pass the argument
-\code{core.require_pull_recursive = TRUE})}
+\code{core.require_complete_tree = TRUE})}
 
 \item{options}{As an alternative to \code{...}, you can pass a list of
-named options here (e.g., \code{list(core.require_pull_recursive = TRUE)}).  This interface is typically easier to program against.}
+named options here (e.g., \code{list(core.require_complete_tree = TRUE)}).  This interface is typically easier to program against.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
@@ -31,7 +31,7 @@ may change).
 
 Currently you can set:
 \itemize{
-\item \code{core.require_pull_recursive}
+\item \code{core.require_complete_tree}
 }
 
 See \link{outpack_init} for description of these options.

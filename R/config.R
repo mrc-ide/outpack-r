@@ -8,17 +8,17 @@
 ##'
 ##' Currently you can set:
 ##'
-##' * `core.require_pull_recursive`
+##' * `core.require_complete_tree`
 ##'
 ##' See [outpack::outpack_init] for description of these options.
 ##'
 ##' @title Set configuration options
 ##'
 ##' @param ... Named options to set (e.g., pass the argument
-##'   `core.require_pull_recursive = TRUE`)
+##'   `core.require_complete_tree = TRUE`)
 ##'
 ##' @param options As an alternative to `...`, you can pass a list of
-##'   named options here (e.g., `list(core.require_pull_recursive =
+##'   named options here (e.g., `list(core.require_complete_tree =
 ##'   TRUE)`).  This interface is typically easier to program against.
 ##'
 ##' @inheritParams outpack_location_list
@@ -38,7 +38,7 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
   assert_named(options)
 
   setters <- list(
-    "core.require_pull_recursive" = config_set_require_pull_recursive)
+    "core.require_complete_tree" = config_set_require_complete_tree)
 
   unknown <- setdiff(names(options), names(setters))
   if (length(unknown)) {
@@ -54,11 +54,11 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
 }
 
 
-config_set_require_pull_recursive <- function(value, root) {
+config_set_require_complete_tree <- function(value, root) {
   config <- root$config
 
-  if (config$core$require_pull_recursive == value) {
-    message("'core.require_pull_recursive' was unchanged")
+  if (config$core$require_complete_tree == value) {
+    message("'core.require_complete_tree' was unchanged")
     return()
   }
 
@@ -67,13 +67,13 @@ config_set_require_pull_recursive <- function(value, root) {
     outpack_location_pull_packet(id, recursive = TRUE, root = root)
   }
 
-  config$core$require_pull_recursive <- value
+  config$core$require_complete_tree <- value
   config_write(config, root$path)
   root$config <- config
 }
 
 
-config_new <- function(path_archive, use_file_store, require_pull_recursive) {
+config_new <- function(path_archive, use_file_store, require_complete_tree) {
   if (!is.null(path_archive)) {
     assert_scalar_character(path_archive)
   }
@@ -82,7 +82,7 @@ config_new <- function(path_archive, use_file_store, require_pull_recursive) {
     stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
   }
 
-  assert_scalar_logical(require_pull_recursive)
+  assert_scalar_logical(require_complete_tree)
 
   ## TODO: There's a good reason here to wonder if this _should_ be
   ## configurable.  I'll keep it here within the configuration even
@@ -94,7 +94,7 @@ config_new <- function(path_archive, use_file_store, require_pull_recursive) {
     core = list(
       path_archive = path_archive,
       use_file_store = use_file_store,
-      require_pull_recursive = require_pull_recursive,
+      require_complete_tree = require_complete_tree,
       hash_algorithm = hash_algorithm),
     location = list())
 }

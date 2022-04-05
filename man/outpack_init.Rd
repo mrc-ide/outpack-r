@@ -8,7 +8,7 @@ outpack_init(
   root,
   path_archive = "archive",
   use_file_store = FALSE,
-  require_pull_recursive = FALSE
+  require_complete_tree = FALSE
 )
 }
 \arguments{
@@ -25,10 +25,13 @@ packets.  If \code{archive} is non-\code{NULL}, the file-store will be
 used as the source of truth and the duplicated files in archive
 exist only for convenience.}
 
-\item{require_pull_recursive}{Logical, indicating if
-\link{outpack_location_pull_packet} should always operate in
-recursive mode.  This is \code{FALSE} by default, but set to \code{TRUE}
-if you want your archive to behave well as a location.}
+\item{require_complete_tree}{Logical, indicating if we require a
+complete tree of packets.  This currently affects
+\link{outpack_location_pull_packet}, by requiring that it
+always operates in recursive mode.  This is \code{FALSE} by default,
+but set to \code{TRUE} if you want your archive to behave well as a
+location; if \code{TRUE} you will always have all the packets that
+you hold metadata about.}
 }
 \value{
 Invisibly, an \code{outpack_root} object; these will be

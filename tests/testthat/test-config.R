@@ -32,16 +32,16 @@ test_that("Disallow unknown configuration options", {
 })
 
 
-test_that("Can update core.require_pull_recursive in empty archive", {
+test_that("Can update core.require_complete_tree in empty archive", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   root <- outpack_init(path)
-  expect_false(root$config$core$require_pull_recursive)
+  expect_false(root$config$core$require_complete_tree)
 
-  outpack_config_set(core.require_pull_recursive = TRUE, root = root)
+  outpack_config_set(core.require_complete_tree = TRUE, root = root)
 
-  expect_true(root$config$core$require_pull_recursive)
-  expect_true(outpack_root_open(root$path)$config$core$require_pull_recursive)
+  expect_true(root$config$core$require_complete_tree)
+  expect_true(outpack_root_open(root$path)$config$core$require_complete_tree)
 })
 
 
@@ -52,7 +52,7 @@ test_that("Enabling recursive pulls forces pulling missing packets", {
   root <- list()
   root$src <- outpack_init(file.path(path, "src"))
   root$dst <- outpack_init(file.path(path, "dst"))
-  expect_false(root$dst$config$core$require_pull_recursive)
+  expect_false(root$dst$config$core$require_complete_tree)
 
   id <- create_random_packet_chain(root$src, 3)
   outpack_location_add("src", root$src$path, root = root$dst$path)
@@ -60,25 +60,25 @@ test_that("Enabling recursive pulls forces pulling missing packets", {
   outpack_location_pull_packet(id[["c"]], root = root$dst$path)
   expect_equal(root$dst$index()$unpacked$packet, id[["c"]])
 
-  outpack_config_set(core.require_pull_recursive = TRUE, root = root$dst$path)
+  outpack_config_set(core.require_complete_tree = TRUE, root = root$dst$path)
 
   expect_setequal(root$dst$index()$unpacked$packet, id)
   expect_true(
-    outpack_root_open(root$dst$path)$config$core$require_pull_recursive)
+    outpack_root_open(root$dst$path)$config$core$require_complete_tree)
 })
 
 
-test_that("Unchanged require_pull_recursive prints message", {
+test_that("Unchanged require_complete_tree prints message", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   root <- outpack_init(path)
-  expect_false(root$config$core$require_pull_recursive)
+  expect_false(root$config$core$require_complete_tree)
   expect_message(
-    outpack_config_set(core.require_pull_recursive = FALSE, root = root),
-    "'core.require_pull_recursive' was unchanged")
+    outpack_config_set(core.require_complete_tree = FALSE, root = root),
+    "'core.require_complete_tree' was unchanged")
   expect_silent(
-    outpack_config_set(core.require_pull_recursive = TRUE, root = root))
+    outpack_config_set(core.require_complete_tree = TRUE, root = root))
   expect_message(
-    outpack_config_set(core.require_pull_recursive = TRUE, root = root),
-    "'core.require_pull_recursive' was unchanged")
+    outpack_config_set(core.require_complete_tree = TRUE, root = root),
+    "'core.require_complete_tree' was unchanged")
 })
