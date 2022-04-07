@@ -207,13 +207,10 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 
 location_driver <- function(location_id, root) {
   i <- match(location_id, root$config$location$id)
-  if (is.na(i)) {
-    stop(sprintf("Unknown location '%s'", location_id))
-  }
   ## Once we support multiple location types, we'll need to consider
   ## this more carefully; leaving an assertion in to make it more
   ## obvious where change is needed.
-  stopifnot(root$config$location$type[[i]] == "path")
+  stopifnot(!is.na(i), root$config$location$type[[i]] == "path")
   path <- root$config$location$args[[i]]$path
   outpack_location_path$new(path)
 }
