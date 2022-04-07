@@ -57,7 +57,7 @@ will make files available for use as dependencies (e.g., with
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">outpack_location_pull_packet</span><span class="op">(</span>
   <span class="va">id</span>,
   location <span class="op">=</span> <span class="cn">NULL</span>,
-  recursive <span class="op">=</span> <span class="cn">FALSE</span>,
+  recursive <span class="op">=</span> <span class="cn">NULL</span>,
   root <span class="op">=</span> <span class="cn">NULL</span>
 <span class="op">)</span></code></pre></div>
     </div>
@@ -74,9 +74,11 @@ highest priority.  Provide a string to limit the search to a
 particular location, or provide a number to limit to locations
 with at least this priority.</p></dd>
 <dt>recursive</dt>
-<dd><p>Logical, indicating if we should recursively pull
-all packets that are referenced by the packets specified in
-<code>id</code>.  This might copy a lot of data!</p></dd>
+<dd><p>If non-NULL, a logical, indicating if we should
+recursively pull all packets that are referenced by the packets
+specified in <code>id</code>.  This might copy a lot of data!  If <code>NULL</code>,
+we default to the value given by the the configuration option
+<code>require_complete_tree</code>.</p></dd>
 <dt>root</dt>
 <dd><p>The outpack root. Will be searched for from the
 current directory if not given.</p></dd>
