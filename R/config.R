@@ -1,4 +1,79 @@
-config_new <- function(path_archive, use_file_store) {
+##' Set configuration options. Not all can currently be set; this will
+##' be expanded over time. See Details.
+##'
+##' Options are set in the order that they are provided.  Currently,
+##' if setting one option fails, no further options will be processed
+##' but previous ones will be (do not rely on this behaviour, it
+##' may change).
+##'
+##' Currently you can set:
+##'
+##' * `core.require_complete_tree`
+##'
+##' See [outpack::outpack_init] for description of these options.
+##'
+##' @title Set configuration options
+##'
+##' @param ... Named options to set (e.g., pass the argument
+##'   `core.require_complete_tree = TRUE`)
+##'
+##' @param options As an alternative to `...`, you can pass a list of
+##'   named options here (e.g., `list(core.require_complete_tree =
+##'   TRUE)`).  This interface is typically easier to program against.
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##' @export
+outpack_config_set <- function(..., options = list(...), root = NULL) {
+  root <- outpack_root_locate(root)
+  if (!missing(options) && ...length() > 0) {
+    stop("If 'options' is given, no dot arguments are allowed")
+  }
+  if (length(options) == 0) {
+    return(invisible())
+  }
+
+  assert_is(options, "list")
+  assert_named(options)
+
+  setters <- list(
+    "core.require_complete_tree" = config_set_require_complete_tree)
+
+  unknown <- setdiff(names(options), names(setters))
+  if (length(unknown)) {
+    stop("Can't set configuration option: ",
+         paste(squote(unknown), collapse = ", "))
+  }
+
+  for (nm in names(options)) {
+    root <- setters[[nm]](options[[nm]], root)
+  }
+
+  invisible()
+}
+
+
+config_set_require_complete_tree <- function(value, root) {
+  config <- root$config
+
+  if (config$core$require_complete_tree == value) {
+    message("'core.require_complete_tree' was unchanged")
+    return()
+  }
+
+  if (value) {
+    id <- root$index()$unpacked$packet
+    outpack_location_pull_packet(id, recursive = TRUE, root = root)
+  }
+
+  config$core$require_complete_tree <- value
+  config_write(config, root$path)
+  root$config <- config
+}
+
+
+config_new <- function(path_archive, use_file_store, require_complete_tree) {
   if (!is.null(path_archive)) {
     assert_scalar_character(path_archive)
   }
@@ -6,6 +81,8 @@ config_new <- function(path_archive, use_file_store) {
   if (is.null(path_archive) && !use_file_store) {
     stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
   }
+
+  assert_scalar_logical(require_complete_tree)
 
   ## TODO: There's a good reason here to wonder if this _should_ be
   ## configurable.  I'll keep it here within the configuration even
@@ -17,6 +94,7 @@ config_new <- function(path_archive, use_file_store) {
     core = list(
       path_archive = path_archive,
       use_file_store = use_file_store,
+      require_complete_tree = require_complete_tree,
       hash_algorithm = hash_algorithm),
     location = list())
 }

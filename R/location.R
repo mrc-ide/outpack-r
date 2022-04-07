@@ -153,19 +153,27 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##'   particular location, or provide a number to limit to locations
 ##'   with at least this priority.
 ##'
-##' @param recursive Logical, indicating if we should recursively pull
-##'   all packets that are referenced by the packets specified in
-##'   `id`.  This might copy a lot of data!
+##' @param recursive If non-NULL, a logical, indicating if we should
+##'   recursively pull all packets that are referenced by the packets
+##'   specified in `id`.  This might copy a lot of data!  If `NULL`,
+##'   we default to the value given by the the configuration option
+##'   `require_complete_tree`.
 ##'
 ##' @inheritParams outpack_location_list
 ##'
 ##' @return Invisibly, the ids of packets that were pulled
 ##' @export
-outpack_location_pull_packet <- function(id, location = NULL, recursive = FALSE,
+outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
                                          root = NULL) {
   root <- outpack_root_locate(root)
   assert_character(id)
   index <- root$index()
+
+  recursive <- recursive %||% root$config$core$require_complete_tree
+  assert_scalar_logical(recursive)
+  if (root$config$core$require_complete_tree && !recursive) {
+    stop("'recursive' must be TRUE (or NULL) with your configuration")
+  }
 
   if (recursive) {
     id <- find_all_dependencies(id, index$metadata)

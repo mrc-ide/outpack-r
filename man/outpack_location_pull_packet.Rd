@@ -7,7 +7,7 @@
 outpack_location_pull_packet(
   id,
   location = NULL,
-  recursive = FALSE,
+  recursive = NULL,
   root = NULL
 )
 }
@@ -21,9 +21,11 @@ highest priority.  Provide a string to limit the search to a
 particular location, or provide a number to limit to locations
 with at least this priority.}
 
-\item{recursive}{Logical, indicating if we should recursively pull
-all packets that are referenced by the packets specified in
-\code{id}.  This might copy a lot of data!}
+\item{recursive}{If non-NULL, a logical, indicating if we should
+recursively pull all packets that are referenced by the packets
+specified in \code{id}.  This might copy a lot of data!  If \code{NULL},
+we default to the value given by the the configuration option
+\code{require_complete_tree}.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
