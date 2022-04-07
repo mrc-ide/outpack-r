@@ -96,14 +96,16 @@ test_that("can pull metadata from a file base location", {
 
   ## Sensible tests here will be much easier to write once we have a
   ## decent query interface.
-  index <- outpack_root_open(path_downstream)$index()
+  root_downstream <- outpack_root_open(path_downstream)
+  index <- root_downstream$index()
   expect_length(index$metadata, 3)
   expect_setequal(names(index$metadata), ids)
   expect_mapequal(index$metadata, root_upstream$index()$metadata)
 
   expect_s3_class(index$location, "data.frame")
   expect_setequal(index$location$packet, ids)
-  expect_equal(index$location$location, rep("upstream", 3))
+  expect_equal(index$location$location,
+               rep(lookup_location_id("upstream", root_downstream), 3))
 })
 
 
@@ -125,7 +127,6 @@ test_that("can pull empty metadata", {
   ## This is what we need to improve, everywhere
   expect_s3_class(index$location, "data.frame")
 })
-
 
 
 test_that("pull metadata from subset of locations", {
@@ -154,10 +155,13 @@ test_that("pull metadata from subset of locations", {
     ids[[name]] <- vcapply(1:3, function(i) create_random_packet(root[[name]]))
   }
 
+  location_id <- lookup_location_id(c("x", "y", "z"),
+                                    outpack_root_open(path$a))
+
   outpack_location_pull_metadata(c("x", "y"), root = path$a)
   index <- outpack_root_open(path$a)$index()
   expect_setequal(names(index$metadata), c(ids$x, ids$y))
-  expect_equal(index$location$location, rep(c("x", "y"), each = 3))
+  expect_equal(index$location$location, rep(location_id[1:2], each = 3))
   expect_equal(index$metadata[ids$x],
                outpack_root_open(path$x)$index()$metadata)
   expect_equal(index$metadata[ids$y],
@@ -166,7 +170,7 @@ test_that("pull metadata from subset of locations", {
   outpack_location_pull_metadata(root = path$a)
   index <- outpack_root_open(path$a)$index()
   expect_setequal(names(index$metadata), c(ids$x, ids$y, ids$z))
-  expect_equal(index$location$location, rep(c("x", "y", "z"), each = 3))
+  expect_equal(index$location$location, rep(location_id, each = 3))
   expect_equal(index$metadata[ids$z],
                outpack_root_open(path$z)$index()$metadata)
 })
@@ -179,7 +183,7 @@ test_that("Can't pull metadata from an unknown location", {
   outpack_init(path)
   expect_error(
     outpack_location_pull_metadata("upstream", root = path),
-    "Unknown location 'upstream'")
+    "Unknown location: 'upstream'")
 })
 
 
@@ -225,8 +229,6 @@ test_that("Can pull metadata through chain of locations", {
   outpack_location_pull_metadata(root = root$d)
   index <- root$d$index()
 
-  outpack_location_list(root$d)
-
   ## Metadata is correct
   expect_length(index$metadata, 2)
   expect_equal(names(index$metadata), c(id1, id2))
@@ -235,7 +237,9 @@ test_that("Can pull metadata through chain of locations", {
   ## Location information contains both sources
   expect_equal(nrow(index$location), 3)
   expect_equal(index$location$packet, c(id1, id1, id2))
-  expect_equal(index$location$location, c("b", "c", "c"))
+
+  expect_equal(index$location$location,
+               lookup_location_id(c("b", "c", "c"), root$d))
 })
 
 
@@ -256,7 +260,7 @@ test_that("can pull a packet from one location to another, using file store", {
 
   index <- root$dst$index()
   expect_equal(index$unpacked$packet, id)
-  expect_equal(index$unpacked$location, "src")
+  expect_equal(index$unpacked$location, lookup_location_id("src", root$dst))
   expect_true(file.exists(
     file.path(root$dst$path, "archive", "data", id, "data.rds")))
   expect_true(root$dst$files$exists(root$dst$metadata(id)$files$hash))
@@ -280,7 +284,7 @@ test_that("can pull a packet from one location to another, archive only", {
 
   index <- root$dst$index()
   expect_equal(index$unpacked$packet, id)
-  expect_equal(index$unpacked$location, "src")
+  expect_equal(index$unpacked$location, lookup_location_id("src", root$dst))
   expect_true(file.exists(
     file.path(root$dst$path, "archive", "data", id, "data.rds")))
 })
@@ -406,7 +410,8 @@ test_that("Can pull a tree recursively", {
   index <- root$dst$index()
   expect_equal(index$unpacked$packet,
                root$src$index()$unpacked$packet)
-  expect_equal(index$unpacked$location, rep("src", 3))
+  expect_equal(index$unpacked$location,
+               rep(lookup_location_id("src", root$dst), 3))
 
   expect_equal(
     outpack_location_pull_packet(id$c, "src", recursive = TRUE,
@@ -427,8 +432,8 @@ test_that("Can add locations with different priorities", {
 
   outpack_location_add("b", root$b$path, priority = 5, root = root$a)
   outpack_location_add("c", root$b$path, priority = 10, root = root$a)
-  expect_equal(root$a$config$location$b$priority, 5)
-  expect_equal(root$a$config$location$c$priority, 10)
+  expect_equal(root$a$config$location$name, c("c", "b", "local"))
+  expect_equal(root$a$config$location$priority, c(10, 5, 0))
 
   outpack_root_open(root$a$path)
   expect_equal(outpack_location_list(root$a),
@@ -452,43 +457,48 @@ test_that("Can resolve locations", {
                          root = root$dst)
   }
 
+  location_id <- set_names(
+    lookup_location_id(c("a", "b", "c", "d", "local"), root$dst),
+    c("a", "b", "c", "d", "local"))
+
   expect_equal(
-    location_resolve_valid(NULL, root$dst, FALSE),
-    c("b", "d", "c", "a"))
+    location_resolve_valid(NULL, root$dst, FALSE, FALSE),
+    lookup_location_id(c("b", "d", "c", "a"), root$dst))
   expect_equal(
-    location_resolve_valid(NULL, root$dst, TRUE),
-    c("b", "d", "c", "local", "a"))
+    location_resolve_valid(NULL, root$dst, TRUE, FALSE),
+    lookup_location_id(c("b", "d", "c", "local", "a"), root$dst))
   expect_equal(
-    location_resolve_valid(15, root$dst, FALSE),
-    c("b", "d"))
+    location_resolve_valid(15, root$dst, FALSE, FALSE),
+    lookup_location_id(c("b", "d"), root$dst))
   expect_equal(
-    location_resolve_valid(0, root$dst, FALSE),
-    c("b", "d", "c"))
+    location_resolve_valid(0, root$dst, FALSE, FALSE),
+    lookup_location_id(c("b", "d", "c"), root$dst))
   expect_equal(
-    location_resolve_valid(0, root$dst, TRUE),
-    c("b", "d", "c", "local"))
+    location_resolve_valid(0, root$dst, TRUE, FALSE),
+    lookup_location_id(c("b", "d", "c", "local"), root$dst))
   expect_equal(
-    location_resolve_valid(c("a", "b", "local", "d"), root$dst, FALSE),
-    c("a", "b", "d"))
+    location_resolve_valid(c("a", "b", "local", "d"), root$dst, FALSE, FALSE),
+    lookup_location_id(c("a", "b", "d"), root$dst))
   expect_equal(
-    location_resolve_valid(c("a", "b", "local", "d"), root$dst, TRUE),
-    c("a", "b", "local", "d"))
+    location_resolve_valid(c("a", "b", "local", "d"), root$dst, TRUE, FALSE),
+    lookup_location_id(c("a", "b", "local", "d"), root$dst))
 
   expect_error(
-    location_resolve_valid(TRUE, root$dst, TRUE),
+    location_resolve_valid(TRUE, root$dst, TRUE, FALSE),
     "Invalid input for 'location'; expected NULL, character or numeric")
   expect_error(
-    location_resolve_valid(c(1, 2), root$dst, TRUE),
+    location_resolve_valid(c(1, 2), root$dst, TRUE, FALSE),
     "If 'location' is numeric it must be a scalar (but was length 2)",
     fixed = TRUE)
+
   expect_error(
-    location_resolve_valid(50, root$dst, TRUE),
+    location_resolve_valid(50, root$dst, TRUE, FALSE),
     "No locations found with priority of at least 50")
   expect_error(
-    location_resolve_valid("other", root$dst, TRUE),
+    location_resolve_valid("other", root$dst, TRUE, FALSE),
     "Unknown location: 'other'")
   expect_error(
-    location_resolve_valid(c("a", "b", "f", "g"), root$dst, TRUE),
+    location_resolve_valid(c("a", "b", "f", "g"), root$dst, TRUE, FALSE),
     "Unknown location: 'f', 'g'")
 })
 
@@ -497,8 +507,11 @@ test_that("informative error message when no locations configured", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   root <- outpack_init(path)
+  expect_equal(
+    location_resolve_valid(NULL, root, FALSE, TRUE),
+    character(0))
   expect_error(
-    location_resolve_valid(NULL, root, FALSE),
+    location_resolve_valid(NULL, root, FALSE, FALSE),
     "No suitable location found")
   expect_error(
     outpack_location_pull_packet(outpack_id(), root = root),
@@ -539,38 +552,46 @@ test_that("Can filter locations", {
   outpack_location_pull_metadata(root = root$dst)
 
   ids <- unique(c(ids_a, ids_b, ids_c, ids_d))
+  expected <- function(ids, location_name) {
+    data_frame(packet = ids,
+               location_id = lookup_location_id(location_name, root$dst),
+               location_name = location_name)
+  }
+  locs <- function(location) {
+    location_resolve_valid(location, root$dst,
+                           include_local = FALSE,
+                           allow_no_locations = FALSE)
+  }
 
   expect_equal(
-    location_build_pull_plan(ids, NULL, root = root$dst),
-    data_frame(
-      packet = ids,
-      location = c("a", "a", "a", "b", "b", "b", "c", "c", "c", "d", "d", "d")))
+    location_build_pull_plan(ids, locs(NULL), root = root$dst),
+    expected(ids,
+             c("a", "a", "a", "b", "b", "b", "c", "c", "c", "d", "d", "d")))
   ## Invert priority order:
   expect_equal(
-    location_build_pull_plan(ids, c("d", "c", "b", "a"), root = root$dst),
-    data_frame(
-      packet = ids,
-      location = c("d", "d", "d", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
+    location_build_pull_plan(ids, locs(c("d", "c", "b", "a")), root = root$dst),
+    expected(ids,
+             c("d", "d", "d", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
   ## Drop redundant locations
   expect_equal(
-    location_build_pull_plan(ids, c("b", "d"), root = root$dst),
-    data_frame(
-      packet = ids,
-      location = c("b", "b", "b", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
+    location_build_pull_plan(ids, locs(c("b", "d")), root = root$dst),
+    expected(ids,
+             c("b", "b", "b", "b", "b", "b", "d", "d", "d", "d", "d", "d")))
+
   ## Some corner cases:
   expect_equal(
-    location_build_pull_plan(ids_a[[1]], NULL, root = root$dst),
-    data_frame(packet = ids_a[[1]], location = "a"))
+    location_build_pull_plan(ids_a[[1]], locs(NULL), root = root$dst),
+    expected(ids_a[[1]], "a"))
   expect_equal(
-    location_build_pull_plan(character(), NULL, root = root$dst),
-    data_frame(packet = character(), location = character()))
+    location_build_pull_plan(character(), locs(NULL), root = root$dst),
+    expected(character(), character()))
 
   ## Failure to find things:
   err <- expect_error(
-    location_build_pull_plan(ids, c("a", "b", "c"), root = root$dst),
+    location_build_pull_plan(ids, locs(c("a", "b", "c")), root = root$dst),
     "Failed to find packets at location 'a', 'b', 'c'")
   expect_error(
-    location_build_pull_plan(ids, 10, root = root$dst),
+    location_build_pull_plan(ids, locs(10), root = root$dst),
     err$message, fixed = TRUE)
 })
 

@@ -50,8 +50,12 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 
   config <- root$config
 
-  loc <- list(name = name, type = "path", path = path, priority = priority)
-  config$location <- c(unname(config$location), list(loc))
+  config$location <- rbind(
+    config$location,
+    new_location_entry(name, priority, "path", list(path = path)))
+  config$location <- config$location[
+    order(config$location$priority, decreasing = TRUE), ]
+  rownames(config$location) <- NULL
   config_write(config, root$path)
 
   root$config <- config_read(root$path)
@@ -75,27 +79,13 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 ##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
-  names(outpack_location_priority(root))
+  outpack_root_locate(root)$config$location$name
 }
 
 
-## TODO: similar to `git remote -v` we might support an extended mode
-## here (returning a data.frame) or a second function that returns
-## richer information about the locations.  This function is going to
-## be called fairly frequently so the cheap version here and above is
-## important.
-##
-## Probably something like this needs exporting, but holding off for now:
-## * would be simplified if we kept something for local in the main
-##   set of locations
-## * probably want a function that returns a data.frame of location
-##   information - could construct this when we load the config I suspect?
-## * we'll want to report information about where the location points at
-##   and that will be easiest once we have more than one type.
 outpack_location_priority <- function(root = NULL) {
   root <- outpack_root_locate(root)
-  priority <- c(local = 0, vnapply(root$config$location, "[[", "priority"))
-  priority[order(priority, decreasing = TRUE)]
+  set_names(root$config$location$priority, root$config$location$name)
 }
 
 
@@ -118,13 +108,11 @@ outpack_location_priority <- function(root = NULL) {
 ##' @export
 outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
   root <- outpack_root_locate(root)
-  if (is.null(location)) {
-    location <- outpack_location_list(root)
-  }
-  assert_character(location)
-
-  for (name in setdiff(location, location_reserved_name)) {
-    location_pull_metadata(name, root)
+  location_id <- location_resolve_valid(location, root,
+                                        include_local = FALSE,
+                                        allow_no_locations = TRUE)
+  for (id in location_id) {
+    location_pull_metadata(id, root)
   }
 }
 
@@ -186,7 +174,10 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
     return(id)
   }
 
-  plan <- location_build_pull_plan(id, location, root)
+  location_id <- location_resolve_valid(location, root,
+                                        include_local = FALSE,
+                                        allow_no_locations = FALSE)
+  plan <- location_build_pull_plan(id, location_id, root)
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
@@ -204,32 +195,30 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
   ## workflows, but there's also an argument that we might try looking
   ## for a given file in any location at some point.
   for (i in seq_len(nrow(plan))) {
-    driver <- location_driver(plan$location[i], root)
+    driver <- location_driver(plan$location_id[i], root)
     location_pull_files_store(root, driver, plan$packet[i])
     location_pull_files_archive(root, driver, plan$packet[i])
-    mark_packet_unpacked(plan$packet[i], plan$location[i], root)
+    mark_packet_unpacked(plan$packet[i], plan$location_id[i], root)
   }
 
   invisible(id)
 }
 
 
-location_driver <- function(location, root) {
-  dat <- root$config$location[[location]]
-  if (is.null(dat)) {
-    stop(sprintf("Unknown location '%s'", location))
-  }
+location_driver <- function(location_id, root) {
+  i <- match(location_id, root$config$location$id)
   ## Once we support multiple location types, we'll need to consider
   ## this more carefully; leaving an assertion in to make it more
   ## obvious where change is needed.
-  stopifnot(dat$type == "path")
-  outpack_location_path$new(dat$path)
+  stopifnot(!is.na(i), root$config$location$type[[i]] == "path")
+  path <- root$config$location$args[[i]]$path
+  outpack_location_path$new(path)
 }
 
 
-location_pull_metadata <- function(location_name, root) {
+location_pull_metadata <- function(location_id, root) {
   index <- root$index()
-  driver <- location_driver(location_name, root)
+  driver <- location_driver(location_id, root)
 
   known_there <- driver$list()
 
@@ -245,11 +234,11 @@ location_pull_metadata <- function(location_name, root) {
     }
   }
 
-  known_here <- index$location$packet[index$location$location == location_name]
+  known_here <- index$location$packet[index$location$location == location_id]
   new_loc <- known_there[!(known_there$packet %in% known_here), ]
 
   for (i in seq_len(nrow(new_loc))) {
-    mark_packet_known(new_loc$packet[[i]], location_name, new_loc$hash[[i]],
+    mark_packet_known(new_loc$packet[[i]], location_id, new_loc$hash[[i]],
                       new_loc$time[[i]], root)
   }
 
@@ -259,9 +248,9 @@ location_pull_metadata <- function(location_name, root) {
 
 ## This will work across any number of packets at once with a small
 ## amount of change.
-location_pull_files_store <- function(root, driver, id) {
+location_pull_files_store <- function(root, driver, packet_id) {
   if (root$config$core$use_file_store) {
-    meta <- root$metadata(id)
+    meta <- root$metadata(packet_id)
     files_exist <- root$files$exists(meta$files$hash)
     for (h in meta$files$hash[!files_exist]) {
       ## TODO: Should we support bulk download? This might be more
@@ -272,11 +261,11 @@ location_pull_files_store <- function(root, driver, id) {
   }
 }
 
-location_pull_files_archive <- function(root, driver, id) {
+location_pull_files_archive <- function(root, driver, packet_id) {
   if (!is.null(root$config$core$path_archive)) {
-    meta <- root$metadata(id)
-    dest <- file.path(root$path, root$config$core$path_archive, meta$name, id,
-                      meta$files$path)
+    meta <- root$metadata(packet_id)
+    dest <- file.path(root$path, root$config$core$path_archive, meta$name,
+                      packet_id, meta$files$path)
     if (root$config$core$use_file_store) {
       for (i in seq_len(nrow(meta$files))) {
         root$files$get(meta$files$hash[[i]], dest[[i]])
@@ -297,8 +286,8 @@ location_pull_files_archive <- function(root, driver, id) {
 }
 
 
-## Tidy up this logic with the same in outpack_location_list
-location_resolve_valid <- function(location, root, include_local) {
+location_resolve_valid <- function(location, root, include_local,
+                                   allow_no_locations) {
   if (is.null(location)) {
     location <- outpack_location_list(root)
   } else if (is.character(location)) {
@@ -332,34 +321,32 @@ location_resolve_valid <- function(location, root, include_local) {
   ## but that makes things pretty hard to follow. We'll do some work
   ## on nicer errors later once we get this ready for people to
   ## actually use.
-  if (length(location) == 0) {
+  if (length(location) == 0 && !allow_no_locations) {
     stop("No suitable location found")
   }
 
-  location
+  lookup_location_id(location, root)
 }
 
 
-location_build_pull_plan <- function(id, location, root) {
+location_build_pull_plan <- function(packet_id, location_id, root) {
   ## For each packet we'll use the location with the highest priority
   ## based on the list of locations
-  location <- location_resolve_valid(location, root, include_local = FALSE)
-
   index <- root$index()
 
   ## Things that are found in any location:
-  candidates <- index$location[index$location$location %in% location,
+  candidates <- index$location[index$location$location %in% location_id,
                                c("packet", "location")]
 
   ## Sort by priority
-  candidates <- candidates[order(match(candidates$location, location)), ]
+  candidates <- candidates[order(match(candidates$location, location_id)), ]
 
-  ## Then find the highest priority location where a packet can be found
   plan <- data_frame(
-    packet = id,
-    location = candidates$location[match(id, candidates$packet)])
+    packet = packet_id,
+    location_id = candidates$location[match(packet_id, candidates$packet)])
+  plan$location_name <- lookup_location_name(plan$location_id, root)
 
-  if (anyNA(plan$location)) {
+  if (anyNA(plan$location_id)) {
     ## This is going to want eventual improvement before we face
     ## users.  The issues here are that:
     ## * id or location might be vectors (and potentially) quite long
@@ -373,12 +360,34 @@ location_build_pull_plan <- function(id, location, root) {
     ##   packet here too (we can get that easily from the index)
     ## * we don't report back how the set of candidate locations was
     ##   resolved (e.g., explicitly given, default, min priority)
-    msg <- id[is.na(plan$location)]
+    msg <- packet_id[is.na(plan$location_id)]
+    src <- lookup_location_name(location_id, root)
     stop(sprintf("Failed to find %s at location %s: %s",
                  ngettext(length(msg), "packet", "packets"),
-                 paste(squote(location), collapse = ", "),
+                 paste(squote(src), collapse = ", "),
                  paste(squote(msg), collapse = ", ")))
   }
 
   plan
+}
+
+
+new_location_entry <- function(name, priority, type, args) {
+  location_id <- paste(as.character(openssl::rand_bytes(4)), collapse = "")
+  ## NOTE: make sure this matches the order in config_read
+  data_frame(name = name,
+             id = location_id,
+             priority = priority,
+             type = type,
+             args = I(list(args)))
+}
+
+
+lookup_location_id <- function(name, root) {
+  root$config$location$id[match(name, root$config$location$name)]
+}
+
+
+lookup_location_name <- function(id, root) {
+  root$config$location$name[match(id, root$config$location$id)]
 }

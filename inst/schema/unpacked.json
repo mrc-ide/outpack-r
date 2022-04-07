@@ -22,8 +22,9 @@
         },
 
         "location": {
-            "description": "The name of the location that the packet was pulled from"
+            "description": "The id of the location that the packet was pulled from",
+            "$ref": "locationId.json"
         }
     },
-    "required": ["schemaVersion", "packet", "time"]
+    "required": ["schemaVersion", "packet", "time", "location"]
 }

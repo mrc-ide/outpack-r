@@ -1,5 +1,5 @@
 outpack_schema_version <- function() {
-  if (is.null(cache$schema)) {
+  if (is.null(cache$schema_version)) {
     path <- outpack_file("schema/metadata.json")
     cache$schema_version <- jsonlite::read_json(path)$version
   }
