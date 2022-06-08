@@ -250,7 +250,7 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
     error = function(e)
       stop("Syntax error in custom metadata: ", e$message, call. = FALSE))
 
-  if (!is.null(schema) && getOption("outpack.schema_validate")) {
+  if (should_validate_schema(schema)) {
     tryCatch(
       custom_schema(schema)$validate(data, error = TRUE),
       error = function(e)
