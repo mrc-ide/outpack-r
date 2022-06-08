@@ -34,7 +34,8 @@ location; if \code{TRUE} you will always have all the packets that
 you hold metadata about.}
 }
 \value{
-Invisibly, an \code{outpack_root} object; these will be
+Invisibly, an \code{outpack_root} object; these will change in
+future verisons!
 }
 \description{
 Create a new outpack root.
