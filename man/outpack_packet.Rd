@@ -33,6 +33,8 @@ outpack_packet_add_custom(application, data, schema = NULL)
 names must be unique, and the values must all be non-NA scalar
 atomics (logical, integer, numeric, character)}
 
+\item{id}{The id of an existing packet to use files from}
+
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
 
@@ -41,8 +43,6 @@ relative path).  This function can be safely called multiple
 times within a single packet run (or zero times!) as needed.}
 
 \item{envir}{Environment in which to run the script}
-
-\item{id}{The id of an existing packet to use files from}
 
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the
@@ -87,7 +87,9 @@ register additional data for each artefact with:
 \item the contents of the artefact (an array of filenames)
 }
 
-JSON for this might look like:\if{html}{\out{<div class="sourceCode json">}}\preformatted{\{
+JSON for this might look like:
+
+\if{html}{\out{<div class="sourceCode json">}}\preformatted{\{
   "artefacts": [
     \{
       "description": "Data for onward use",
