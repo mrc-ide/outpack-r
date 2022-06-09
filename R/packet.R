@@ -13,13 +13,16 @@
 ##'   names must be unique, and the values must all be non-NA scalar
 ##'   atomics (logical, integer, numeric, character)
 ##'
+##' @param id Optionally, an outpack id via [outpack::outpack_id]. If
+##'   not given a new id will be generated.
+##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
 ##' @return Invisibly, a copy of the packet data
 ##' @rdname outpack_packet
 ##' @export
-outpack_packet_start <- function(path, name, parameters = NULL,
+outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
                                  root = NULL) {
   root <- outpack_root_locate(root)
   if (!is.null(current$packet)) {
@@ -35,11 +38,11 @@ outpack_packet_start <- function(path, name, parameters = NULL,
   assert_directory(path)
   validate_parameters(parameters)
 
-  ## TODO: we could accept 'id' as an argument here, but we'd need to
-  ## validate that it matches our format (depending on what we chose
-  ## to accept) and we should check that it is not present in the
-  ## index yet.
-  id <- outpack_id()
+  if (is.null(id)) {
+    id <- outpack_id()
+  } else {
+    validate_outpack_id(id)
+  }
 
   time <- list(start = Sys.time())
 
