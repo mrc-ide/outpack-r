@@ -491,7 +491,7 @@ test_that("Can hash files on startup", {
   on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
-    "png('myplot.png')",
+    "png('zzz.png')",
     "plot(d)",
     "dev.off()"),
     file.path(path_src, "script.R"))
@@ -499,16 +499,21 @@ test_that("Can hash files on startup", {
             file.path(path_src, "data.csv"),
             row.names = FALSE)
 
-  inputs <- c("script.R", "data.csv")
+  inputs <- c("data.csv", "script.R")
 
   p <- outpack_packet_start(path_src, "example", root = root)
-  expect_setequal(outpack_packet_list_unmarked(), inputs)
-  outpack_packet_mark_file(inputs)
-  expect_equal(outpack_packet_list_unmarked(), character())
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = inputs, status = "unknown"))
+  outpack_packet_file_mark(inputs)
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = inputs, status = "immutable"))
   outpack_packet_run("script.R")
-  expect_setequal(outpack_packet_list_unmarked(), "myplot.png")
-  outpack_packet_mark_file("myplot.png")
-  expect_equal(outpack_packet_list_unmarked(), character())
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = c(inputs, "zzz.png"),
+                          status = c("immutable", "immutable", "unknown")))
+  outpack_packet_file_mark("zzz.png")
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = c(inputs, "zzz.png"), status = "immutable"))
   outpack_packet_end()
 })
 
@@ -539,7 +544,7 @@ test_that("Can detect changes to hashed files", {
             row.names = FALSE)
   inputs <- c("script.R", "data.csv")
   p <- outpack_packet_start(path_src, "example", root = root)
-  outpack_packet_mark_file(inputs)
+  outpack_packet_file_mark(inputs)
   outpack_packet_run("script.R")
   expect_error(
     outpack_packet_end(),
@@ -560,10 +565,10 @@ test_that("Re-adding files triggers hash", {
   write.csv(mtcars, file.path(path_src, "data.csv"))
 
   p <- outpack_packet_start(path_src, "example", root = root)
-  outpack_packet_mark_file("data.csv")
-  expect_silent(outpack_packet_mark_file("data.csv"))
+  outpack_packet_file_mark("data.csv")
+  expect_silent(outpack_packet_file_mark("data.csv"))
   expect_length(outpack_packet_current()$files, 1)
   file.create(file.path(path_src, "data.csv"))
-  expect_error(outpack_packet_mark_file("data.csv"),
+  expect_error(outpack_packet_file_mark("data.csv"),
                "File was changed after being added: 'data.csv'")
 })
