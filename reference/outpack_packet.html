@@ -56,7 +56,7 @@ the current packet (<code>outpack_packet_use_dependency</code>,
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">outpack_packet_start</span><span class="op">(</span><span class="va">path</span>, <span class="va">name</span>, parameters <span class="op">=</span> <span class="cn">NULL</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="fu">outpack_packet_start</span><span class="op">(</span><span class="va">path</span>, <span class="va">name</span>, parameters <span class="op">=</span> <span class="cn">NULL</span>, id <span class="op">=</span> <span class="cn">NULL</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span>
 
 <span class="fu">outpack_packet_cancel</span><span class="op">(</span><span class="op">)</span>
 
@@ -75,43 +75,66 @@ the current packet (<code>outpack_packet_use_dependency</code>,
     <h2>Arguments</h2>
     <dl><dt>path</dt>
 <dd><p>Path to the build / output directory.</p></dd>
+
+
 <dt>name</dt>
 <dd><p>The name of the packet</p></dd>
+
+
 <dt>parameters</dt>
 <dd><p>Optionally, a named list of parameters.  The
 names must be unique, and the values must all be non-NA scalar
 atomics (logical, integer, numeric, character)</p></dd>
+
+
+<dt>id</dt>
+<dd><p>The id of an existing packet to use files from</p></dd>
+
+
 <dt>root</dt>
 <dd><p>The outpack root. Will be searched for from the
 current directory if not given.</p></dd>
+
+
 <dt>script</dt>
 <dd><p>Path to the script within the packet directory (a
 relative path).  This function can be safely called multiple
 times within a single packet run (or zero times!) as needed.</p></dd>
+
+
 <dt>envir</dt>
 <dd><p>Environment in which to run the script</p></dd>
-<dt>id</dt>
-<dd><p>The id of an existing packet to use files from</p></dd>
+
+
 <dt>files</dt>
 <dd><p>A named character vector of files; the name
 corresponds to the name within the current packet, while the
 value corresponds to the name within the upstream packet</p></dd>
+
+
 <dt>application</dt>
 <dd><p>The name of the application (used to organise
 the data and query it later, see Details)</p></dd>
+
+
 <dt>data</dt>
 <dd><p>Additional metadata to add to the packet. This must be
 a string representing already-serialised json data.</p></dd>
+
+
 <dt>schema</dt>
 <dd><p>Optionally, but recommended, a schema to validate
 <code>data</code> against.  Validation will only happen if the option
 <code>outpack.schema_validate</code> is <code>TRUE</code>, as for the main schema
 validation.  Will be passed to <a href="https://docs.ropensci.org/jsonvalidate/reference/json_schema.html" class="external-link">jsonvalidate::json_schema</a>, so
 can be a string containing the schema or a path to the schema.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Invisibly, a copy of the packet data</p>
+    
+
+<p>Invisibly, a copy of the packet data</p>
     </div>
     <div id="custom-metadata">
     <h2>Custom metadata</h2>
@@ -128,7 +151,8 @@ file outputs into logical bundles.  To support this it needs to
 register additional data for each artefact with:</p><ul><li><p>the description of the artefect (a short phrase)</p></li>
 <li><p>the format of the artefact (a string describing the data type)</p></li>
 <li><p>the contents of the artefact (an array of filenames)</p></li>
-</ul><p>JSON for this might look like:</p><div class="sourceCode json"><pre><code><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">{</span></span>
+</ul><p>JSON for this might look like:</p>
+<p></p><div class="sourceCode json"><pre><code><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">{</span></span>
 <span id="cb1-2"><a href="#cb1-2"></a>  <span class="dt">"artefacts"</span><span class="fu">:</span> <span class="ot">[</span></span>
 <span id="cb1-3"><a href="#cb1-3"></a>    <span class="fu">{</span></span>
 <span id="cb1-4"><a href="#cb1-4"></a>      <span class="dt">"description"</span><span class="fu">:</span> <span class="st">"Data for onward use"</span><span class="fu">,</span></span>
@@ -169,7 +193,7 @@ must serialise your own data before passing through to
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>

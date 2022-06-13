@@ -63,16 +63,22 @@
     <dl><dt>root</dt>
 <dd><p>Path to use.  This path may exist, but it is an error
 to call this on a path that has already been initialised.</p></dd>
+
+
 <dt>path_archive</dt>
 <dd><p>Path to the archive directory, used to store
 human-readable copies of packets.  If <code>NULL</code>, no such copy is
 made, and <code>file_store</code> must be <code>TRUE</code></p></dd>
+
+
 <dt>use_file_store</dt>
 <dd><p>Logical, indicating if we should use a
 content-addressable file-store as the source of truth for
 packets.  If <code>archive</code> is non-<code>NULL</code>, the file-store will be
 used as the source of truth and the duplicated files in archive
 exist only for convenience.</p></dd>
+
+
 <dt>require_complete_tree</dt>
 <dd><p>Logical, indicating if we require a
 complete tree of packets.  This currently affects
@@ -81,10 +87,14 @@ always operates in recursive mode.  This is <code>FALSE</code> by default,
 but set to <code>TRUE</code> if you want your archive to behave well as a
 location; if <code>TRUE</code> you will always have all the packets that
 you hold metadata about.</p></dd>
+
 </dl></div>
     <div id="value">
     <h2>Value</h2>
-    <p>Invisibly, an <code>outpack_root</code> object; these will be</p>
+    
+
+<p>Invisibly, an <code>outpack_root</code> object; these will change in
+future verisons!</p>
     </div>
 
   </div>
@@ -99,7 +109,7 @@ you hold metadata about.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.2.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.4.</p>
 </div>
 
       </footer></div>
