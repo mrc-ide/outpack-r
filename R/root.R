@@ -23,7 +23,9 @@
 ##'   location; if `TRUE` you will always have all the packets that
 ##'   you hold metadata about.
 ##'
-##' @return Invisibly, an `outpack_root` object; these will be
+##' @return Invisibly, an `outpack_root` object; these will change in
+##'   future verisons!
+##' @export
 outpack_init <- function(root, path_archive = "archive",
                          use_file_store = FALSE,
                          require_complete_tree = FALSE) {

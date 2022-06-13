@@ -26,3 +26,8 @@ load_schema <- function(key, schema) {
   }
   cache$schema[[key]]
 }
+
+
+should_validate_schema <- function(schema) {
+  !is.null(schema) && getOption("outpack.schema_validate", FALSE)
+}

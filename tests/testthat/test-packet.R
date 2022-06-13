@@ -438,6 +438,7 @@ test_that("Can validate custom metadata against schema", {
 
 
 test_that("Can report nicely about json syntax errors", {
+  on.exit(outpack_packet_clear(), add = TRUE)
   tmp <- tempfile()
   on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
 
@@ -450,4 +451,25 @@ test_that("Can report nicely about json syntax errors", {
   expect_error(
     outpack_packet_add_custom("app1", '{"a": 1, "b": 2'),
     "Syntax error in custom metadata:")
+})
+
+
+test_that("pre-prepared id can be used to start packet", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  id <- outpack_id()
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+
+  p <- outpack_packet_start(path_src, "example", id = id, root = root)
+  expect_equal(p$id, id)
+
+  outpack_packet_end()
+  index <- root$index()
+  expect_equal(names(index$metadata), id)
 })
