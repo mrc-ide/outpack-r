@@ -105,7 +105,7 @@ outpack_root <- R6::R6Class(
 ##' Open an existing outpack root. This returns a "root" object, which
 ##' can be passed through to various outpack functions. The root
 ##' object is the same as that returned by
-##' [outpack::outpack_root_init] and will be documented once the
+##' [outpack::outpack_init] and will be documented once the
 ##' interface stabilises.
 ##'
 ##' @title Open outpack root
