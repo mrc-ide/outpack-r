@@ -18,7 +18,7 @@ test_that("outpack_location_path requires exact root", {
 
   expect_error(
     outpack_location_path$new(path),
-    "File does not exist:")
+    "Directory does not exist:")
 
   outpack_init(path)
   subdir <- file.path(path, "subdir")
@@ -101,7 +101,8 @@ test_that("can locate files from the store", {
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
-  expect_equal(loc$fetch_file(h), root$files$filename(h))
+  expect_equal(normalizePath(loc$fetch_file(h)),
+               normalizePath(root$files$filename(h)))
 })
 
 

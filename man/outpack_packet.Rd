@@ -87,9 +87,7 @@ register additional data for each artefact with:
 \item the contents of the artefact (an array of filenames)
 }
 
-JSON for this might look like:
-
-\if{html}{\out{<div class="sourceCode json">}}\preformatted{\{
+JSON for this might look like:\if{html}{\out{<div class="sourceCode json">}}\preformatted{\{
   "artefacts": [
     \{
       "description": "Data for onward use",

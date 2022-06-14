@@ -102,30 +102,43 @@ outpack_root <- R6::R6Class(
   ))
 
 
-outpack_root_locate <- function(path) {
+##' Open an existing outpack root. This returns a "root" object, which
+##' can be passed through to various outpack functions. The root
+##' object is the same as that returned by
+##' [outpack::outpack_init] and will be documented once the
+##' interface stabilises.
+##'
+##' @title Open outpack root
+##'
+##' @param path The path to look for the root; must be an existing
+##'   directory. Use `.` or `getwd()` for the current directory.
+##'
+##' @param locate Logical, indicating if we should look in parent
+##'   directories until the root is found (similar behaviour to how
+##'   `git` can find its root directory from any directory below the
+##'   root).
+##'
+##' @return An `outpack_root` object; treat this as an opaque object
+##'   for now.
+##'
+##' @export
+outpack_root_open <- function(path, locate = TRUE) {
   if (inherits(path, "outpack_root")) {
     return(path)
   }
-  path <- path %||% "."
   assert_scalar_character(path)
   assert_directory(path)
-  root_found <- find_file_descend(".outpack", path)
-  if (is.null(root_found)) {
-    stop(sprintf("Did not find existing outpack root from directory '%s'",
-                 path))
-  }
-  outpack_root$new(root_found)
-}
-
-
-outpack_root_open <- function(path) {
-  if (inherits(path, "outpack_root")) {
-    return(path)
-  }
-  assert_scalar_character(path)
-  assert_file_exists(path)
-  if (!file.exists(file.path(path, ".outpack"))) {
-    stop(sprintf("'%s' does not look like an outpack root", path))
+  if (locate) {
+    root_found <- find_file_descend(".outpack", path)
+    if (is.null(root_found)) {
+      stop(sprintf("Did not find existing outpack root from directory '%s'",
+                   path))
+    }
+    path <- root_found
+  } else {
+    if (!file.exists(file.path(path, ".outpack"))) {
+      stop(sprintf("'%s' does not look like an outpack root", path))
+    }
   }
   outpack_root$new(path)
 }

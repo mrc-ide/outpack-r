@@ -58,37 +58,37 @@ test_that("Can locate an outpack root", {
   p <- file.path(path, "a", "b", "c")
   fs::dir_create(p)
   expect_equal(
-    outpack_root_locate(p)$path,
-    outpack_root_locate(path)$path)
+    outpack_root_open(p)$path,
+    outpack_root_open(path)$path)
   expect_equal(
-    with_dir(p, outpack_root_locate(NULL)$path),
-    outpack_root_locate(path)$path)
+    with_dir(p, outpack_root_open(".")$path),
+    outpack_root_open(path)$path)
   expect_identical(
-    outpack_root_locate(r), r)
+    outpack_root_open(r), r)
 })
 
 
-test_that("outpack_root_locate errors if it reaches toplevel", {
+test_that("outpack_root_open errors if it reaches toplevel", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   fs::dir_create(path)
   expect_error(
-    outpack_root_locate(path),
+    outpack_root_open(path),
     "Did not find existing outpack root from directory '.+'")
 })
 
 
-test_that("outpack_root_open does not recurse", {
+test_that("outpack_root_open does not recurse if locate = FALSE", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   r <- outpack_init(path)
-  expect_identical(outpack_root_open(r), r)
-  expect_equal(outpack_root_open(path)$path, path)
+  expect_identical(outpack_root_open(r, locate = FALSE), r)
+  expect_equal(outpack_root_open(path, locate = FALSE)$path, path)
 
   p <- file.path(path, "a", "b", "c")
   fs::dir_create(p)
   expect_error(
-    outpack_root_open(p),
+    outpack_root_open(p, locate = FALSE),
     "'.+/a/b/c' does not look like an outpack root")
 })
 

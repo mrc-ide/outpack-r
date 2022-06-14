@@ -28,7 +28,7 @@
 ##' @return Nothing
 ##' @export
 outpack_location_add <- function(name, path, priority = 0, root = NULL) {
-  root <- outpack_root_locate(root)
+  root <- outpack_root_open(root, locate = TRUE)
   assert_scalar_character(name)
   assert_scalar_numeric(priority)
 
@@ -46,7 +46,7 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   ## requested path; this will just fail but without providing the
   ## user with anything actionable yet.
   assert_scalar_character(path)
-  outpack_root_open(path)
+  outpack_root_open(path, locate = FALSE)
 
   config <- root$config
 
@@ -79,12 +79,12 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 ##'
 ##' @export
 outpack_location_list <- function(root = NULL) {
-  outpack_root_locate(root)$config$location$name
+  outpack_root_open(root, locate = TRUE)$config$location$name
 }
 
 
 outpack_location_priority <- function(root = NULL) {
-  root <- outpack_root_locate(root)
+  root <- outpack_root_open(root, locate = TRUE)
   set_names(root$config$location$priority, root$config$location$name)
 }
 
@@ -107,7 +107,7 @@ outpack_location_priority <- function(root = NULL) {
 ##'
 ##' @export
 outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
-  root <- outpack_root_locate(root)
+  root <- outpack_root_open(root, locate = TRUE)
   location_id <- location_resolve_valid(location, root,
                                         include_local = FALSE,
                                         allow_no_locations = TRUE)
@@ -153,7 +153,7 @@ outpack_location_pull_metadata <- function(location = NULL, root = NULL) {
 ##' @export
 outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
                                          root = NULL) {
-  root <- outpack_root_locate(root)
+  root <- outpack_root_open(root, locate = TRUE)
   assert_character(id)
   index <- root$index()
 
