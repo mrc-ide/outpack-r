@@ -111,7 +111,7 @@ outpack_root <- R6::R6Class(
 ##' @title Open outpack root
 ##'
 ##' @param path The path to look for the root; must be an existing
-##'   directory. If `NULL`
+##'   directory. Use `.` or `getwd()` for the current directory.
 ##'
 ##' @param locate Logical, indicating if we should look in parent
 ##'   directories until the root is found (similar behaviour to how

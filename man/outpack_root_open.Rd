@@ -8,7 +8,7 @@ outpack_root_open(path, locate = TRUE)
 }
 \arguments{
 \item{path}{The path to look for the root; must be an existing
-directory. If \code{NULL}}
+directory. Use \code{.} or \code{getwd()} for the current directory.}
 
 \item{locate}{Logical, indicating if we should look in parent
 directories until the root is found (similar behaviour to how
