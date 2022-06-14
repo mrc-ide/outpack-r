@@ -26,6 +26,6 @@ for now, later we will expand this.}
 Mark file within an in-progress packet. This will store the hash
 of the file within the internal outpack structures and force an
 error if the file is changed or deleted later.  The function
-\code{\link[=outpack_packet_list_unmarked]{outpack_packet_list_unmarked()}} will report on unmarked
-files present in the directory.
+\code{\link[=outpack_packet_file_list]{outpack_packet_file_list()}} will report on which files
+are marked (or unmarked) within the directory.
 }

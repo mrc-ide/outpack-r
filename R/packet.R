@@ -277,8 +277,8 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
 ##' Mark file within an in-progress packet. This will store the hash
 ##' of the file within the internal outpack structures and force an
 ##' error if the file is changed or deleted later.  The function
-##' [outpack::outpack_packet_list_unmarked()] will report on unmarked
-##' files present in the directory.
+##' [outpack::outpack_packet_file_list()] will report on which files
+##' are marked (or unmarked) within the directory.
 ##'
 ##' @title Mark files during packet run
 ##'
