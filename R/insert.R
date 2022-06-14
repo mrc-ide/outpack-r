@@ -1,5 +1,5 @@
 outpack_insert_packet <- function(path, json, root = NULL) {
-  root <- outpack_root_locate(root)
+  root <- outpack_root_open(root, locate = TRUE)
   meta <- outpack_metadata_load(json)
   assert_directory(path)
 

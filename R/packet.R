@@ -24,7 +24,7 @@
 ##' @export
 outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
                                  root = NULL) {
-  root <- outpack_root_locate(root)
+  root <- outpack_root_open(root, locate = TRUE)
   if (!is.null(current$packet)) {
     ## * Could make this root specific?
     ## * Could make this path specific?

@@ -18,7 +18,7 @@ test_that("outpack_location_path requires exact root", {
 
   expect_error(
     outpack_location_path$new(path),
-    "File does not exist:")
+    "Directory does not exist:")
 
   outpack_init(path)
   subdir <- file.path(path, "subdir")

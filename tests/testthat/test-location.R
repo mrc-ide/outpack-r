@@ -68,7 +68,7 @@ test_that("Require that (for now) locations must be paths", {
   on.exit(unlink(other, recursive = TRUE), add = TRUE)
   expect_error(
     outpack_location_add("other", other, root = path),
-    "File does not exist:")
+    "Directory does not exist:")
   fs::dir_create(other)
   expect_error(
     outpack_location_add("other", other, root = path),

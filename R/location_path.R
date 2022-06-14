@@ -9,7 +9,7 @@ outpack_location_path <- R6::R6Class(
     initialize = function(path) {
       ## TODO: filter so that we only count some locations as
       ## possibilities to export.
-      private$root <- outpack_root_open(path)
+      private$root <- outpack_root_open(path, locate = FALSE)
     },
 
     list = function() {
