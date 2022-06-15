@@ -19,7 +19,7 @@ for now, later we will expand this.}
 \itemize{
 \item \code{outpack_packet_file_mark} returns nothing
 \item \code{outpack_packet_file_list} returns a \link{data.frame} with columns
-\code{path} and \code{status} (\code{immutable}, \code{ignored}, \code{unknown})
+\code{path} and \code{status} (\code{immutable} or \code{unknown})
 }
 }
 \description{

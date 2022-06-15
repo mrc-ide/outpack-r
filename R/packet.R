@@ -290,7 +290,7 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
 ##' @return
 ##' * `outpack_packet_file_mark` returns nothing
 ##' * `outpack_packet_file_list` returns a [data.frame] with columns
-##'   `path` and `status` (`immutable`, `ignored`, `unknown`)
+##'   `path` and `status` (`immutable` or `unknown`)
 ##'
 ##' @rdname outpack_packet_file
 ##'
