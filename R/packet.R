@@ -54,6 +54,7 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
     id = id,
     path = path,
     parameters = parameters,
+    files = list(),
     time = time,
     root = root)
 
@@ -78,6 +79,7 @@ outpack_packet_current <- function() {
   current$packet
 }
 
+
 ##' @export
 ##' @rdname outpack_packet
 outpack_packet_end <- function() {
@@ -91,6 +93,7 @@ outpack_packet_end <- function() {
                                   script = p$script,
                                   custom = p$custom,
                                   session = NULL,
+                                  file_hash = p$files$immutable,
                                   hash_algorithm = hash_algorithm)
   outpack_insert_packet(p$path, json, p$root)
   outpack_packet_clear()
@@ -268,6 +271,59 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
   custom <- list(application = application, data = data)
   current$packet$custom <- c(p$custom, list(custom))
   invisible()
+}
+
+
+##' Mark file within an in-progress packet. This will store the hash
+##' of the file within the internal outpack structures and force an
+##' error if the file is changed or deleted later.  The function
+##' [outpack::outpack_packet_file_list()] will report on which files
+##' are marked (or unmarked) within the directory.
+##'
+##' @title Mark files during packet run
+##'
+##' @param files A character vector of relative paths
+##'
+##' @param status A status to mark the file with. Must be "immutable"
+##'   for now, later we will expand this.
+##'
+##' @return
+##' * `outpack_packet_file_mark` returns nothing
+##' * `outpack_packet_file_list` returns a [data.frame] with columns
+##'   `path` and `status` (`immutable` or `unknown`)
+##'
+##' @rdname outpack_packet_file
+##'
+##' @export
+outpack_packet_file_mark <- function(files, status = "immutable") {
+  status <- match_value(status, "immutable")
+  p <- outpack_packet_current()
+
+  assert_relative_path(files, no_dots = TRUE)
+  assert_file_exists(files, p$path)
+
+  hash_algorithm <- p$root$config$core$hash_algorithm
+  value <- with_dir(p$path, hash_files(files, hash_algorithm, named = TRUE))
+
+  if (any(files %in% names(p$files$immutable))) {
+    validate_hashes(value, p$files$immutable)
+    value <- value[!(names(value) %in% names(p$files))]
+  }
+
+  current$packet$files$immutable <- c(p$files$immutable, value)
+  invisible()
+}
+
+
+##' @export
+##' @rdname outpack_packet_file
+outpack_packet_file_list <- function() {
+  p <- outpack_packet_current()
+  files <- with_dir(p$path,
+                    dir(all.files = TRUE, recursive = TRUE, no.. = TRUE))
+  status <- rep("unknown", length(files))
+  status[files %in% names(p$files$immutable)] <- "immutable"
+  data_frame(path = files, status = status)
 }
 
 

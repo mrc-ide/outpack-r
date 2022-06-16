@@ -116,3 +116,15 @@ assert_directory <- function(x, workdir = NULL, name = "Directory") {
     stop(sprintf("%s must be a directory: '%s'", name, x))
   }
 }
+
+
+
+match_value <- function(arg, choices, name = deparse(substitute(arg))) {
+  assert_scalar_character(arg)
+  if (!(arg %in% choices)) {
+    stop(sprintf("%s must be one of %s",
+                 name, paste(squote(choices), collapse = ", ")),
+         call. = FALSE)
+  }
+  arg
+}

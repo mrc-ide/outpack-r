@@ -473,3 +473,102 @@ test_that("pre-prepared id can be used to start packet", {
   index <- root$index()
   expect_equal(names(index$metadata), id)
 })
+
+
+test_that("Can hash files on startup", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+  writeLines(c(
+    "d <- read.csv('data.csv')",
+    "png('zzz.png')",
+    "plot(d)",
+    "dev.off()"),
+    file.path(path_src, "script.R"))
+  write.csv(data.frame(x = 1:10, y = runif(10)),
+            file.path(path_src, "data.csv"),
+            row.names = FALSE)
+
+  inputs <- c("data.csv", "script.R")
+
+  p <- outpack_packet_start(path_src, "example", root = root)
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = inputs, status = "unknown"))
+  outpack_packet_file_mark(inputs)
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = inputs, status = "immutable"))
+  outpack_packet_run("script.R")
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = c(inputs, "zzz.png"),
+                          status = c("immutable", "immutable", "unknown")))
+  outpack_packet_file_mark("zzz.png")
+  expect_equal(outpack_packet_file_list(),
+               data_frame(path = c(inputs, "zzz.png"), status = "immutable"))
+  outpack_packet_end()
+})
+
+
+test_that("Can detect changes to hashed files", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+  writeLines(c(
+    "d <- read.csv('data.csv')",
+    "file.create('data.csv')", # truncates file
+    "png('myplot.png')",
+    "plot(d)",
+    "dev.off()"),
+    file.path(path_src, "script.R"))
+  write.csv(data.frame(x = 1:10, y = runif(10)),
+            file.path(path_src, "data.csv"),
+            row.names = FALSE)
+  inputs <- c("script.R", "data.csv")
+  p <- outpack_packet_start(path_src, "example", root = root)
+  outpack_packet_file_mark(inputs)
+  outpack_packet_run("script.R")
+  expect_error(
+    outpack_packet_end(),
+    "File was changed after being added: 'data.csv'")
+})
+
+
+test_that("Re-adding files triggers hash", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+
+  path_src <- tempfile()
+  fs::dir_create(path_src)
+  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
+  write.csv(mtcars, file.path(path_src, "data.csv"))
+
+  p <- outpack_packet_start(path_src, "example", root = root)
+  outpack_packet_file_mark("data.csv")
+  expect_silent(outpack_packet_file_mark("data.csv"))
+  expect_length(outpack_packet_current()$files, 1)
+  file.create(file.path(path_src, "data.csv"))
+  expect_error(outpack_packet_file_mark("data.csv"),
+               "File was changed after being added: 'data.csv'")
+})

@@ -1,6 +1,8 @@
 outpack_metadata_create <- function(path, name, id, time, files,
                                     depends, parameters,
-                                    script, custom, session, hash_algorithm) {
+                                    script, custom, session,
+                                    file_hash,
+                                    hash_algorithm) {
   assert_scalar_character(name)
   assert_scalar_character(id)
 
@@ -35,6 +37,10 @@ outpack_metadata_create <- function(path, name, id, time, files,
       path = files,
       size = file.size(files),
       hash = vcapply(files, hash_file, hash_algorithm, USE.NAMES = FALSE)))
+
+  if (!is.null(file_hash)) {
+    validate_hashes(set_names(files$hash, files$path), file_hash)
+  }
 
   ## TODO: best to validate here that all elements of depends are
   ## really found in the inputs list; more generally we might verify
@@ -141,4 +147,18 @@ outpack_session_info <- function(info) {
 outpack_metadata_index_read <- function(path) {
   keep <- c("name", "id", "parameters", "files", "depends")
   outpack_metadata_load(path)[keep]
+}
+
+
+validate_hashes <- function(found, expected) {
+  err <- found[names(expected)] != expected
+  msg <- is.na(err)
+  if (any(msg)) {
+    stop(sprintf("File was deleted after being added: %s",
+                 paste(squote(names(expected)[msg]), collapse = ", ")))
+  }
+  if (any(err)) {
+    stop(sprintf("File was changed after being added: %s",
+                 paste(squote(names(expected)[err]), collapse = ", ")))
+  }
 }

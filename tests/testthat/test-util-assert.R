@@ -84,3 +84,9 @@ test_that("assert_relative_path", {
     assert_relative_path("my/../../path", TRUE),
     "must not contain '..' path components")
 })
+
+
+test_that("match_value", {
+  expect_error(match_value("foo", letters), "must be one of")
+  expect_silent(match_value("a", letters))
+})
