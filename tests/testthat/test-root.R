@@ -112,6 +112,9 @@ test_that("Can't get nonexistant metadata", {
   expect_error(
     r$metadata(id),
     sprintf("id '%s' not found in index", id))
+  expect_error(
+    r$metadata(id, full = TRUE),
+    sprintf("id '%s' not found in index", id))
 })
 
 
@@ -125,4 +128,21 @@ test_that("empty root has nothing unpacked", {
                data_frame(packet = character(),
                           time = empty_time(),
                           location = character()))
+})
+
+
+test_that("Can read full metadata via root", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  r <- outpack_init(path)
+  id1 <- create_random_packet(path)
+  id2 <- create_random_packet(path)
+
+  d1 <- r$metadata(id1, TRUE)
+  d2 <- r$metadata(id1, FALSE)
+
+  expect_identical(d1[names(d2)], d2)
+  extra <- setdiff(names(d1), names(d2))
+  expect_equal(d1$script, list())
+  expect_equal(d1$schemaVersion, outpack_schema_version())
 })

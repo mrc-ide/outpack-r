@@ -56,7 +56,32 @@ outpack_root <- R6::R6Class(
   cloneable = FALSE,
 
   private = list(
-    index_data = NULL
+    index_data = NULL,
+    metadata_read = function(id) {
+      path_metadata <- file.path(self$path, ".outpack", "metadata", id)
+      if (!file.exists(path_metadata)) {
+        stop(sprintf("id '%s' not found in index", id))
+      }
+      outpack_metadata_load(path_metadata)
+    },
+
+    metadata_load = function(id) {
+      ## TODO: this contains more logic than ideal but attempts to
+      ## avoid updating the index if needed.  The other thing to do
+      ## would _always_ be to update the index but that feels wasteful
+      ## really.
+      ##
+      ## We could probably be much more efficient if we cached all
+      ## roots within a session, though doing that safely would
+      ## practically mean putting a key file in each root so that we
+      ## can detect directory moves.
+      meta <- private$index_data$metadata[[id]] %||%
+        self$index()$metadata[[id]]
+      if (is.null(meta)) {
+        stop(sprintf("id '%s' not found in index", id))
+      }
+      meta
+    }
   ),
 
   public = list(
@@ -76,22 +101,12 @@ outpack_root <- R6::R6Class(
       lockBinding("files", self)
     },
 
-    metadata = function(id) {
-      ## TODO: this contains more logic than ideal but attempts to
-      ## avoid updating the index if needed.  The other thing to do
-      ## would _always_ be to update the index but that feels wasteful
-      ## really.
-      ##
-      ## We could probably be much more efficient if we cached all
-      ## roots within a session, though doing that safely would
-      ## practically mean putting a key file in each root so that we
-      ## can detect directory moves.
-      meta <- private$index_data$metadata[[id]] %||%
-        self$index()$metadata[[id]]
-      if (is.null(meta)) {
-        stop(sprintf("id '%s' not found in index", id))
+    metadata = function(id, full = FALSE) {
+      if (full) {
+        private$metadata_read(id)
+      } else {
+        private$metadata_load(id)
       }
-      meta
     },
 
     index = function(refresh = FALSE) {
