@@ -131,3 +131,13 @@ set_class <- function(x, cls) {
   class(x) <- cls
   x
 }
+
+
+is_call <- function(expr, valid) {
+  is.recursive(expr) && as.character(expr[[1]]) %in% valid
+}
+
+
+last <- function(x) {
+  x[[length(x)]]
+}
