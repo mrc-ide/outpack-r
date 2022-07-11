@@ -6,12 +6,15 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
   expr_parsed <- query_parse(expr)
 
   ## We will want to do this more generally later, because it will be
-  ## a waste to do this every time. We also need to get location on
-  ## here too.
+  ## a waste to do this every time.
+  idx <- root$index()
+  i <- match(idx$location$location, root$config$location$id)
+  location <- split(root$config$location$name[i], idx$location$packet)
   index <- data_frame(
     id = names(root$index()$metadata),
     name = vcapply(root$index()$metadata, "[[", "name"),
-    parameters = I(lapply(root$index()$metadata, "[[", "parameters")))
+    parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
+    location = I(location))
 
   if (!is.null(scope)) {
     ids <- outpack_query(scope, NULL, root)
@@ -64,7 +67,7 @@ query_parse_filter <- function(expr) {
       call. = FALSE)
   }
 
-  len <- list(latest = 1)
+  len <- list(latest = 1, at_location = NULL)
   len[query_operators] <- 2
 
   fn <- as.character(expr[[1]])
@@ -76,26 +79,15 @@ query_parse_filter <- function(expr) {
   }
 
   ## Technically latest would work for anything?
-  if (length(expr) - 1 != len[[fn]]) {
+  if (!is.null(len[[fn]]) && length(expr) - 1 != len[[fn]]) {
     stop(sprintf(
       "Invalid call to %s(), wrong number of args", # TODO: better message
       fn), call. = FALSE)
   }
 
-  ret <- list(type = "filter",
-              name = fn)
-
-  if (fn %in% query_operators) {
-    ## here we need the lhs and rhs to be accessors
-    ret$args <- lapply(expr[-1], query_parse_value)
-  } else if (fn == "latest") {
-    ## arg is a subquery
-    ret$args <- list(query_parse_expr(expr[[2]]))
-  } else {
-    stop("Can't get here?") # TODO
-  }
-
-  ret
+  list(type = "filter",
+       name = fn,
+       args = lapply(expr[-1], query_parse_value))
 }
 
 
@@ -152,6 +144,15 @@ query_eval <- function(query, index) {
   } else if (query$type == "filter" && query$name == "latest") {
     candidates <- query_eval(query$args[[1]], index)
     if (length(candidates) == 0) NA_character_ else last(candidates)
+  } else if (query$type == "filter" && query$name == "at_location") {
+    ## All arguments must be literal, this is likely something we'll
+    ## use elsewhere.
+    location <- vcapply(query$args, function(x) {
+      stopifnot(x$type == "literal", is.character(x$value))
+      x$value
+    })
+    i <- vlapply(index$location, function(x) any(x %in% location))
+    index$id[i]
   } else if (query$type == "filter") {
     args <- lapply(query$args, query_eval, index)
     i <- query_operator_safe(query$name, args[[1]], args[[2]])

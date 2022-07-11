@@ -48,3 +48,36 @@ test_that("Scope queries", {
     outpack_query(quote(parameter:a == 1), quote(name == "x"), root = root),
     x1)
 })
+
+
+test_that("location based queries", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE))
+  path <- root <- list()
+  path$a <- file.path(tmp, "a")
+  outpack_init(path$a, use_file_store = TRUE)
+  for (name in c("x", "y", "z")) {
+    path[[name]] <- file.path(tmp, name)
+    root[[name]] <- outpack_init(path[[name]], use_file_store = TRUE)
+    outpack_location_add(name, path[[name]], root = path$a)
+  }
+
+  ids <- list()
+  for (name in c("x", "y", "z")) {
+    ids[[name]] <- vcapply(1:3, function(i)
+      create_random_packet(root[[name]], "data", list(p = i)))
+  }
+  outpack_location_pull_metadata(root = path$a)
+
+  expect_equal(
+    outpack_query(quote(at_location("x", "y")), root = path$a),
+    c(ids$x, ids$y))
+
+  ## This is most similar to the functionality of orderly's
+  ##
+  ## > use_draft == "newer"
+  expect_equal(
+    outpack_query(quote(parameter:p == 2), quote(at_location("x", "y")),
+                  root = path$a),
+    c(ids$x[2], ids$y[2]))
+})
