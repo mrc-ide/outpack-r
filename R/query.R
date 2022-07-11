@@ -14,8 +14,8 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")))
 
   if (!is.null(scope)) {
-    ## Here, filter 'data' by additional queries
-    browser()
+    ids <- outpack_query(scope, NULL, root)
+    index <- index[index$id %in% ids, ]
   }
 
   ## TODO: Also may need to pass through the parameters data
@@ -136,7 +136,7 @@ query_eval <- function(query, index) {
     if (query$value == "name") {
       index$name
     } else if (query$value == "parameter") {
-      lapply(index$parameter, "[[", query$value$query)
+      lapply(index$parameters, "[[", query$query)
     } else {
       stop("Impossible") # TODO
     }
@@ -157,6 +157,6 @@ query_eval <- function(query, index) {
     i <- query_operator_safe(query$name, args[[1]], args[[2]])
     index$id[i]
   } else {
-    stop("you may be asking yourself, how did I get here?")
+    stop("you may be asking yourself, how did I get here?") # TODO
   }
 }
