@@ -48,38 +48,52 @@ query_parse <- function(expr) {
 }
 
 
-query_group <- list("(" = 1, "!" = 1, "&&" = 2, "||" = 2)
-query_test <- list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2)
-query_other <- list("latest" = c(0, 1), "at_location" = c(1, Inf))
+query_functions <- list(
+  group = list("(" = 1, "!" = 1, "&&" = 2, "||" = 2),
+  test = list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2),
+  other = list(latest = c(0, 1), at_location = c(1, Inf)))
 
 
 query_parse_expr <- function(expr, context) {
-  fn <- query_parse_check_call(expr, context)
-  if (fn %in% names(query_test)) {
-    ret <- list(type = "test",
-                name = fn,
-                args = lapply(expr[-1], query_parse_value, context))
-  } else if (fn %in% names(query_group)) {
-    fn <- deparse(expr[[1]])
-    ret <- list(type = "group",
-                name = fn,
-                args = lapply(expr[-1], query_parse_expr, context))
-  } else if (fn == "latest") {
-    ret <- list(type = "latest",
-                args = lapply(expr[-1], query_parse_expr, context))
-  } else if (fn == "at_location") {
-    args <- as.list(expr[-1])
-    if (!all(vlapply(args, is.character))) {
-      query_parse_error(
-        "All arguments to at_location() must be string literals",
-        expr, context)
-    }
-    ret <- list(type = "at_location",
-                args = lapply(args, query_parse_value, context))
-  } else {
-    stop("Unhandled") # TODO - we can never get here due to the above
+  type <- query_parse_check_call(expr, context)
+  switch(type,
+         test = query_parse_test(expr, context),
+         group = query_parse_group(expr, context),
+         latest = query_parse_latest(expr, context),
+         at_location = query_parse_at_location(expr, context),
+         stop("Unhandled")) # TODO - we can never get here due to the above
+}
+
+
+query_parse_test <- function(expr, context) {
+  list(type = "test",
+       name = deparse(expr[[1]]),
+       args = lapply(expr[-1], query_parse_value, context))
+}
+
+
+query_parse_group <- function(expr, context) {
+  list(type = "group",
+       name = deparse(expr[[1]]),
+       args = lapply(expr[-1], query_parse_expr, context))
+}
+
+
+query_parse_latest <- function(expr, context) {
+  list(type = "latest",
+       args = lapply(expr[-1], query_parse_expr, context))
+}
+
+
+query_parse_at_location <- function(expr, context) {
+  args <- as.list(expr[-1])
+  if (!all(vlapply(args, is.character))) {
+    query_parse_error(
+      "All arguments to at_location() must be string literals",
+      expr, context)
   }
-  ret
+  list(type = "at_location",
+       args = lapply(args, query_parse_value, context))
 }
 
 
@@ -104,7 +118,15 @@ query_parse_check_call <- function(expr, context) {
   }
 
   fn <- as.character(expr[[1]])
-  len <- c(query_group, query_test, query_other)[[fn]]
+
+  if (fn %in% names(query_functions$group)) {
+    type <- "group"
+  } else if (fn %in% names(query_functions$test)) {
+    type <- "test"
+  } else { # fn is in names(query_functions$other)
+    type <- "other"
+  }
+  len <- query_functions[[type]][[fn]]
 
   if (is.null(len)) {
     query_parse_error(sprintf(
@@ -136,7 +158,11 @@ query_parse_check_call <- function(expr, context) {
     }
   }
 
-  fn
+  if (type == "other") {
+    type <- fn
+  }
+
+  type
 }
 
 
