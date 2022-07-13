@@ -40,6 +40,11 @@ query_parse <- function(expr) {
 }
 
 
+## TODO: arg numbers here too, then group
+query_group <- c("(", "!", "&&", "||")
+query_test <- c("==", "!=", "<", "<=", ">", ">=")
+query_other <- c("latest", "at_location")
+
 query_parse_expr <- function(expr) {
   if (!is.call(expr)) {
     stop(sprintf(
@@ -54,12 +59,12 @@ query_parse_expr <- function(expr) {
               "&&" = 2,
               "||" = 2,
               at_location = NULL)
-  len[query_operators] <- 2
+  len[query_test] <- 2
 
   fn <- as.character(expr[[1]])
   if (!(fn %in% names(len))) {
     stop(sprintf(
-      "Invalid query '%s'; unknown filter '%s'",
+      "Invalid query '%s'; unknown query component '%s'",
       deparse(expr), fn),
       call. = FALSE)
   }
@@ -70,46 +75,41 @@ query_parse_expr <- function(expr) {
       fn), call. = FALSE)
   }
 
-  if (is_call(expr, c("(", "!", "&&", "||"))) {
+  if (fn %in% query_test) {
+    ret <- list(type = "test",
+                name = fn,
+                args = lapply(expr[-1], query_parse_value))
+  } else if (is_call(expr, query_group)) {
     fn <- deparse(expr[[1]])
-    list(type = "operator",
+    list(type = "group",
          name = fn,
          args = lapply(expr[-1], query_parse_expr))
-  } else {
-    ret <- list(type = "filter",
-                name = fn)
-
-    if (fn %in% c(query_operators, "at_location")) {
-      ret$args <- lapply(expr[-1], query_parse_value)
-      if (fn == "at_location") {
-        ## TODO: Generalise above check
-        if (length(ret$args) == 0) {
-          stop("Invalid call to at_location(), requires at least one argument")
-        }
-        ## This is likely to be reused elsewhere?
-        ok <- vlapply(ret$args, function(x)
-          x$type == "literal" && is.character(x$value))
-        if (!all(ok)) {
-          stop("All arguments to at_location() must be string literals")
-        }
-      }
-    } else { # latest
-      ret$args <- lapply(expr[-1], query_parse_expr)
+  } else if (fn == "latest") {
+    ret <- list(type = "latest",
+                args = lapply(expr[-1], query_parse_expr))
+  } else if (fn == "at_location") {
+    args <- as.list(expr[-1])
+    ## Generalise above expression
+    if (length(args) == 0) {
+      stop("Invalid call to at_location(), requires at least one argument")
     }
-
-    ret
+    if (!all(vlapply(args, is.character))) {
+      stop("All arguments to at_location() must be string literals")
+    }
+    ret <- list(type = "at_location",
+                args = lapply(args, query_parse_value)) # literal strings
+  } else {
+    stop("Unhandled") # TODO - we can never get here due to the above
   }
 }
 
 
-query_operators <- c("==", "!=", "<", "<=", ">", ">=")
-
 query_parse_value <- function(expr) {
   if (is.numeric(expr) || is.character(expr) || is.logical(expr)) {
-    return(list(type = "literal", value = expr))
+    list(type = "literal", value = expr)
   } else if (identical(expr, quote(name))) {
     list(type = "lookup",
-         value = "name")
+         name = "name")
   } else if (is_call(expr, ":")) {
     if (!identical(expr[[2]], quote(parameter))) {
         stop(sprintf(
@@ -118,54 +118,70 @@ query_parse_value <- function(expr) {
           call. = FALSE)
     }
     list(type = "lookup",
-         value = "parameter",
+         name = "parameter",
          query = as.character(expr[[3]]))
   } else {
-    stop("Unhandled value type") # TODO
+    ## TODO: this is not going to be very actionable without context;
+    ## provide the parent expression and the component within it?
+    stop("Unhandled value type")
   }
-}
-
-
-query_operator_safe <- function(op, a, b) {
-  op <- match.fun(op)
-  vlapply(Map(function(a, b) !is.null(a) && !is.null(b) && op(a, b),
-              a, b, USE.NAMES = FALSE),
-          identity)
 }
 
 
 query_eval <- function(query, index) {
-  if (query$type == "literal") {
-    query$value
-  } else if (query$type == "lookup") {
-    if (query$value == "name") {
-      index$name
-    } else if (query$value == "parameter") {
-      lapply(index$parameters, "[[", query$query)
-    } else {
-      stop("Impossible") # TODO
-    }
-  } else if (query$type == "operator") {
-    args <- lapply(query$args, query_eval, index)
+  switch(query$type,
+         literal = query$value,
+         lookup = query_eval_lookup(query, index),
+         group = query_eval_group(query, index),
+         test = query_eval_test(query, index),
+         latest = query_eval_latest(query, index),
+         at_location = query_eval_at_location(query, index),
+         stop("you may be asking yourself, how did I get here?")) # TODO
+}
 
-    switch(query$name,
-           "&&" = intersect(args[[1]], args[[2]]),
-           "||" = union(args[[1]], args[[2]]),
-           "!" = setdiff(index$id, args[[1]]),
-           "(" = args[[1]],
-           stop("no such operator")) # TODO
-  } else if (query$type == "filter" && query$name == "latest") {
-    candidates <- query_eval(query$args[[1]], index)
-    if (length(candidates) == 0) NA_character_ else last(candidates)
-  } else if (query$type == "filter" && query$name == "at_location") {
-    location <- vcapply(query$args, "[[", "value")
-    i <- vlapply(index$location, function(x) any(x %in% location))
-    index$id[i]
-  } else if (query$type == "filter") {
-    args <- lapply(query$args, query_eval, index)
-    i <- query_operator_safe(query$name, args[[1]], args[[2]])
-    index$id[i]
-  } else {
-    stop("you may be asking yourself, how did I get here?") # TODO
-  }
+
+query_eval_latest <- function(query, index) {
+  candidates <- query_eval(query$args[[1]], index)
+  if (length(candidates) == 0) NA_character_ else last(candidates)
+}
+
+
+query_eval_at_location <- function(query, index) {
+  location <- vcapply(query$args, "[[", "value")
+  i <- vlapply(index$location, function(x) any(x %in% location))
+  index$id[i]
+}
+
+
+query_eval_lookup <- function(query, index) {
+  switch(query$name,
+         name = index$name,
+         parameter = lapply(index$parameters, "[[", query$query),
+         stop("No such query")) # TODO
+}
+
+
+query_eval_group <- function(query, index) {
+  args <- lapply(query$args, query_eval, index)
+  switch(query$name,
+         "&&" = intersect(args[[1]], args[[2]]),
+         "||" = union(args[[1]], args[[2]]),
+         "!" = setdiff(index$id, args[[1]]),
+         "(" = args[[1]],
+         stop("no such operator")) # TODO
+}
+
+
+query_eval_test <- function(query, index) {
+  args <- lapply(query$args, query_eval, index)
+  i <- query_eval_test_binary(query$name, args[[1]], args[[2]])
+  index$id[i]
+}
+
+
+query_eval_test_binary <- function(op, a, b) {
+  op <- match.fun(op)
+  vlapply(Map(function(a, b) !is.null(a) && !is.null(b) && op(a, b),
+              a, b, USE.NAMES = FALSE),
+          identity)
 }
