@@ -1,0 +1,113 @@
+---
+title: "Outpack query DSL"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Outpack query DSL}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Outpack includes a query DSL (domain specific language), extending the one used by orderly (see [`orderly::orderly_search()`](https://www.vaccineimpact.org/orderly/reference/orderly_search.html)).
+
+Queries are used in identifying ids to pull in as dependencies, so rather than providing an identifier, you might want to depend on
+
+* the most recent copy of a packet with a particular name
+* ...produced in some date range
+* ...with some particular set of parameter values
+* ...that produced a particular file
+* ...that was depended on by some other packet
+* ...that can be found on a particular location
+
+Not all of this is supported as of the current version of outpack, and *using* the queries seemlessly is also not supported!
+
+## Structure of queries
+
+The most simple query is
+
+```r
+latest()
+```
+
+which finds the most recent packet; this is unlikely to be very useful without scoping - see below.
+
+More complex queries are expressed in a syntax that is valid R (this is also valid Julia and close to valid Python).  A complex query is composed of "tests"
+
+```r
+name == "some_name"
+parameter:x > 1
+```
+
+Every "test" uses a boolean operator (`<`, `>`, `<=`, `>=`, `==`, or `!=`) and the left and right hand side can be one of:
+
+* a lookup into the outpack metadata (`parameter:x` is the value of a parameter called `x`, `name` is the name of the packet)
+* a lookup into the provided data `pars` (`this:x` is the value of `pars$x`)
+* a literal value (e.g., `"some_name"`, `1`, or `TRUE`)
+
+Tests can be grouped together `(`, `!`, `&&`, and `||` as you might expect:
+
+* `parameter:x == 1 || parameter:x == 2` finds packets where the parameter `x` was 1 or 2
+* `name == "data" && parameter:x > 3` finds packets called "data" where parameter `x` is greater than 3
+* `(parameter:y == 2) && !(parameter:x == 1 || parameter:x == 2)` finds where parameter `y` is 2 and parameter `x` is anything other than 1 or 2 (could also be written `(parameter:y == 2) && (parameter:x != 1 && parameter:x != 2)`)
+
+There are two other functions
+
+* `latest(expr)` finds the latest packet satifying `expr` - it always returns a length 1 character, but this is `NA_character_` if no suitable packet is found
+* `at_location("loc1", "loc2")` finds packets that are available at any of the locations provided (here, `"loc1"` or `"loc2"`; any number of locations can be provided, these must be string literals).
+
+## Scoping queries
+
+Scoping queries can be used to reduce the set of packets that are searched over. They essentially join together with the main query as `(scope) && (expr)`, except that we only look values up in `expr` if the query `scope` is satisfied. This is useful if you want to limit the search to a particular name or location but perform some more detailed search.
+
+For example, the query
+
+```r
+outpack_query(quote(parameter:x == 1), quote(name == "data"))`
+```
+
+is equivalent to
+
+```r
+outpack_query(quote(parameter:x == 1 && name == "data"))
+```
+
+except that in the former we only check the parameter values of packets called "data".
+
+Orderly will use this functionality when resolving dependencies.
+
+## Possible future queries and interface improvements
+
+### Simple things
+
+orderly supports `is.null(parameter:x)` but we might generalise this and support
+
+```r
+parameter:x == NULL
+```
+
+However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
+
+### More complex
+
+It might be useful to do a lookup against a subquery
+
+```r
+latest(name == (latest(subquery)):name)
+```
+
+Similarily, we might want to look up parameter values
+
+```r
+latest(parameter:x == (latest(subquery)):parameter:x)
+```
+
+But it might be better to disambiguate this, perhaps wrapping subqueries in `{`
+
+```r
+latest(name == {latest(subquery)}:name)
+```
+
+It's not that clear, really.
+
+### Explain the query
+
+Often, people want to know "why does this packet not match"?  It would be good to show where in the query some set of packets fail the query and are excluded. This would definitely be its own bit of work.
