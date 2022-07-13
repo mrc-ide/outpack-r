@@ -41,25 +41,6 @@ query_parse <- function(expr) {
 
 
 query_parse_expr <- function(expr) {
-  if (is_call(expr, c("(", "!", "&&", "||"))) {
-    query_parse_operator(expr)
-  } else {
-    query_parse_filter(expr)
-  }
-}
-
-
-query_parse_operator <- function(expr) {
-  fn <- deparse(expr[[1]])
-  list(type = "operator",
-       name = fn,
-       args = lapply(expr[-1], query_parse_expr))
-}
-
-
-query_operators <- c("==", "!=", "<", "<=", ">", ">=")
-
-query_parse_filter <- function(expr) {
   if (!is.call(expr)) {
     stop(sprintf(
       "Invalid query '%s'; expected some sort of expression",
@@ -67,7 +48,12 @@ query_parse_filter <- function(expr) {
       call. = FALSE)
   }
 
-  len <- list(latest = 1, at_location = NULL)
+  len <- list(latest = 1,
+              "(" = 1,
+              "!" = 1,
+              "&&" = 2,
+              "||" = 2,
+              at_location = NULL)
   len[query_operators] <- 2
 
   fn <- as.character(expr[[1]])
@@ -78,25 +64,45 @@ query_parse_filter <- function(expr) {
       call. = FALSE)
   }
 
-  ## Technically latest would work for anything?
   if (!is.null(len[[fn]]) && length(expr) - 1 != len[[fn]]) {
     stop(sprintf(
       "Invalid call to %s(), wrong number of args", # TODO: better message
       fn), call. = FALSE)
   }
 
-  ret <- list(type = "filter",
-              name = fn)
+  if (is_call(expr, c("(", "!", "&&", "||"))) {
+    fn <- deparse(expr[[1]])
+    list(type = "operator",
+         name = fn,
+         args = lapply(expr[-1], query_parse_expr))
+  } else {
+    ret <- list(type = "filter",
+                name = fn)
 
-  if (fn %in% c(query_operators, "at_location")) {
-    ret$args <- lapply(expr[-1], query_parse_value)
-  } else { # latest
-    ret$args <- lapply(expr[-1], query_parse_expr)
+    if (fn %in% c(query_operators, "at_location")) {
+      ret$args <- lapply(expr[-1], query_parse_value)
+      if (fn == "at_location") {
+        ## TODO: Generalise above check
+        if (length(ret$args) == 0) {
+          stop("Invalid call to at_location(), requires at least one argument")
+        }
+        ## This is likely to be reused elsewhere?
+        ok <- vlapply(ret$args, function(x)
+          x$type == "literal" && is.character(x$value))
+        if (!all(ok)) {
+          stop("All arguments to at_location() must be string literals")
+        }
+      }
+    } else { # latest
+      ret$args <- lapply(expr[-1], query_parse_expr)
+    }
+
+    ret
   }
-
-  ret
 }
 
+
+query_operators <- c("==", "!=", "<", "<=", ">", ">=")
 
 query_parse_value <- function(expr) {
   if (is.numeric(expr) || is.character(expr) || is.logical(expr)) {
@@ -152,12 +158,7 @@ query_eval <- function(query, index) {
     candidates <- query_eval(query$args[[1]], index)
     if (length(candidates) == 0) NA_character_ else last(candidates)
   } else if (query$type == "filter" && query$name == "at_location") {
-    ## All arguments must be literal, this is likely something we'll
-    ## use elsewhere.
-    location <- vcapply(query$args, function(x) {
-      stopifnot(x$type == "literal", is.character(x$value))
-      x$value
-    })
+    location <- vcapply(query$args, "[[", "value")
     i <- vlapply(index$location, function(x) any(x %in% location))
     index$id[i]
   } else if (query$type == "filter") {

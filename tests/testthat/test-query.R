@@ -3,6 +3,7 @@ test_that("Can run very basic queries", {
   on.exit(unlink(tmp, recursive = TRUE))
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- vcapply(1:3, function(i) create_random_packet(tmp))
+  ## TODO: support empty query here
   expect_equal(
     outpack_query(quote(name == "data"), root = root),
     ids)
