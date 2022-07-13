@@ -1,3 +1,21 @@
+##' Evaluate a query against the outpack database, returning a vector
+##' of matching packet ids.
+##'
+##' @title Query outpack's database
+##'
+##' @param expr The query expression
+##'
+##' @param pars Optionally, a named list of parameters to substitute
+##'   into the query (using the `this:` prefix)
+##'
+##' @param scope Optionally, a scope query to limit the packets
+##'   searched by `pars`
+##'
+##' @param root The outpack root. Will be searched for from the
+##'   current directory if not given.
+##'
+##' @return A character vector of matching ids
+##' @export
 outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   expr_parsed <- query_parse(expr)
