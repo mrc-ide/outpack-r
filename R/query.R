@@ -36,7 +36,7 @@ query_parse <- function(expr) {
     }
     expr <- expr[[1L]]
   } else if (!is.language(expr)) {
-    stop("invalid input")
+    stop("Invalid input for query")
   }
 
   ## This is used extensively in orderly, so we'll support it here
@@ -153,7 +153,7 @@ query_parse_check_call <- function(expr, context) {
     if (nargs > len[[2]]) {
       query_parse_error(sprintf(
         "Invalid call to %s(); expected at most %d args but recieved %d",
-        fn, len[[1]], nargs),
+        fn, len[[2]], nargs),
         expr, context)
     }
   }
@@ -174,10 +174,9 @@ query_parse_value <- function(expr, context) {
          name = "name")
   } else if (is_call(expr, ":")) {
     if (!identical(expr[[2]], quote(parameter))) {
-        stop(sprintf(
+        query_parse_error(sprintf(
           "Invalid query '%s'; only parameter: supported for now",
-          deparse_str(expr)),
-          call. = FALSE)
+          deparse_str(expr)), expr, context)
     }
     list(type = "lookup",
          name = "parameter",
@@ -185,7 +184,9 @@ query_parse_value <- function(expr, context) {
   } else {
     ## TODO: this is not going to be very actionable without context;
     ## provide the parent expression and the component within it?
-    stop("Unhandled value type")
+    query_parse_error(
+      sprintf("Unhandled query expression value '%s'", deparse_str(expr)),
+      expr, context)
   }
 }
 

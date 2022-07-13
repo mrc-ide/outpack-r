@@ -11,20 +11,70 @@ test_that("Parse basic query", {
 })
 
 
-test_that("at_location requires at least one string literal", {
+test_that("Prevent unparseable queries", {
+  expect_error(query_parse(NULL),
+               "Invalid input for query")
+  expect_error(query_parse("latest(); latest()"),
+               "Expected a single expression")
+})
+
+
+test_that("print context around parse errors", {
   err <- expect_error(
-    query_parse(quote(latest(at_location(1, 2)))),
-    "All arguments to at_location() must be string literals",
+    query_parse(quote(a %in% b)),
+    "Invalid query 'a %in% b'; unknown query component '%in%'",
     fixed = TRUE)
-  expect_match(err$message, "- in     at_location(1, 2)", fixed = TRUE)
-  expect_match(err$message, "- within latest(at_location(1, 2))", fixed = TRUE)
+  expect_match(err$message, "  - in a %in% b", fixed = TRUE)
+
+  err <- expect_error(
+    query_parse(quote(latest(a %in% b))),
+    "Invalid query 'a %in% b'; unknown query component '%in%'",
+    fixed = TRUE)
+  expect_match(err$message, "  - in     a %in% b", fixed = TRUE)
+  expect_match(err$message, "  - within latest(a %in% b)", fixed = TRUE)
+})
+
+
+test_that("Expressions must be calls", {
   expect_error(
-    query_parse(quote(latest(at_location("a", 2)))),
-    "All arguments to at_location() must be string literals",
+    query_parse(quote(name)),
+    "Invalid query 'name'; expected some sort of expression")
+  expect_error(
+    query_parse(quote(latest(name))),
+    "Invalid query 'name'; expected some sort of expression")
+  expect_error(
+    query_parse(quote(latest(parameter:x == 1 && name))),
+    "Invalid query 'name'; expected some sort of expression")
+})
+
+
+test_that("validate argument numbers", {
+  ## Have to do a fiddle here, to fail the arg length check. The error
+  ## message is a bit weird too, but it will be reasonable for
+  ## anything else that has a fixed number of args.
+  expect_error(
+    query_parse(quote(`==`(a, b, c))),
+    "Invalid call to ==(); expected 2 args but recieved 3",
+    fixed = TRUE)
+  expect_error(
+    query_parse(quote(latest(a, b))),
+    "Invalid call to latest(); expected at most 1 args but recieved 2",
     fixed = TRUE)
   expect_error(
     query_parse(quote(latest(at_location()))),
     "Invalid call to at_location(); expected at least 1 args but recieved 0",
+    fixed = TRUE)
+})
+
+
+test_that("at_location requires string literal arguments", {
+  expect_error(
+    query_parse(quote(latest(at_location(1, 2)))),
+    "All arguments to at_location() must be string literals",
+    fixed = TRUE)
+  expect_error(
+    query_parse(quote(latest(at_location("a", 2)))),
+    "All arguments to at_location() must be string literals",
     fixed = TRUE)
 
   res <- query_parse(quote(at_location("a", "b")))
@@ -32,6 +82,26 @@ test_that("at_location requires at least one string literal", {
                list(type = "at_location",
                     args = list(list(type = "literal", value = "a"),
                                 list(type = "literal", value = "b"))))
+})
+
+
+test_that("Queries can only be name and parameter", {
+  expect_equal(
+    query_parse(quote(name == "data")),
+    list(type = "test", name = "==",
+         args = list(list(type = "lookup", name = "name"),
+                     list(type = "literal", value = "data"))))
+  expect_equal(
+    query_parse(quote(parameter:x == 1)),
+    list(type = "test", name = "==",
+         args = list(list(type = "lookup", name = "parameter", query = "x"),
+                     list(type = "literal", value = 1))))
+  expect_error(
+    query_parse(quote(date >= "2022-02-04")),
+    "Unhandled query expression value 'date'")
+  expect_error(
+    query_parse(quote(custom:orderly:displayname >= "my name")),
+    "Invalid query 'custom:orderly:displayname'")
 })
 
 
