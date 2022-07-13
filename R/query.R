@@ -16,12 +16,13 @@ outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
     location = I(location))
 
+  pars <- validate_parameters(pars)
+
   if (!is.null(scope)) {
     ids <- outpack_query(scope, pars, NULL, root)
     index <- index[index$id %in% ids, ]
   }
 
-  ## TODO: Also may need to pass through the parameters data
   query_eval(expr_parsed, index, pars)
 }
 
@@ -172,14 +173,15 @@ query_parse_value <- function(expr, context) {
     list(type = "lookup",
          name = "name")
   } else if (is_call(expr, ":")) {
-    if (!identical(expr[[2]], quote(parameter))) {
+    name <- deparse_str(expr[[2]])
+    valid <- c("parameter", "this")
+    if (!(name %in% valid)) {
         query_parse_error(sprintf(
-          "Invalid query '%s'; only parameter: supported for now",
-          deparse_str(expr)), expr, context)
+          "Invalid lookup '%s'", name), expr, context)
     }
     list(type = "lookup",
-         name = "parameter",
-         query = as.character(expr[[3]]))
+         name = name,
+         query = deparse_str(expr[[3]]))
   } else {
     query_parse_error(
       sprintf("Unhandled query expression value '%s'", deparse_str(expr)),
@@ -222,6 +224,7 @@ query_eval_lookup <- function(query, index, pars) {
   switch(query$name,
          name = index$name,
          parameter = lapply(index$parameters, "[[", query$query),
+         this = query_lookup_this(query$query, pars),
          ## Normally unreachable
          stop("Unhandled lookup [outpack bug - please report]"))
 }
@@ -251,4 +254,13 @@ query_eval_test_binary <- function(op, a, b) {
   vlapply(Map(function(a, b) !is.null(a) && !is.null(b) && op(a, b),
               a, b, USE.NAMES = FALSE),
           identity)
+}
+
+
+query_lookup_this <- function(name, pars) {
+  if (!(name %in% names(pars))) {
+    stop(sprintf("Did not find '%s' within given pars (%s)",
+                 name, paste(squote(names(pars)), collapse = ", ")))
+  }
+  pars[[name]]
 }

@@ -101,7 +101,7 @@ test_that("Queries can only be name and parameter", {
     "Unhandled query expression value 'date'")
   expect_error(
     query_parse(quote(custom:orderly:displayname >= "my name")),
-    "Invalid query 'custom:orderly:displayname'")
+    "Invalid lookup 'custom:orderly'")
 })
 
 
@@ -195,6 +195,36 @@ test_that("location based queries", {
                   scope = quote(at_location("x", "y")),
                   root = path$a),
     c(ids$x[2], ids$y[2]))
+})
+
+
+test_that("Can filter based on given values", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE))
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- vcapply(1:3, function(i)
+    create_random_packet(tmp, "x", list(a = 1)))
+  x2 <- vcapply(1:3, function(i)
+    create_random_packet(tmp, "x", list(a = 2)))
+
+  expect_equal(
+    outpack_query(quote(latest(parameter:a == this:a)),
+                  pars = list(a = 1), root = root),
+    last(x1))
+  expect_equal(
+    outpack_query(quote(latest(parameter:a == this:a)),
+                  pars = list(a = 2), root = root),
+    last(x2))
+  expect_equal(
+    outpack_query(quote(latest(parameter:a == this:a)),
+                  pars = list(a = 3), root = root),
+    NA_character_)
+  expect_error(
+    outpack_query(quote(latest(parameter:a == this:x)),
+                  pars = list(a = 3), root = root),
+    "Did not find 'x' within given pars ('a')",
+    fixed = TRUE)
 })
 
 
