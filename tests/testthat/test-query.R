@@ -158,7 +158,8 @@ test_that("Scope queries", {
     outpack_query(quote(parameter:a == 1), root = root),
     c(x1, y1))
   expect_equal(
-    outpack_query(quote(parameter:a == 1), quote(name == "x"), root = root),
+    outpack_query(quote(parameter:a == 1), scope = quote(name == "x"),
+                  root = root),
     x1)
 })
 
@@ -190,7 +191,8 @@ test_that("location based queries", {
   ##
   ## > use_draft == "newer"
   expect_equal(
-    outpack_query(quote(parameter:p == 2), quote(at_location("x", "y")),
+    outpack_query(quote(parameter:p == 2),
+                  scope = quote(at_location("x", "y")),
                   root = path$a),
     c(ids$x[2], ids$y[2]))
 })

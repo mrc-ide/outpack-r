@@ -1,4 +1,4 @@
-outpack_query <- function(expr, scope = NULL, root = NULL) {
+outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   expr_parsed <- query_parse(expr)
 
@@ -17,12 +17,12 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
     location = I(location))
 
   if (!is.null(scope)) {
-    ids <- outpack_query(scope, NULL, root)
+    ids <- outpack_query(scope, pars, NULL, root)
     index <- index[index$id %in% ids, ]
   }
 
   ## TODO: Also may need to pass through the parameters data
-  query_eval(expr_parsed, index)
+  query_eval(expr_parsed, index, pars)
 }
 
 
@@ -188,37 +188,37 @@ query_parse_value <- function(expr, context) {
 }
 
 
-query_eval <- function(query, index) {
+query_eval <- function(query, index, pars) {
   switch(query$type,
          literal = query$value,
-         lookup = query_eval_lookup(query, index),
-         group = query_eval_group(query, index),
-         test = query_eval_test(query, index),
-         latest = query_eval_latest(query, index),
-         at_location = query_eval_at_location(query, index),
+         lookup = query_eval_lookup(query, index, pars),
+         group = query_eval_group(query, index, pars),
+         test = query_eval_test(query, index, pars),
+         latest = query_eval_latest(query, index, pars),
+         at_location = query_eval_at_location(query, index, pars),
          ## Normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
 
 
-query_eval_latest <- function(query, index) {
+query_eval_latest <- function(query, index, pars) {
   if (length(query$args) == 0) {
     candidates <- index$id
   } else {
-    candidates <- query_eval(query$args[[1]], index)
+    candidates <- query_eval(query$args[[1]], index, pars)
   }
   if (length(candidates) == 0) NA_character_ else last(candidates)
 }
 
 
-query_eval_at_location <- function(query, index) {
+query_eval_at_location <- function(query, index, pars) {
   location <- vcapply(query$args, "[[", "value")
   i <- vlapply(index$location, function(x) any(x %in% location))
   index$id[i]
 }
 
 
-query_eval_lookup <- function(query, index) {
+query_eval_lookup <- function(query, index, pars) {
   switch(query$name,
          name = index$name,
          parameter = lapply(index$parameters, "[[", query$query),
@@ -227,8 +227,8 @@ query_eval_lookup <- function(query, index) {
 }
 
 
-query_eval_group <- function(query, index) {
-  args <- lapply(query$args, query_eval, index)
+query_eval_group <- function(query, index, pars) {
+  args <- lapply(query$args, query_eval, index, pars)
   switch(query$name,
          "&&" = intersect(args[[1]], args[[2]]),
          "||" = union(args[[1]], args[[2]]),
@@ -239,8 +239,8 @@ query_eval_group <- function(query, index) {
 }
 
 
-query_eval_test <- function(query, index) {
-  args <- lapply(query$args, query_eval, index)
+query_eval_test <- function(query, index, pars) {
+  args <- lapply(query$args, query_eval, index, pars)
   i <- query_eval_test_binary(query$name, args[[1]], args[[2]])
   index$id[i]
 }
