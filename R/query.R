@@ -1,12 +1,11 @@
-## We're going to support some sort of 'scope' restriction here that
-## we'll put around all queries, limiting for example the name or
-## location set.
 outpack_query <- function(expr, scope = NULL, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   expr_parsed <- query_parse(expr)
 
-  ## We will want to do this more generally later, because it will be
-  ## a waste to do this every time.
+  ## We will want to do this processing more generally later (in the
+  ## root object, saved as part of the index), because it will be a
+  ## waste to do this every time. Ideally it can be done incrementally
+  ## too.
   idx <- root$index()
   i <- match(idx$location$location, root$config$location$id)
   location <- split(root$config$location$name[i], idx$location$packet)
@@ -23,7 +22,6 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
   }
 
   ## TODO: Also may need to pass through the parameters data
-  ## TODO: Something to "explain why X is not valid"
   query_eval(expr_parsed, index)
 }
 
