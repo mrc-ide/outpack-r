@@ -61,7 +61,8 @@ query_parse_expr <- function(expr, context) {
          group = query_parse_group(expr, context),
          latest = query_parse_latest(expr, context),
          at_location = query_parse_at_location(expr, context),
-         stop("Unhandled")) # TODO - we can never get here due to the above
+         ## normally unreachable
+         stop("Unhandled expression [outpack bug - please report]"))
 }
 
 
@@ -182,8 +183,6 @@ query_parse_value <- function(expr, context) {
          name = "parameter",
          query = as.character(expr[[3]]))
   } else {
-    ## TODO: this is not going to be very actionable without context;
-    ## provide the parent expression and the component within it?
     query_parse_error(
       sprintf("Unhandled query expression value '%s'", deparse_str(expr)),
       expr, context)
@@ -199,7 +198,8 @@ query_eval <- function(query, index) {
          test = query_eval_test(query, index),
          latest = query_eval_latest(query, index),
          at_location = query_eval_at_location(query, index),
-         stop("you may be asking yourself, how did I get here?")) # TODO
+         ## Normally unreachable
+         stop("Unhandled expression [outpack bug - please report]"))
 }
 
 
@@ -224,7 +224,8 @@ query_eval_lookup <- function(query, index) {
   switch(query$name,
          name = index$name,
          parameter = lapply(index$parameters, "[[", query$query),
-         stop("No such query")) # TODO
+         ## Normally unreachable
+         stop("Unhandled lookup [outpack bug - please report]"))
 }
 
 
@@ -235,7 +236,8 @@ query_eval_group <- function(query, index) {
          "||" = union(args[[1]], args[[2]]),
          "!" = setdiff(index$id, args[[1]]),
          "(" = args[[1]],
-         stop("no such operator")) # TODO
+         ## Normally unreachable
+         stop("Unhandled operator [outpack bug - please report]"))
 }
 
 

@@ -194,3 +194,28 @@ test_that("location based queries", {
                   root = path$a),
     c(ids$x[2], ids$y[2]))
 })
+
+
+test_that("switch statements will prevent regressions", {
+  skip_if_not_installed("mockery")
+  mockery::stub(query_parse_expr, "query_parse_check_call",
+                mockery::mock("other"))
+  expr <- quote(some_function())
+  expect_error(
+    query_parse_expr(expr, expr),
+    "Unhandled expression [outpack bug - please report]",
+    fixed = TRUE)
+
+  expect_error(
+    query_eval(list(type = "other")),
+    "Unhandled expression [outpack bug - please report]",
+    fixed = TRUE)
+  expect_error(
+    query_eval_lookup(list(name = "custom:orderly:displayname")),
+    "Unhandled lookup [outpack bug - please report]",
+    fixed = TRUE)
+  expect_error(
+    query_eval_group(list(name = "operator")),
+    "Unhandled operator [outpack bug - please report]",
+    fixed = TRUE)
+})
