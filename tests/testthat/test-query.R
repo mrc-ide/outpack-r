@@ -11,6 +11,30 @@ test_that("Parse basic query", {
 })
 
 
+test_that("at_location requires at least one string literal", {
+  err <- expect_error(
+    query_parse(quote(latest(at_location(1, 2)))),
+    "All arguments to at_location() must be string literals",
+    fixed = TRUE)
+  expect_match(err$message, "- in     at_location(1, 2)", fixed = TRUE)
+  expect_match(err$message, "- within latest(at_location(1, 2))", fixed = TRUE)
+  expect_error(
+    query_parse(quote(latest(at_location("a", 2)))),
+    "All arguments to at_location() must be string literals",
+    fixed = TRUE)
+  expect_error(
+    query_parse(quote(latest(at_location()))),
+    "Invalid call to at_location(); expected at least 1 args but recieved 0",
+    fixed = TRUE)
+
+  res <- query_parse(quote(at_location("a", "b")))
+  expect_equal(res,
+               list(type = "at_location",
+                    args = list(list(type = "literal", value = "a"),
+                                list(type = "literal", value = "b"))))
+})
+
+
 test_that("Can run very basic queries", {
   tmp <- tempfile()
   on.exit(unlink(tmp, recursive = TRUE))

@@ -44,7 +44,7 @@ query_parse <- function(expr) {
     expr <- quote(latest())
   }
 
-  query_parse_expr(expr)
+  query_parse_expr(expr, expr)
 }
 
 
@@ -53,27 +53,29 @@ query_test <- list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2)
 query_other <- list("latest" = c(0, 1), "at_location" = c(1, Inf))
 
 
-query_parse_expr <- function(expr) {
-  fn <- query_parse_check_call(expr)
+query_parse_expr <- function(expr, context) {
+  fn <- query_parse_check_call(expr, context)
   if (fn %in% names(query_test)) {
     ret <- list(type = "test",
                 name = fn,
-                args = lapply(expr[-1], query_parse_value))
+                args = lapply(expr[-1], query_parse_value, context))
   } else if (fn %in% names(query_group)) {
     fn <- deparse(expr[[1]])
     ret <- list(type = "group",
                 name = fn,
-                args = lapply(expr[-1], query_parse_expr))
+                args = lapply(expr[-1], query_parse_expr, context))
   } else if (fn == "latest") {
     ret <- list(type = "latest",
-                args = lapply(expr[-1], query_parse_expr))
+                args = lapply(expr[-1], query_parse_expr, context))
   } else if (fn == "at_location") {
     args <- as.list(expr[-1])
     if (!all(vlapply(args, is.character))) {
-      stop("All arguments to at_location() must be string literals")
+      query_parse_error(
+        "All arguments to at_location() must be string literals",
+        expr, context)
     }
     ret <- list(type = "at_location",
-                args = lapply(args, query_parse_value)) # literal strings
+                args = lapply(args, query_parse_value, context))
   } else {
     stop("Unhandled") # TODO - we can never get here due to the above
   }
@@ -81,41 +83,56 @@ query_parse_expr <- function(expr) {
 }
 
 
-query_parse_check_call <- function(expr) {
+query_parse_error <- function(msg, expr, context) {
+  if (identical(expr, context)) {
+    stop(sprintf("%s\n  - in %s", msg, deparse_str(expr)),
+         call. = FALSE)
+  } else {
+    stop(sprintf("%s\n  - in     %s\n  - within %s",
+                 msg, deparse_str(expr), deparse_str(context)),
+         call. = FALSE)
+  }
+}
+
+
+query_parse_check_call <- function(expr, context) {
   if (!is.call(expr)) {
-    stop(sprintf(
+    query_parse_error(sprintf(
       "Invalid query '%s'; expected some sort of expression",
       deparse_str(expr)),
-      call. = FALSE)
+      expr, context)
   }
 
-  len <- c(query_group, query_test, query_other)
-
   fn <- as.character(expr[[1]])
-  if (!(fn %in% names(len))) {
-    stop(sprintf(
+  len <- c(query_group, query_test, query_other)[[fn]]
+
+  if (is.null(len)) {
+    query_parse_error(sprintf(
       "Invalid query '%s'; unknown query component '%s'",
       deparse_str(expr), fn),
-      call. = FALSE)
+      expr, context)
   }
 
   nargs <- length(expr) - 1L
-  if (length(len[[fn]]) == 1) {
-    if (nargs != len[[fn]]) {
-      stop(sprintf(
-        "Invalid call to %s() in %s, expected %d args but recieved %d",
-        fn, deparse_str(expr), len[[fn]], nargs), call. = FALSE)
+  if (length(len) == 1) {
+    if (nargs != len) {
+      query_parse_error(sprintf(
+        "Invalid call to %s(); expected %d args but recieved %d",
+        fn, len, nargs),
+        expr, context)
     }
   } else {
-    if (nargs < len[[fn]][[1]]) {
-      stop(sprintf(
-        "Invalid call to %s() in %s, expected at least %d args but recieved %d",
-        fn, deparse_str(expr), len[[fn]][[1]], nargs), call. = FALSE)
+    if (nargs < len[[1]]) {
+      query_parse_error(sprintf(
+        "Invalid call to %s(); expected at least %d args but recieved %d",
+        fn, len[[1]], nargs),
+        expr, context)
     }
-    if (nargs > len[[fn]][[2]]) {
-      stop(sprintf(
-        "Invalid call to %s() in %s, expected at most %d args but recieved %d",
-        fn, deparse_str(expr), len[[fn]][[1]], nargs), call. = FALSE)
+    if (nargs > len[[2]]) {
+      query_parse_error(sprintf(
+        "Invalid call to %s(); expected at most %d args but recieved %d",
+        fn, len[[1]], nargs),
+        expr, context)
     }
   }
 
@@ -123,7 +140,7 @@ query_parse_check_call <- function(expr) {
 }
 
 
-query_parse_value <- function(expr) {
+query_parse_value <- function(expr, context) {
   if (is.numeric(expr) || is.character(expr) || is.logical(expr)) {
     list(type = "literal", value = expr)
   } else if (identical(expr, quote(name))) {
