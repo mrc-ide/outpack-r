@@ -1,9 +1,27 @@
+test_that("Parse basic query", {
+  res <- query_parse("latest(name == 'data')")
+  expect_identical(query_parse(quote(latest(name == "data"))), res)
+  expect_equal(res$type, "latest")
+  expect_length(res$args, 1)
+  expect_equal(res$args[[1]]$type, "test")
+  expect_equal(res$args[[1]]$name, "==")
+  expect_length(res$args[[1]]$args, 2)
+  expect_equal(res$args[[1]]$args[[1]], list(type = "lookup", name = "name"))
+  expect_equal(res$args[[1]]$args[[2]], list(type = "literal", value = "data"))
+})
+
+
 test_that("Can run very basic queries", {
   tmp <- tempfile()
   on.exit(unlink(tmp, recursive = TRUE))
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- vcapply(1:3, function(i) create_random_packet(tmp))
-  ## TODO: support empty query here
+  expect_equal(
+    outpack_query(quote(latest), root = root),
+    last(ids))
+  expect_equal(
+    outpack_query(quote(latest()), root = root),
+    last(ids))
   expect_equal(
     outpack_query(quote(name == "data"), root = root),
     ids)

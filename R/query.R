@@ -13,6 +13,7 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
   index <- data_frame(
     id = names(root$index()$metadata),
     name = vcapply(root$index()$metadata, "[[", "name"),
+    ## Wrap these in I() because they're list columns
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
     location = I(location))
 
@@ -29,9 +30,18 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
 
 query_parse <- function(expr) {
   if (is.character(expr)) {
-    expr <- parse(text = expr)
+    expr <- parse(text = expr, keep.source = FALSE)
+    if (length(expr) != 1L) {
+      stop("Expected a single expression")
+    }
+    expr <- expr[[1L]]
   } else if (!is.language(expr)) {
     stop("invalid input")
+  }
+
+  ## This is used extensively in orderly, so we'll support it here
+  if (identical(expr, quote(latest))) {
+    expr <- quote(latest())
   }
 
   query_parse_expr(expr)
@@ -40,7 +50,7 @@ query_parse <- function(expr) {
 
 query_group <- list("(" = 1, "!" = 1, "&&" = 2, "||" = 2)
 query_test <- list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2)
-query_other <- list("latest" = 1, "at_location" = c(1, Inf))
+query_other <- list("latest" = c(0, 1), "at_location" = c(1, Inf))
 
 
 query_parse_expr <- function(expr) {
@@ -51,9 +61,9 @@ query_parse_expr <- function(expr) {
                 args = lapply(expr[-1], query_parse_value))
   } else if (fn %in% names(query_group)) {
     fn <- deparse(expr[[1]])
-    list(type = "group",
-         name = fn,
-         args = lapply(expr[-1], query_parse_expr))
+    ret <- list(type = "group",
+                name = fn,
+                args = lapply(expr[-1], query_parse_expr))
   } else if (fn == "latest") {
     ret <- list(type = "latest",
                 args = lapply(expr[-1], query_parse_expr))
@@ -67,6 +77,7 @@ query_parse_expr <- function(expr) {
   } else {
     stop("Unhandled") # TODO - we can never get here due to the above
   }
+  ret
 }
 
 
@@ -101,7 +112,11 @@ query_parse_check_call <- function(expr) {
         "Invalid call to %s() in %s, expected at least %d args but recieved %d",
         fn, deparse_str(expr), len[[fn]][[1]], nargs), call. = FALSE)
     }
-    stopifnot(len[[fn]][[2]] == Inf) # not supported yet
+    if (nargs > len[[fn]][[2]]) {
+      stop(sprintf(
+        "Invalid call to %s() in %s, expected at most %d args but recieved %d",
+        fn, deparse_str(expr), len[[fn]][[1]], nargs), call. = FALSE)
+    }
   }
 
   fn
@@ -145,7 +160,11 @@ query_eval <- function(query, index) {
 
 
 query_eval_latest <- function(query, index) {
-  candidates <- query_eval(query$args[[1]], index)
+  if (length(query$args) == 0) {
+    candidates <- index$id
+  } else {
+    candidates <- query_eval(query$args[[1]], index)
+  }
   if (length(candidates) == 0) NA_character_ else last(candidates)
 }
 
