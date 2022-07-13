@@ -141,3 +141,8 @@ is_call <- function(expr, valid) {
 last <- function(x) {
   x[[length(x)]]
 }
+
+
+deparse_str <- function(expr) {
+  paste(deparse(expr), collapse = "\n")
+}

@@ -27,8 +27,6 @@ outpack_query <- function(expr, scope = NULL, root = NULL) {
 }
 
 
-## The things we have are:
-## filter: [set] -> [subset]
 query_parse <- function(expr) {
   if (is.character(expr)) {
     expr <- parse(text = expr)
@@ -40,46 +38,18 @@ query_parse <- function(expr) {
 }
 
 
-## TODO: arg numbers here too, then group
-query_group <- c("(", "!", "&&", "||")
-query_test <- c("==", "!=", "<", "<=", ">", ">=")
-query_other <- c("latest", "at_location")
+query_group <- list("(" = 1, "!" = 1, "&&" = 2, "||" = 2)
+query_test <- list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2)
+query_other <- list("latest" = 1, "at_location" = c(1, Inf))
+
 
 query_parse_expr <- function(expr) {
-  if (!is.call(expr)) {
-    stop(sprintf(
-      "Invalid query '%s'; expected some sort of expression",
-      deparse_str(expr)),
-      call. = FALSE)
-  }
-
-  len <- list(latest = 1,
-              "(" = 1,
-              "!" = 1,
-              "&&" = 2,
-              "||" = 2,
-              at_location = NULL)
-  len[query_test] <- 2
-
-  fn <- as.character(expr[[1]])
-  if (!(fn %in% names(len))) {
-    stop(sprintf(
-      "Invalid query '%s'; unknown query component '%s'",
-      deparse(expr), fn),
-      call. = FALSE)
-  }
-
-  if (!is.null(len[[fn]]) && length(expr) - 1 != len[[fn]]) {
-    stop(sprintf(
-      "Invalid call to %s(), wrong number of args", # TODO: better message
-      fn), call. = FALSE)
-  }
-
-  if (fn %in% query_test) {
+  fn <- query_parse_check_call(expr)
+  if (fn %in% names(query_test)) {
     ret <- list(type = "test",
                 name = fn,
                 args = lapply(expr[-1], query_parse_value))
-  } else if (is_call(expr, query_group)) {
+  } else if (fn %in% names(query_group)) {
     fn <- deparse(expr[[1]])
     list(type = "group",
          name = fn,
@@ -89,10 +59,6 @@ query_parse_expr <- function(expr) {
                 args = lapply(expr[-1], query_parse_expr))
   } else if (fn == "at_location") {
     args <- as.list(expr[-1])
-    ## Generalise above expression
-    if (length(args) == 0) {
-      stop("Invalid call to at_location(), requires at least one argument")
-    }
     if (!all(vlapply(args, is.character))) {
       stop("All arguments to at_location() must be string literals")
     }
@@ -101,6 +67,44 @@ query_parse_expr <- function(expr) {
   } else {
     stop("Unhandled") # TODO - we can never get here due to the above
   }
+}
+
+
+query_parse_check_call <- function(expr) {
+  if (!is.call(expr)) {
+    stop(sprintf(
+      "Invalid query '%s'; expected some sort of expression",
+      deparse_str(expr)),
+      call. = FALSE)
+  }
+
+  len <- c(query_group, query_test, query_other)
+
+  fn <- as.character(expr[[1]])
+  if (!(fn %in% names(len))) {
+    stop(sprintf(
+      "Invalid query '%s'; unknown query component '%s'",
+      deparse_str(expr), fn),
+      call. = FALSE)
+  }
+
+  nargs <- length(expr) - 1L
+  if (length(len[[fn]]) == 1) {
+    if (nargs != len[[fn]]) {
+      stop(sprintf(
+        "Invalid call to %s() in %s, expected %d args but recieved %d",
+        fn, deparse_str(expr), len[[fn]], nargs), call. = FALSE)
+    }
+  } else {
+    if (nargs < len[[fn]][[1]]) {
+      stop(sprintf(
+        "Invalid call to %s() in %s, expected at least %d args but recieved %d",
+        fn, deparse_str(expr), len[[fn]][[1]], nargs), call. = FALSE)
+    }
+    stopifnot(len[[fn]][[2]] == Inf) # not supported yet
+  }
+
+  fn
 }
 
 
