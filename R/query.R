@@ -85,9 +85,16 @@ query_parse_filter <- function(expr) {
       fn), call. = FALSE)
   }
 
-  list(type = "filter",
-       name = fn,
-       args = lapply(expr[-1], query_parse_value))
+  ret <- list(type = "filter",
+              name = fn)
+
+  if (fn %in% c(query_operators, "at_location")) {
+    ret$args <- lapply(expr[-1], query_parse_value)
+  } else { # latest
+    ret$args <- lapply(expr[-1], query_parse_expr)
+  }
+
+  ret
 }
 
 
