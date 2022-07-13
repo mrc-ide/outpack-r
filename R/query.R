@@ -19,6 +19,7 @@
 outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   expr_parsed <- query_parse(expr)
+  validate_parameters(pars)
 
   ## We will want to do this processing more generally later (in the
   ## root object, saved as part of the index), because it will be a
@@ -33,8 +34,6 @@ outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
     ## Wrap these in I() because they're list columns
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
     location = I(location))
-
-  pars <- validate_parameters(pars)
 
   if (!is.null(scope)) {
     ids <- outpack_query(scope, pars, NULL, root)
