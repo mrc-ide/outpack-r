@@ -1,6 +1,6 @@
 Package: outpack
 Title: Package Output
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(person("Rich", "FitzJohn", role = c("aut", "cre"),
                     email = "rich.fitzjohn@gmail.com"),
              person("Imperial College of Science, Technology and Medicine",
@@ -20,7 +20,11 @@ Imports:
     openssl
 Suggests:
     jsonvalidate (>= 1.4.0),
+    knitr,
+    mockery,
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Remotes:
     ropensci/jsonvalidate
+VignetteBuilder: knitr
