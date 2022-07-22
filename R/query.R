@@ -11,12 +11,19 @@
 ##' @param scope Optionally, a scope query to limit the packets
 ##'   searched by `pars`
 ##'
+##' @param require_unpacked Logical, indicating if we should require
+##'   that the packets are unpacked. If `FALSE` (the default) we
+##'   search through all packets known to this outpack root,
+##'   regardless of if they are locally available, but if `TRUE`, only
+##'   unpacked packets will be considered.
+##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
 ##' @return A character vector of matching ids
 ##' @export
-outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
+outpack_query <- function(expr, pars = NULL, scope = NULL,
+                          require_unpacked = FALSE, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   expr_parsed <- query_parse(expr)
   validate_parameters(pars)
@@ -38,6 +45,10 @@ outpack_query <- function(expr, pars = NULL, scope = NULL, root = NULL) {
   if (!is.null(scope)) {
     ids <- outpack_query(scope, pars, NULL, root)
     index <- index[index$id %in% ids, ]
+  }
+
+  if (require_unpacked) {
+    index <- index[index$id %in% idx$unpacked$packet, ]
   }
 
   query_eval(expr_parsed, index, pars)
