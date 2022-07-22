@@ -43,11 +43,9 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
     location = I(location))
 
   if (!is.null(scope)) {
-    ids <- outpack_query(scope, pars, NULL, root)
+    ids <- outpack_query(scope, pars, NULL, require_unpacked, root)
     index <- index[index$id %in% ids, ]
-  }
-
-  if (require_unpacked) {
+  } else if (require_unpacked) {
     index <- index[index$id %in% idx$unpacked$packet, ]
   }
 
