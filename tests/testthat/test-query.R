@@ -78,24 +78,26 @@ test_that("at_location requires string literal arguments", {
     fixed = TRUE)
 
   res <- query_parse(quote(at_location("a", "b")))
-  expect_equal(res,
-               list(type = "at_location",
-                    args = list(list(type = "literal", value = "a"),
-                                list(type = "literal", value = "b"))))
+  expect_equal(res$type, "at_location")
+  expect_equal(res$args, list(list(type = "literal", value = "a"),
+                              list(type = "literal", value = "b")))
 })
 
 
 test_that("Queries can only be name and parameter", {
-  expect_equal(
-    query_parse(quote(name == "data")),
-    list(type = "test", name = "==",
-         args = list(list(type = "lookup", name = "name"),
-                     list(type = "literal", value = "data"))))
-  expect_equal(
-    query_parse(quote(parameter:x == 1)),
-    list(type = "test", name = "==",
-         args = list(list(type = "lookup", name = "parameter", query = "x"),
-                     list(type = "literal", value = 1))))
+  res <- query_parse(quote(name == "data"))
+  expect_equal(res$type, "test")
+  expect_equal(res$name, "==")
+  expect_equal(res$args,
+               list(list(type = "lookup", name = "name"),
+                    list(type = "literal", value = "data")))
+
+  res <- query_parse(quote(parameter:x == 1))
+  expect_equal(res$type, "test")
+  expect_equal(res$name, "==")
+  expect_equal(res$args,
+               list(list(type = "lookup", name = "parameter", query = "x"),
+                    list(type = "literal", value = 1)))
   expect_error(
     query_parse(quote(date >= "2022-02-04")),
     "Unhandled query expression value 'date'")
@@ -223,6 +225,21 @@ test_that("Can filter based on given values", {
 })
 
 
+test_that("single requires exactly one packet", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE))
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  ids <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = i)))
+  expect_equal(outpack_query(quote(single(parameter:a == 2)), root = root),
+               ids[[2]])
+  expect_error(outpack_query(quote(single(parameter:a >= 2)), root = root),
+               "Query found 2 packets, but expected exactly one")
+  expect_error(outpack_query(quote(single(parameter:a > 10)), root = root),
+               "Query did not find any packets")
+})
+
+
 test_that("switch statements will prevent regressions", {
   skip_if_not_installed("mockery")
   mockery::stub(query_parse_expr, "query_parse_check_call",
@@ -287,4 +304,31 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
     outpack_query(quote(at_location("x", "y")), require_unpacked = TRUE,
                   root = path$a),
     ids$x)
+})
+
+
+test_that("Parse literal id query", {
+  id <- "20220722-085951-148b7686"
+  res <- query_parse(id)
+  expect_identical(query_parse(bquote(single(id == .(id)))), res)
+  expect_equal(res$type, "single")
+  expect_length(res$args, 1)
+  expect_equal(res$args[[1]]$type, "test")
+  expect_equal(res$args[[1]]$name, "==")
+  expect_length(res$args[[1]]$args, 2)
+  expect_equal(res$args[[1]]$args[[1]], list(type = "lookup", name = "id"))
+  expect_equal(res$args[[1]]$args[[2]], list(type = "literal", value = id))
+})
+
+
+test_that("outpack_query allows ids", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE))
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- vcapply(1:3, function(i) create_random_packet(tmp))
+  expect_identical(outpack_query(ids[[1]], root = root), ids[[1]])
+  expect_identical(outpack_query(ids[[2]], root = root), ids[[2]])
+  expect_error(
+    outpack_query("20220722-085951-148b7686", root = root),
+    "Query did not find any packets")
 })
