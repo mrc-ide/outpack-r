@@ -33,7 +33,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.4</span>
       </span>
     </div>
 
@@ -109,7 +109,7 @@
 <span><span class="va">parameter</span><span class="op">:</span><span class="va">x</span> <span class="op">&gt;</span> <span class="fl">1</span></span></code></pre></div>
 <p>Every “test” uses a boolean operator (<code>&lt;</code>, <code>&gt;</code>, <code>&lt;=</code>, <code>&gt;=</code>, <code>==</code>, or <code>!=</code>) and the left and right hand side can be one of:</p>
 <ul>
-<li>a lookup into the outpack metadata (<code>parameter:x</code> is the value of a parameter called <code>x</code>, <code>name</code> is the name of the packet)</li>
+<li>a lookup into the outpack metadata (<code>parameter:x</code> is the value of a parameter called <code>x</code>, <code>name</code> is the name of the packet, and <code>id</code> is the id of a packet)</li>
 <li>a lookup into the provided data <code>pars</code> (<code>this:x</code> is the value of <code>pars$x</code>)</li>
 <li>a literal value (e.g., <code>"some_name"</code>, <code>1</code>, or <code>TRUE</code>)</li>
 </ul>
@@ -122,12 +122,24 @@
 <li>
 <code>(parameter:y == 2) &amp;&amp; !(parameter:x == 1 || parameter:x == 2)</code> finds where parameter <code>y</code> is 2 and parameter <code>x</code> is anything other than 1 or 2 (could also be written <code>(parameter:y == 2) &amp;&amp; (parameter:x != 1 &amp;&amp; parameter:x != 2)</code>)</li>
 </ul>
-<p>There are two other functions</p>
+<p>There are three other functions</p>
 <ul>
 <li>
-<code>latest(expr)</code> finds the latest packet satifying <code>expr</code> - it always returns a length 1 character, but this is <code>NA_character_</code> if no suitable packet is found</li>
+<code>latest(expr)</code> finds the latest packet satifying <code>expr</code> - it always returns a length 1 character, but this is <code>NA_character_</code> if no suitable packet is found. If no <code>expr</code> is given then the latest of all packets is returned.</li>
+<li>
+<code>single(expr)</code> is like <code>latest(expr)</code> except that it is an error if <code>expr</code> does not evaluate to exactly one packet id</li>
 <li>
 <code>at_location("loc1", "loc2")</code> finds packets that are available at any of the locations provided (here, <code>"loc1"</code> or <code>"loc2"</code>; any number of locations can be provided, these must be string literals).</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="special-simple-queries">Special simple queries<a class="anchor" aria-label="anchor" href="#special-simple-queries"></a>
+</h2>
+<p>There are two shorthand queries:</p>
+<ul>
+<li>
+<code>latest</code> is equivalent to <code>latest()</code> (most useful when applied with a scope)</li>
+<li>a string matching the regular expression for an id (<code>^([0-9]{8}-[0-9]{6}-[[:xdigit:]]{8})$</code>) is equivalent to <code>single(id == "&lt;id&gt;")</code> where <code>"&lt;id&gt;"</code> is the string provided)</li>
 </ul>
 </div>
 <div class="section level2">
