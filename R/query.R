@@ -324,6 +324,11 @@ query_eval_test <- function(query, index, pars) {
 
 query_eval_test_binary <- function(op, a, b) {
   op <- match.fun(op)
+  ## Older versions of R do not allow mixing of zero and non-zero
+  ## length inputs here, but we can do this ourselves:
+  if (length(a) == 0 || length(b) == 0) {
+    return(logical(0))
+  }
   vlapply(Map(function(a, b) !is.null(a) && !is.null(b) && op(a, b),
               a, b, USE.NAMES = FALSE),
           identity)
