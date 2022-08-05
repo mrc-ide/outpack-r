@@ -36,7 +36,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   i <- match(idx$location$location, root$config$location$id)
   location <- split(root$config$location$name[i], idx$location$packet)
   index <- data_frame(
-    id = names(root$index()$metadata),
+    id = names(root$index()$metadata) %||% character(0),
     name = vcapply(root$index()$metadata, "[[", "name"),
     ## Wrap these in I() because they're list columns
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
