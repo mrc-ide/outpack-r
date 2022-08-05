@@ -332,3 +332,13 @@ test_that("outpack_query allows ids", {
     outpack_query("20220722-085951-148b7686", root = root),
     "Query did not find any packets")
 })
+
+
+test_that("correct behaviour with empty queries", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE))
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  expect_equal(outpack_query("latest", root = root), NA_character_)
+  expect_equal(outpack_query(quote(name == "data"), root = root),
+               character(0))
+})
