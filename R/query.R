@@ -36,7 +36,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   i <- match(idx$location$location, root$config$location$id)
   location <- split(root$config$location$name[i], idx$location$packet)
   index <- data_frame(
-    id = names(root$index()$metadata),
+    id = names(root$index()$metadata) %||% character(0),
     name = vcapply(root$index()$metadata, "[[", "name"),
     ## Wrap these in I() because they're list columns
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
@@ -324,6 +324,11 @@ query_eval_test <- function(query, index, pars) {
 
 query_eval_test_binary <- function(op, a, b) {
   op <- match.fun(op)
+  ## Older versions of R do not allow mixing of zero and non-zero
+  ## length inputs here, but we can do this ourselves:
+  if (length(a) == 0 || length(b) == 0) {
+    return(logical(0))
+  }
   vlapply(Map(function(a, b) !is.null(a) && !is.null(b) && op(a, b),
               a, b, USE.NAMES = FALSE),
           identity)
