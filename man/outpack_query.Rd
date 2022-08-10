@@ -4,7 +4,13 @@
 \alias{outpack_query}
 \title{Query outpack's database}
 \usage{
-outpack_query(expr, pars = NULL, scope = NULL, root = NULL)
+outpack_query(
+  expr,
+  pars = NULL,
+  scope = NULL,
+  require_unpacked = FALSE,
+  root = NULL
+)
 }
 \arguments{
 \item{expr}{The query expression}
@@ -14,6 +20,12 @@ into the query (using the \verb{this:} prefix)}
 
 \item{scope}{Optionally, a scope query to limit the packets
 searched by \code{pars}}
+
+\item{require_unpacked}{Logical, indicating if we should require
+that the packets are unpacked. If \code{FALSE} (the default) we
+search through all packets known to this outpack root,
+regardless of if they are locally available, but if \code{TRUE}, only
+unpacked packets will be considered.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
