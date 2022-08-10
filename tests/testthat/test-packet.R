@@ -61,7 +61,7 @@ test_that("Can run a basic packet", {
   expect_equal(meta$name, "example")
   expect_equal(meta$id, id)
   expect_null(meta$parameters)
-  expect_equal(meta$depends, data_frame(id = character(), files = I(list())))
+  expect_equal(meta$depends, data_frame(packet = character(), files = I(list())))
   expect_setequal(meta$files$path, c("data.csv", "myplot.png", "script.R"))
   expect_equal(meta$files$size,
                file.size(file.path(path_src, meta$files$path)))
@@ -131,10 +131,14 @@ test_that("Can handle dependencies", {
   outpack_packet_end()
 
   meta <- outpack_root_open(path)$metadata(id2)
+  path_metadata <- file.path(path, ".outpack", "metadata", id2)
+  expect_true(file.exists(path_metadata))
+  outpack_schema("metadata")$validate(path_metadata)
+
   expect_equal(
     meta$depends,
     data_frame(
-      id = id1,
+      packet = id1,
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 
@@ -288,7 +292,7 @@ test_that("Can use dependency from outpack without file store", {
   expect_equal(
     meta$depends,
     data_frame(
-      id = id1,
+      packet = id1,
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 

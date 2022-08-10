@@ -29,7 +29,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   }
 
   for (i in seq_len(nrow(meta$depends))) {
-    validate_packet_has_file(root, meta$depends$id[[i]],
+    validate_packet_has_file(root, meta$depends$packet[[i]],
                              meta$depends$files[[i]]$there)
   }
 
