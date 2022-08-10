@@ -61,7 +61,8 @@ test_that("Can run a basic packet", {
   expect_equal(meta$name, "example")
   expect_equal(meta$id, id)
   expect_null(meta$parameters)
-  expect_equal(meta$depends, data_frame(packet = character(), files = I(list())))
+  expect_equal(meta$depends, data_frame(packet = character(),
+                                        files = I(list())))
   expect_setequal(meta$files$path, c("data.csv", "myplot.png", "script.R"))
   expect_equal(meta$files$size,
                file.size(file.path(path_src, meta$files$path)))
