@@ -169,7 +169,7 @@ outpack_packet_use_dependency <- function(id, files) {
   ## Only update packet information after success, to reflect new
   ## metadata
 
-  depends <- list(id = id,
+  depends <- list(packet = id,
                   files = data_frame(here = names(files), there = src))
   current$packet$depends <- c(p$depends, list(depends))
 

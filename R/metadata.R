@@ -56,7 +56,7 @@ outpack_metadata_create <- function(path, name, id, time, files,
     depends <- list()
   } else {
     for (i in seq_along(depends)) {
-      depends[[i]]$id <- scalar(depends[[i]]$id)
+      depends[[i]]$packet <- scalar(depends[[i]]$packet)
     }
     ## TODO: Additional checks could be required, but will require a
     ## root.  We do some of these on insert and via
@@ -117,7 +117,7 @@ outpack_metadata_load <- function(json) {
                            size = vnapply(data$files, "[[", "size"),
                            hash = vcapply(data$files, "[[", "hash"))
   data$depends <- data_frame(
-    id = vcapply(data$depends, "[[", "id"),
+    packet = vcapply(data$depends, "[[", "packet"),
     files = I(lapply(data$depends, function(x) {
       data_frame(here = vcapply(x$files, "[[", "here"),
                  there = vcapply(x$files, "[[", "there"))
