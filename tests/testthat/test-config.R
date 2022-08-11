@@ -99,7 +99,7 @@ test_that("Can add file_store", {
   expect_true(length(hash2) == 1)
 
   dest <- tempdir()
-  on.exit(unlink(path, recursive = TRUE))
+  on.exit(unlink(dest, recursive = TRUE))
   root$files$get(hash1, dest)
   root$files$get(hash2, dest)
 })

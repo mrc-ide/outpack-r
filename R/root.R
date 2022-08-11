@@ -115,7 +115,7 @@ outpack_root <- R6::R6Class(
     },
 
     add_file_store = function() {
-      self$files <- file_store$new(file.path(path, ".outpack", "files"))
+      self$files <- file_store$new(file.path(self$path, ".outpack", "files"))
       invisible(lapply(self$index()$metadata, function(meta) {
         src <- file.path(self$path, self$config$core$path_archive,
                          meta$name, meta$id)
