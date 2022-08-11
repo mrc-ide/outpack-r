@@ -38,7 +38,9 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
   assert_named(options)
 
   setters <- list(
-    "core.require_complete_tree" = config_set_require_complete_tree)
+    "core.require_complete_tree" = config_set_require_complete_tree,
+    "core.use_file_store" = config_set_use_file_store
+  )
 
   unknown <- setdiff(names(options), names(setters))
   if (length(unknown)) {
@@ -68,6 +70,32 @@ config_set_require_complete_tree <- function(value, root) {
   }
 
   config$core$require_complete_tree <- value
+  config_write(config, root$path)
+  root$config <- config
+}
+
+
+config_set_use_file_store <- function(value, root) {
+  assert_scalar_logical(value)
+  config <- root$config
+
+  if (config$core$use_file_store == value) {
+    message("'core.use_file_store' was unchanged")
+    return()
+  }
+
+  if (value) {
+    stop("Can't add file store yet")
+  }
+
+  if (!value) {
+    if (is.null(config$core$path_archive)) {
+      stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+    }
+    root$remove_file_store()
+  }
+
+  config$core$use_file_store <- value
   config_write(config, root$path)
   root$config <- config
 }

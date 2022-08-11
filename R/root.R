@@ -98,7 +98,6 @@ outpack_root <- R6::R6Class(
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
       lockBinding("path", self)
-      lockBinding("files", self)
     },
 
     metadata = function(id, full = FALSE) {
@@ -113,6 +112,11 @@ outpack_root <- R6::R6Class(
       prev <- if (refresh) list() else private$index_data
       private$index_data <- index_update(self, prev)
       private$index_data
+    },
+
+    remove_file_store = function() {
+      self$files$destroy()
+      self$files <- NULL
     }
   ))
 

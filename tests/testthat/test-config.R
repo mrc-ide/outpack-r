@@ -45,6 +45,52 @@ test_that("Can update core.require_complete_tree in empty archive", {
 })
 
 
+test_that("Can remove file_store if path_archive exists", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, use_file_store = TRUE)
+  expect_true(root$config$core$use_file_store)
+
+  file_store <- root$files$path
+  expect_true(fs::dir_exists(file_store))
+
+  expect_message(outpack_config_set(core.use_file_store = TRUE, root = root),
+                 "'core.use_file_store' was unchanged")
+  expect_true(root$config$core$use_file_store)
+  expect_true(fs::dir_exists(file_store))
+
+  outpack_config_set(core.use_file_store = FALSE, root = root)
+
+  expect_false(root$config$core$use_file_store)
+  expect_false(outpack_root_open(root$path)$config$core$use_file_store)
+  expect_false(fs::dir_exists(file_store))
+})
+
+
+test_that("Cannot remove file_store if no path_archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, use_file_store = TRUE, path_archive = NULL)
+  file_store <- root$files$path
+  expect_true(fs::dir_exists(file_store))
+  expect_error(outpack_config_set(core.use_file_store = FALSE, root = root),
+               "if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+
+  expect_true(root$config$core$use_file_store)
+  expect_true(outpack_root_open(root$path)$config$core$use_file_store)
+  expect_true(fs::dir_exists(file_store))
+})
+
+
+test_that("Cannot add file_store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(outpack_config_set(core.use_file_store = TRUE, root = root),
+               "Can't add file store yet")
+})
+
+
 test_that("Enabling recursive pulls forces pulling missing packets", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
