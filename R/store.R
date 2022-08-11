@@ -60,5 +60,10 @@ file_store <- R6::R6Class(
         self$path,
         as.character(fs::dir_ls(recurse = 2, type = "file")))
       sub("/", "", sub("/", ":", files))
+    },
+
+    delete = function() {
+      fs::dir_delete(self$path)
     }
-  ))
+  )
+)
