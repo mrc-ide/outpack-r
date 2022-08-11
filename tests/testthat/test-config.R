@@ -82,12 +82,26 @@ test_that("Cannot remove file_store if no path_archive", {
 })
 
 
-test_that("Cannot add file_store", {
+test_that("Can add file_store", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   root <- outpack_init(path)
-  expect_error(outpack_config_set(core.use_file_store = TRUE, root = root),
-               "Can't add file store yet")
+  id1 <- create_random_packet(root, name = "example1")
+  id2 <- create_random_packet(root, name = "example2")
+  outpack_config_set(core.use_file_store = TRUE, root = root)
+  expect_true(root$config$core$use_file_store)
+  expect_true(outpack_root_open(root$path)$config$core$use_file_store)
+  expect_true(fs::dir_exists(root$files$path))
+
+  hash1 <- root$metadata(id1)$files$hash
+  expect_true(length(hash1) == 1)
+  hash2 <- root$metadata(id2)$files$hash
+  expect_true(length(hash2) == 1)
+
+  dest <- tempdir()
+  on.exit(unlink(path, recursive = TRUE))
+  root$files$get(hash1, dest)
+  root$files$get(hash2, dest)
 })
 
 

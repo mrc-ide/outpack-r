@@ -98,7 +98,6 @@ outpack_root <- R6::R6Class(
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
       lockBinding("path", self)
-      lockBinding("files", self)
     },
 
     metadata = function(id, full = FALSE) {
@@ -113,6 +112,15 @@ outpack_root <- R6::R6Class(
       prev <- if (refresh) list() else private$index_data
       private$index_data <- index_update(self, prev)
       private$index_data
+    },
+
+    add_file_store = function() {
+      self$files <- file_store$new(file.path(path, ".outpack", "files"))
+      invisible(lapply(self$index()$metadata, function(meta) {
+        src <- file.path(self$path, self$config$core$path_archive,
+                         meta$name, meta$id)
+        file_import_store(self, src, meta$files$path, meta$files$hash)
+      }))
     },
 
     remove_file_store = function() {
@@ -319,34 +327,30 @@ file_export <- function(root, id, path, dest) {
 
 
 file_import_store <- function(root, path, file_path, file_hash) {
-  if (root$config$core$use_file_store) {
-    for (i in seq_along(file_path)) {
-      root$files$put(file.path(path, file_path[[i]]), file_hash[[i]])
-    }
+  for (i in seq_along(file_path)) {
+    root$files$put(file.path(path, file_path[[i]]), file_hash[[i]])
   }
 }
 
 
 file_import_archive <- function(root, path, file_path, name, id) {
-  if (!is.null(root$config$core$path_archive)) {
-    dest <- file.path(root$path, root$config$core$path_archive, name, id)
+  dest <- file.path(root$path, root$config$core$path_archive, name, id)
 
-    ## TODO: These should not ever happen, so just asserting here.  If
-    ## it does happen it requires that the user has provided an id,
-    ## and also copied files around?  Not sure how we'd recover here
-    ## either.
-    stopifnot(path != dest,
-              !file.exists(dest))
+  ## TODO: These should not ever happen, so just asserting here.  If
+  ## it does happen it requires that the user has provided an id,
+  ## and also copied files around?  Not sure how we'd recover here
+  ## either.
+  stopifnot(path != dest,
+            !file.exists(dest))
 
-    ## TODO: open question as to if we should filter this down to just
-    ## the required files (as we do here); this means that if the user
-    ## has provided "files" to the metadata function we'd be leaving
-    ## some files behind.  This does match the behaviour of the file
-    ## store version, but not of orderly.
-    file_path_dest <- file.path(dest, file_path)
-    fs::dir_create(dirname(file_path_dest))
-    fs::file_copy(file.path(path, file_path), file_path_dest)
-  }
+  ## TODO: open question as to if we should filter this down to just
+  ## the required files (as we do here); this means that if the user
+  ## has provided "files" to the metadata function we'd be leaving
+  ## some files behind.  This does match the behaviour of the file
+  ## store version, but not of orderly.
+  file_path_dest <- file.path(dest, file_path)
+  fs::dir_create(dirname(file_path_dest))
+  fs::file_copy(file.path(path, file_path), file_path_dest)
 }
 
 
