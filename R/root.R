@@ -124,8 +124,7 @@ outpack_root <- R6::R6Class(
     },
 
     remove_file_store = function() {
-      self$files$delete()
-      unlockBinding("files", self)
+      self$files$destroy()
       self$files <- NULL
     }
   ))
