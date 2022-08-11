@@ -54,6 +54,11 @@ test_that("Can remove file_store if path_archive exists", {
   file_store <- root$files$path
   expect_true(fs::dir_exists(file_store))
 
+  expect_message(outpack_config_set(core.use_file_store = TRUE, root = root),
+                 "'core.use_file_store' was unchanged")
+  expect_true(root$config$core$use_file_store)
+  expect_true(fs::dir_exists(file_store))
+
   outpack_config_set(core.use_file_store = FALSE, root = root)
 
   expect_false(root$config$core$use_file_store)
