@@ -137,6 +137,29 @@ test_that("File store is not added if a hash cannot be resolved", {
 })
 
 
+test_that("Files will be searched for by hash when adding file store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_false(root$config$core$use_file_store)
+
+  id <- create_deterministic_packet(root, name = "data")
+  id_new <- create_deterministic_packet(root, name = "data-new")
+
+  expect_equal(root$index()$unpacked$packet, c(id, id_new))
+  fs::file_delete(file.path(path, "archive", "data", id,
+                            root$metadata(id)$files$path))
+
+  outpack_config_set(core.use_file_store = TRUE, root = root)
+
+  expect_true(root$config$core$use_file_store)
+
+  dest <- tempdir()
+  on.exit(unlink(dest, recursive = TRUE))
+  root$files$get(root$metadata(id)$files$hash, dest)
+})
+
+
 test_that("Enabling recursive pulls forces pulling missing packets", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))

@@ -13,6 +13,16 @@ create_random_packet <- function(root, name = "data", parameters = NULL) {
 }
 
 
+create_deterministic_packet <- function(root, name = "data", parameters = NULL) {
+  src <- fs::dir_create(tempfile())
+  on.exit(unlink(src, recursive = TRUE))
+  saveRDS(1:10, file.path(src, "data.rds"))
+  id <- outpack_packet_start(src, name, parameters = parameters, root = root)$id
+  outpack_packet_end()
+  id
+}
+
+
 mock_metadata_depends <- function(id, depends = character(0)) {
   ret <- list(list(id = id, depends = data_frame(packet = depends)))
   names(ret) <- id
