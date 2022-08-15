@@ -118,6 +118,25 @@ test_that("Can add file_store", {
 })
 
 
+test_that("File store is not added if a hash cannot be resolved", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_false(root$config$core$use_file_store)
+
+  id <- create_random_packet(root, name = "test")
+
+  expect_equal(root$index()$unpacked$packet, id)
+  fs::file_delete(file.path(path, "archive", "test", id,
+                            root$metadata(id)$files$path))
+  expect_error(outpack_config_set(core.use_file_store = TRUE, root = root),
+               "the following files were missing or corrupted: 'data.rds'"
+  )
+  expect_false(root$config$core$use_file_store)
+  expect_null(root$config$files)
+})
+
+
 test_that("Enabling recursive pulls forces pulling missing packets", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))

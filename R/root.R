@@ -118,9 +118,18 @@ outpack_root <- R6::R6Class(
       self$files <- file_store$new(file.path(self$path, ".outpack", "files"))
       invisible(lapply(self$index()$unpacked$packet, function(id) {
         meta <- self$metadata(id)
-        src <- file.path(self$path, self$config$core$path_archive,
-                         meta$name, meta$id)
-        file_import_store(self, src, meta$files$path, meta$files$hash)
+        path <- unlist(lapply(meta$files$hash,
+                       function(hash) find_file_by_hash(self, hash)))
+        if (any(is.null(path))) {
+          missing <- meta$files$path[is.null(path)]
+          message <- sprintf(
+            "the following files were missing or corrupted: '%s'",
+            paste(missing, collapse = ", ")
+          )
+          stop(sprintf("Failed to import packet '%s': %s",
+                       id, message))
+        }
+        file_import_store(self, "", path, meta$files$hash)
       }))
     },
 
