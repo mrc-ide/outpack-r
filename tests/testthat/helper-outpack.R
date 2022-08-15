@@ -13,7 +13,8 @@ create_random_packet <- function(root, name = "data", parameters = NULL) {
 }
 
 
-create_deterministic_packet <- function(root, name = "data", parameters = NULL) {
+create_deterministic_packet <- function(root, name = "data",
+                                        parameters = NULL) {
   src <- fs::dir_create(tempfile())
   on.exit(unlink(src, recursive = TRUE))
   saveRDS(1:10, file.path(src, "data.rds"))

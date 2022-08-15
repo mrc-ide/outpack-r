@@ -129,7 +129,7 @@ outpack_root <- R6::R6Class(
           stop(sprintf("Failed to import packet '%s': %s",
                        id, message))
         }
-        file_import_store(self, "", path, meta$files$hash)
+        file_import_store(self, NULL, path, meta$files$hash)
       }))
     },
 
@@ -337,7 +337,12 @@ file_export <- function(root, id, path, dest) {
 
 file_import_store <- function(root, path, file_path, file_hash) {
   for (i in seq_along(file_path)) {
-    root$files$put(file.path(path, file_path[[i]]), file_hash[[i]])
+    if (!is.null(path)) {
+      fp <- file.path(path, file_path[[i]])
+    } else {
+      fp <- file_path[[i]]
+    }
+    root$files$put(fp, file_hash[[i]])
   }
 }
 
