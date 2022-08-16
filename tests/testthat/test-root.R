@@ -46,7 +46,7 @@ test_that("Must include some packet storage", {
   path <- tempfile()
   expect_error(
     outpack_init(path, path_archive = NULL, use_file_store = FALSE),
-    "if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+    "If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
   expect_false(file.exists(path))
 })
 
