@@ -119,18 +119,16 @@ config_set_path_archive <- function(value, root) {
       fs::dir_delete(file.path(root$path, config$core$path_archive))
     }
     config$core["path_archive"] <- list(NULL)
-  } else {
-    if (!is.null(config$core$path_archive)) {
-      path_archive_old <- file.path(root$path, config$core$path_archive)
-      if (fs::dir_exists(path_archive_old)) {
-        path_archive_new <- file.path(root$path, value)
-        fs::dir_copy(path_archive_old, path_archive_new)
-        fs::dir_delete(path_archive_old)
-      }
-      config$core$path_archive <- value
-    } else {
-      stop("can't add archive yet")
+  } else if (!is.null(config$core$path_archive)) {
+    path_archive_old <- file.path(root$path, config$core$path_archive)
+    if (fs::dir_exists(path_archive_old)) {
+      path_archive_new <- file.path(root$path, value)
+      fs::dir_copy(path_archive_old, path_archive_new)
+      fs::dir_delete(path_archive_old)
     }
+    config$core$path_archive <- value
+  } else {
+    stop("can't add archive yet")
   }
 
   config_write(config, root$path)
