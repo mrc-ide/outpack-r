@@ -123,6 +123,37 @@ test_that("Can remove initialised archive if using file store", {
 })
 
 
+test_that("Can rename uninitialised archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = "archive",
+                       use_file_store = TRUE)
+
+  expect_equal(root$config$core$path_archive, "archive")
+  outpack_config_set(core.path_archive = "new", root = root)
+  expect_equal(root$config$core$path_archive, "new")
+})
+
+
+test_that("Can rename initialised archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = "archive",
+                       use_file_store = TRUE)
+
+  expect_equal(root$config$core$path_archive, "archive")
+  create_random_packet(root)
+  path_archive <- file.path(path, "archive")
+  expect_true(fs::dir_exists(path_archive))
+
+  outpack_config_set(core.path_archive = "new", root = root)
+  expect_equal(root$config$core$path_archive, "new")
+  path_archive_new <- file.path(path, "new")
+  expect_false(fs::dir_exists(path_archive))
+  expect_true(fs::dir_exists(path_archive_new))
+})
+
+
 test_that("Enabling recursive pulls forces pulling missing packets", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))

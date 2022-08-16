@@ -123,6 +123,13 @@ config_set_path_archive <- function(value, root) {
       message("'core.path_archive' was unchanged")
       return()
     }
+    path_archive_old <- file.path(root$path, config$core$path_archive)
+    if (fs::dir_exists(path_archive_old)) {
+      path_archive_new <- file.path(root$path, value)
+      fs::dir_copy(path_archive_old, path_archive_new)
+      fs::dir_delete(path_archive_old)
+    }
+    config$core$path_archive <- value
   }
 
   config_write(config, root$path)
