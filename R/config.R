@@ -91,7 +91,7 @@ config_set_use_file_store <- function(value, root) {
 
   if (!value) {
     if (is.null(config$core$path_archive)) {
-      stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+      stop("If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
     }
     root$remove_file_store()
   }
@@ -112,7 +112,7 @@ config_set_path_archive <- function(value, root) {
 
   if (is.null(value)) {
     if (!config$core$use_file_store) {
-      stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+      stop("If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
     }
     path_archive <- file.path(root$path, config$core$path_archive)
     if (fs::dir_exists(path_archive)) {
@@ -144,7 +144,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
   }
   assert_scalar_logical(use_file_store)
   if (is.null(path_archive) && !use_file_store) {
-    stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+    stop("If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
   }
 
   assert_scalar_logical(require_complete_tree)

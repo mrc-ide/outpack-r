@@ -74,7 +74,7 @@ test_that("Cannot remove file_store if no path_archive", {
   file_store <- root$files$path
   expect_true(fs::dir_exists(file_store))
   expect_error(outpack_config_set(core.use_file_store = FALSE, root = root),
-               "if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+               "If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
 
   expect_true(root$config$core$use_file_store)
   expect_true(outpack_root_open(root$path)$config$core$use_file_store)
@@ -165,7 +165,7 @@ test_that("Cannot remove archive if not using file store", {
   root <- outpack_init(path, path_archive = "archive")
 
   expect_error(outpack_config_set(core.path_archive = NULL, root = root),
-               "if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+               "If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
 })
 
 
