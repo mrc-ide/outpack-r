@@ -110,6 +110,9 @@ test_that("Can remove initialised archive if using file store", {
                        use_file_store = TRUE)
 
   expect_equal(root$config$core$path_archive, "archive")
+  expect_message(outpack_config_set(core.path_archive = "archive", root = root),
+                 "'core.path_archive' was unchanged")
+
   create_random_packet(root)
   path_archive <- file.path(path, "archive")
   expect_true(fs::dir_exists(path_archive))
@@ -126,11 +129,12 @@ test_that("Can remove initialised archive if using file store", {
 test_that("Can rename uninitialised archive", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
-  root <- outpack_init(path, path_archive = "archive",
-                       use_file_store = TRUE)
+  root <- outpack_init(path, path_archive = "archive")
 
   expect_equal(root$config$core$path_archive, "archive")
+
   outpack_config_set(core.path_archive = "new", root = root)
+
   expect_equal(root$config$core$path_archive, "new")
 })
 
@@ -138,19 +142,30 @@ test_that("Can rename uninitialised archive", {
 test_that("Can rename initialised archive", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
-  root <- outpack_init(path, path_archive = "archive",
-                       use_file_store = TRUE)
+  root <- outpack_init(path, path_archive = "archive")
+
+  create_random_packet(root)
 
   expect_equal(root$config$core$path_archive, "archive")
-  create_random_packet(root)
   path_archive <- file.path(path, "archive")
   expect_true(fs::dir_exists(path_archive))
 
   outpack_config_set(core.path_archive = "new", root = root)
+
   expect_equal(root$config$core$path_archive, "new")
   path_archive_new <- file.path(path, "new")
   expect_false(fs::dir_exists(path_archive))
   expect_true(fs::dir_exists(path_archive_new))
+})
+
+
+test_that("Cannot remove archive if not using file store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = "archive")
+
+  expect_error(outpack_config_set(core.path_archive = NULL, root = root),
+               "if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
 })
 
 
