@@ -169,6 +169,16 @@ test_that("Cannot remove archive if not using file store", {
 })
 
 
+test_that("Cannot add archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+
+  expect_error(outpack_config_set(core.path_archive = "archive", root = root),
+               "can't add archive yet")
+})
+
+
 test_that("Enabling recursive pulls forces pulling missing packets", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
