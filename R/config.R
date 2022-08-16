@@ -114,7 +114,7 @@ config_set_path_archive <- function(value, root) {
       return()
     }
     path_archive <- file.path(root$path, config$core$path_archive)
-    if (fs::dir_exists(path_archive)){
+    if (fs::dir_exists(path_archive)) {
       fs::dir_delete(file.path(root$path, config$core$path_archive))
     }
     config$core["path_archive"] <- list(NULL)
@@ -167,7 +167,6 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
 config_serialise <- function(config, path) {
   config$schemaVersion <- scalar(config$schemaVersion) # nolint
   config$core <- lapply(config$core, scalar)
-  browser()
 
   prepare_location <- function(loc) {
     c(lapply(loc[setdiff(names(loc), "args")], scalar),
