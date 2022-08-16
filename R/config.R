@@ -116,7 +116,7 @@ config_set_path_archive <- function(value, root) {
     }
     path_archive <- file.path(root$path, config$core$path_archive)
     if (fs::dir_exists(path_archive)) {
-      fs::dir_delete(file.path(root$path, config$core$path_archive))
+      fs::dir_delete(path_archive)
     }
     config$core["path_archive"] <- list(NULL)
   } else {
