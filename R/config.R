@@ -92,7 +92,6 @@ config_set_use_file_store <- function(value, root) {
   }
 
   if (value) {
-    root$add_file_store()
     tryCatch(
       root$add_file_store(),
       error = function(e) {
