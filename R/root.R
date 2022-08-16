@@ -114,6 +114,25 @@ outpack_root <- R6::R6Class(
       private$index_data
     },
 
+    add_file_store = function() {
+      self$files <- file_store$new(file.path(self$path, ".outpack", "files"))
+      invisible(lapply(self$index()$unpacked$packet, function(id) {
+        meta <- self$metadata(id)
+        path <- unlist(lapply(meta$files$hash,
+                       function(hash) find_file_by_hash(self, hash)))
+        if (any(is.null(path))) {
+          missing <- meta$files$path[is.null(path)]
+          message <- sprintf(
+            "the following files were missing or corrupted: '%s'",
+            paste(missing, collapse = ", ")
+          )
+          stop(sprintf("Failed to import packet '%s': %s",
+                       id, message))
+        }
+        file_import_store(self, NULL, path, meta$files$hash)
+      }))
+    },
+
     remove_file_store = function() {
       self$files$destroy()
       self$files <- NULL
@@ -317,34 +336,35 @@ file_export <- function(root, id, path, dest) {
 
 
 file_import_store <- function(root, path, file_path, file_hash) {
-  if (root$config$core$use_file_store) {
-    for (i in seq_along(file_path)) {
-      root$files$put(file.path(path, file_path[[i]]), file_hash[[i]])
+  for (i in seq_along(file_path)) {
+    if (!is.null(path)) {
+      fp <- file.path(path, file_path[[i]])
+    } else {
+      fp <- file_path[[i]]
     }
+    root$files$put(fp, file_hash[[i]])
   }
 }
 
 
 file_import_archive <- function(root, path, file_path, name, id) {
-  if (!is.null(root$config$core$path_archive)) {
-    dest <- file.path(root$path, root$config$core$path_archive, name, id)
+  dest <- file.path(root$path, root$config$core$path_archive, name, id)
 
-    ## TODO: These should not ever happen, so just asserting here.  If
-    ## it does happen it requires that the user has provided an id,
-    ## and also copied files around?  Not sure how we'd recover here
-    ## either.
-    stopifnot(path != dest,
-              !file.exists(dest))
+  ## TODO: These should not ever happen, so just asserting here.  If
+  ## it does happen it requires that the user has provided an id,
+  ## and also copied files around?  Not sure how we'd recover here
+  ## either.
+  stopifnot(path != dest,
+            !file.exists(dest))
 
-    ## TODO: open question as to if we should filter this down to just
-    ## the required files (as we do here); this means that if the user
-    ## has provided "files" to the metadata function we'd be leaving
-    ## some files behind.  This does match the behaviour of the file
-    ## store version, but not of orderly.
-    file_path_dest <- file.path(dest, file_path)
-    fs::dir_create(dirname(file_path_dest))
-    fs::file_copy(file.path(path, file_path), file_path_dest)
-  }
+  ## TODO: open question as to if we should filter this down to just
+  ## the required files (as we do here); this means that if the user
+  ## has provided "files" to the metadata function we'd be leaving
+  ## some files behind.  This does match the behaviour of the file
+  ## store version, but not of orderly.
+  file_path_dest <- file.path(dest, file_path)
+  fs::dir_create(dirname(file_path_dest))
+  fs::file_copy(file.path(path, file_path), file_path_dest)
 }
 
 

@@ -35,9 +35,12 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   ## LOGGING: Report on things like the number of files added to the
   ## archives
-
-  file_import_store(root, path, meta$files$path, meta$files$hash)
-  file_import_archive(root, path, meta$files$path, meta$name, meta$id)
+  if (root$config$core$use_file_store) {
+    file_import_store(root, path, meta$files$path, meta$files$hash)
+  }
+  if (!is.null(root$config$core$path_archive)) {
+    file_import_archive(root, path, meta$files$path, meta$name, meta$id)
+  }
 
   path_meta <- file.path(root$path, ".outpack", "metadata", id)
   writeLines(json, path_meta)

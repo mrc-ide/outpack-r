@@ -82,12 +82,83 @@ test_that("Cannot remove file_store if no path_archive", {
 })
 
 
-test_that("Cannot add file_store", {
+test_that("Can add file_store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- list()
+  root$src <- outpack_init(file.path(path, "src"))
+  root$dst <- outpack_init(file.path(path, "dst"))
+  expect_false(root$dst$config$core$use_file_store)
+
+  id <- create_random_packet_chain(root$src, 3)
+
+  outpack_location_add("src", root$src$path, root = root$dst$path)
+  outpack_location_pull_metadata(root = root$dst$path)
+  outpack_location_pull_packet(id[["c"]], root = root$dst$path)
+
+  expect_equal(root$dst$index()$unpacked$packet, id[["c"]])
+  outpack_config_set(core.use_file_store = TRUE, root = root$dst)
+
+  expect_true(root$dst$config$core$use_file_store)
+  expect_true(outpack_root_open(root$dst$path)$config$core$use_file_store)
+  expect_true(fs::dir_exists(root$dst$files$path))
+
+  hash_pulled <- root$dst$metadata(id[["c"]])$files$hash
+  expect_equal(length(hash_pulled), 3)
+
+  dest <- tempdir()
+  on.exit(unlink(dest, recursive = TRUE))
+  root$dst$files$get(hash_pulled[[1]], dest)
+  root$dst$files$get(hash_pulled[[2]], dest)
+  root$dst$files$get(hash_pulled[[3]], dest)
+
+  hash_not_pulled <- root$dst$metadata(id[["a"]])$files$hash
+  expect_error(root$dst$files$get(hash_not_pulled[[1]], dest),
+               "not found in store")
+})
+
+
+test_that("File store is not added if a hash cannot be resolved", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   root <- outpack_init(path)
+  expect_false(root$config$core$use_file_store)
+
+  id <- create_random_packet(root, name = "test")
+
+  expect_equal(root$index()$unpacked$packet, id)
+  fs::file_delete(file.path(path, "archive", "test", id,
+                            root$metadata(id)$files$path))
+  regex <- paste("Error adding file store:(.*)",
+    "the following files were missing or corrupted: 'data.rds'")
   expect_error(outpack_config_set(core.use_file_store = TRUE, root = root),
-               "Can't add file store yet")
+               regex
+  )
+  expect_false(root$config$core$use_file_store)
+  expect_null(root$config$files)
+})
+
+
+test_that("Files will be searched for by hash when adding file store", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_false(root$config$core$use_file_store)
+
+  id <- create_deterministic_packet(root, name = "data")
+  id_new <- create_deterministic_packet(root, name = "data-new")
+
+  expect_equal(root$index()$unpacked$packet, c(id, id_new))
+  fs::file_delete(file.path(path, "archive", "data", id,
+                            root$metadata(id)$files$path))
+
+  outpack_config_set(core.use_file_store = TRUE, root = root)
+
+  expect_true(root$config$core$use_file_store)
+
+  dest <- tempdir()
+  on.exit(unlink(dest, recursive = TRUE))
+  root$files$get(root$metadata(id)$files$hash, dest)
 })
 
 
