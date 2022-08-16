@@ -39,7 +39,8 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
 
   setters <- list(
     "core.require_complete_tree" = config_set_require_complete_tree,
-    "core.use_file_store" = config_set_use_file_store
+    "core.use_file_store" = config_set_use_file_store,
+    "core.path_archive" = config_set_path_archive
   )
 
   unknown <- setdiff(names(options), names(setters))
@@ -101,6 +102,34 @@ config_set_use_file_store <- function(value, root) {
 }
 
 
+config_set_path_archive <- function(value, root) {
+  config <- root$config
+
+  if (is.null(value)) {
+    if (!config$core$use_file_store) {
+      stop("if 'path_archive' is NULL, then 'use_file_store' must be TRUE")
+    }
+    if (is.null(config$core$path_archive)) {
+      message("'core.path_archive' was unchanged")
+      return()
+    }
+    path_archive <- file.path(root$path, config$core$path_archive)
+    if (fs::dir_exists(path_archive)){
+      fs::dir_delete(file.path(root$path, config$core$path_archive))
+    }
+    config$core["path_archive"] <- list(NULL)
+  } else {
+    if (config$core$path_archive == value) {
+      message("'core.path_archive' was unchanged")
+      return()
+    }
+  }
+
+  config_write(config, root$path)
+  root$config <- config
+}
+
+
 config_new <- function(path_archive, use_file_store, require_complete_tree) {
   if (!is.null(path_archive)) {
     assert_scalar_character(path_archive)
@@ -131,6 +160,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
 config_serialise <- function(config, path) {
   config$schemaVersion <- scalar(config$schemaVersion) # nolint
   config$core <- lapply(config$core, scalar)
+  browser()
 
   prepare_location <- function(loc) {
     c(lapply(loc[setdiff(names(loc), "args")], scalar),
