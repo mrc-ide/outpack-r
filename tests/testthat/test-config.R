@@ -106,8 +106,9 @@ test_that("Can add file_store", {
   hash_pulled <- root$dst$metadata(id[["c"]])$files$hash
   expect_equal(length(hash_pulled), 3)
 
-  dest <- tempdir()
-  on.exit(unlink(dest, recursive = TRUE))
+  dest <- tempfile()
+  dir.create(dest)
+  on.exit(unlink(path, recursive = TRUE))
   root$dst$files$get(hash_pulled[[1]], dest)
   root$dst$files$get(hash_pulled[[2]], dest)
   root$dst$files$get(hash_pulled[[3]], dest)
@@ -156,8 +157,9 @@ test_that("Files will be searched for by hash when adding file store", {
 
   expect_true(root$config$core$use_file_store)
 
-  dest <- tempdir()
-  on.exit(unlink(dest, recursive = TRUE))
+  dest <- tempfile()
+  dir.create(dest)
+  on.exit(unlink(path, recursive = TRUE))
   root$files$get(root$metadata(id)$files$hash, dest)
 })
 
@@ -270,7 +272,8 @@ test_that("Can add archive", {
   hash <- root$metadata(id[["c"]])$files$hash
   expect_equal(length(hash), 3)
 
-  dest <- tempdir()
+  dest <- tempfile()
+  dir.create(dest)
   on.exit(unlink(dest, recursive = TRUE))
   root$files$get(hash[[1]], dest)
   root$files$get(hash[[2]], dest)
