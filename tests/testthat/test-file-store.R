@@ -34,4 +34,6 @@ test_that("Can store files", {
   expect_length(obj$list(), 10)
   expect_equal(file.exists(obj$filename(obj$list())),
                rep(TRUE, 10))
+  dest <- tempdir()
+  obj$get(obj$list(), dest)
 })

@@ -23,11 +23,12 @@ file_store <- R6::R6Class(
                 substr(dat$value, 3, nchar(dat$value)))
     },
 
-    ## TODO: bulk get, with overwrite control
+    ## TODO: overwrite control
     get = function(hash, dst) {
       src <- self$filename(hash)
-      if (!file.exists(src)) {
-        stop(sprintf("Hash '%s' not found in store", hash))
+      if (any(!file.exists(src))) {
+        stop(sprintf("Hash '%s' not found in store",
+                     hash[which(!file.exists(src))]))
       }
       fs::dir_create(dirname(dst))
       fs::file_copy(src, dst)

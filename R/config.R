@@ -133,7 +133,19 @@ config_set_path_archive <- function(value, root) {
     }
     config$core$path_archive <- value
   } else {
-    stop("can't add archive yet")
+    tryCatch({
+      path_archive <- file.path(root$path, value)
+      fs::dir_create(path_archive)
+      invisible(lapply(root$index()$unpacked$packet, function(id) {
+        meta <- root$metadata(id)
+        dst <- file.path(path_archive, meta$name, id, meta$files$path)
+        root$files$get(meta$files$hash, dst)
+      }))
+      config$core$path_archive <- value
+    }, error = function(e) {
+      fs::dir_delete(path_archive)
+      stop("Error adding 'path_archive': ", e$message, call. = FALSE)
+    })
   }
 
   config_write(config, root$path)
