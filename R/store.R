@@ -23,7 +23,7 @@ file_store <- R6::R6Class(
                 substr(dat$value, 3, nchar(dat$value)))
     },
 
-    ## TODO: overwrite control
+    ## TODO: bulk get, with overwrite control
     get = function(hash, dst) {
       src <- self$filename(hash)
       if (any(!file.exists(src))) {
