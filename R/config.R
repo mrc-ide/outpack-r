@@ -135,8 +135,8 @@ config_set_path_archive <- function(value, root) {
     }
     config$core$path_archive <- value
   } else {
-    assert_relative_path(value, name = "path_archive")
     path_archive <- file.path(root$path, value)
+    assert_relative_path(value, name = "path_archive")
     assert_directory_does_not_exist(path_archive)
     tryCatch({
       fs::dir_create(path_archive)
