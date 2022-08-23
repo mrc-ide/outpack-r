@@ -128,13 +128,17 @@ config_set_path_archive <- function(value, root) {
     path_archive_old <- file.path(root$path, config$core$path_archive)
     if (fs::dir_exists(path_archive_old)) {
       path_archive_new <- file.path(root$path, value)
+      assert_relative_path(value, name = "path_archive")
+      assert_directory_does_not_exist(path_archive_new)
       fs::dir_copy(path_archive_old, path_archive_new)
       fs::dir_delete(path_archive_old)
     }
     config$core$path_archive <- value
   } else {
+    assert_relative_path(value, name = "path_archive")
+    path_archive <- file.path(root$path, value)
+    assert_directory_does_not_exist(path_archive)
     tryCatch({
-      path_archive <- file.path(root$path, value)
       fs::dir_create(path_archive)
       invisible(lapply(root$index()$unpacked$packet, function(id) {
         meta <- root$metadata(id)
@@ -143,7 +147,10 @@ config_set_path_archive <- function(value, root) {
       }))
       config$core$path_archive <- value
     }, error = function(e) {
-      fs::dir_delete(path_archive)
+      path_archive <- file.path(root$path, value)
+      if (fs::dir_exists(path_archive)) {
+        fs::dir_delete(path_archive)
+      }
       stop("Error adding 'path_archive': ", e$message, call. = FALSE)
     })
   }

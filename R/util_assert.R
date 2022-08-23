@@ -110,6 +110,27 @@ assert_file_exists <- function(x, workdir = NULL, name = "File") {
 }
 
 
+assert_directory_does_not_exist <- function(x, name = "Directory") {
+  ok <- !fs::dir_exists(x)
+  if (!all(ok)) {
+    stop(sprintf("%s already exists: %s",
+                 name, paste(squote(x[!ok]), collapse = ", ")))
+  }
+
+  ## TODO: we should (as orderly does) verify that the casing is
+  ## correct here (avoiding README.MD/README.md confusion), but that's
+  ## actually quite hard to pull off.  Either we need to pull in the
+  ## enormous mess of code in orderly, or we can just about achive
+  ## this by looking at the fs::path_real(x) and stripping leading
+  ## path parts with fs::path_rel().  This does do very badly in the
+  ## case of symlinks though (e.g., macOS tempdir) and windows
+  ## shortened paths (e.g., Windows - orderly struggles there
+  ## generally too). (See 1170cc9)
+
+  invisible(x)
+}
+
+
 assert_directory <- function(x, workdir = NULL, name = "Directory") {
   assert_file_exists(x, workdir, name)
   if (!fs::is_dir(x)) {

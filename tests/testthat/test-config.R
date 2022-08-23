@@ -298,6 +298,28 @@ test_that("Archive is not added if file store is corrupt", {
 })
 
 
+test_that("Validates path_archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  expect_error(outpack_config_set(core.path_archive = "/archive", root = root),
+               "'path_archive' must be relative path")
+  expect_null(root$config$core$path_archive)
+
+  dir.create(file.path(path, "archive"))
+  expect_error(outpack_config_set(core.path_archive = "archive", root = root),
+               "Directory already exists")
+  expect_null(root$config$core$path_archive)
+
+  outpack_config_set(core.path_archive = "new-archive", root = root)
+  expect_error(outpack_config_set(core.path_archive = "/archive", root = root),
+               "'path_archive' must be relative path")
+  expect_error(outpack_config_set(core.path_archive = "archive", root = root),
+               "Directory already exists")
+  expect_equal(root$config$core$path_archive, "new-archive")
+})
+
+
 test_that("Enabling recursive pulls forces pulling missing packets", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
