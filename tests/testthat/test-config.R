@@ -106,8 +106,9 @@ test_that("Can add file_store", {
   hash_pulled <- root$dst$metadata(id[["c"]])$files$hash
   expect_equal(length(hash_pulled), 3)
 
-  dest <- tempdir()
-  on.exit(unlink(dest, recursive = TRUE))
+  dest <- tempfile()
+  dir.create(dest)
+  on.exit(unlink(path, recursive = TRUE))
   root$dst$files$get(hash_pulled[[1]], dest)
   root$dst$files$get(hash_pulled[[2]], dest)
   root$dst$files$get(hash_pulled[[3]], dest)
@@ -156,8 +157,9 @@ test_that("Files will be searched for by hash when adding file store", {
 
   expect_true(root$config$core$use_file_store)
 
-  dest <- tempdir()
-  on.exit(unlink(dest, recursive = TRUE))
+  dest <- tempfile()
+  dir.create(dest)
+  on.exit(unlink(path, recursive = TRUE))
   root$files$get(root$metadata(id)$files$hash, dest)
 })
 
@@ -240,13 +242,81 @@ test_that("Cannot remove archive if not using file store", {
 })
 
 
-test_that("Cannot add archive", {
+test_that("Can add archive", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
   root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
 
+  id <- create_random_packet_chain(root, 3)
+  outpack_config_set(core.path_archive = "archive", root = root)
+
+  expect_equal(root$config$core$path_archive, "archive")
+  expect_true(fs::dir_exists(file.path(path, "archive")))
+  expect_true(fs::dir_exists(file.path(path, "archive", "a", id[["a"]])))
+  expect_true(fs::dir_exists(file.path(path, "archive", "b", id[["b"]])))
+  expect_true(fs::dir_exists(file.path(path, "archive", "c", id[["c"]])))
+
+  expect_true(fs::file_exists(file.path(path, "archive", "c", id[["c"]],
+                                        "script.R")))
+  expect_true(fs::file_exists(file.path(path, "archive", "c", id[["c"]],
+                                        "input.rds")))
+  expect_true(fs::file_exists(file.path(path, "archive", "c", id[["c"]],
+                                        "data.rds")))
+
+  # remove file store, recreate it from the archive, then remove archive
+  # and check the remaining file store is valid
+  outpack_config_set(core.use_file_store = FALSE, root = root)
+  outpack_config_set(core.use_file_store = TRUE, root = root)
+  outpack_config_set(core.path_archive = NULL, root = root)
+
+  hash <- root$metadata(id[["c"]])$files$hash
+  expect_equal(length(hash), 3)
+
+  dest <- tempfile()
+  dir.create(dest)
+  on.exit(unlink(dest, recursive = TRUE))
+  root$files$get(hash[[1]], dest)
+  root$files$get(hash[[2]], dest)
+  root$files$get(hash[[3]], dest)
+})
+
+
+test_that("Archive is not added if file store is corrupt", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+
+  id <- create_random_packet_chain(root, 3)
+  hash <- root$metadata(id[["c"]])$files$hash
+  fs::file_delete(root$files$filename(hash[[1]]))
+  e <- "Error adding 'path_archive': Hash 'sha256(.*)' not found in store"
   expect_error(outpack_config_set(core.path_archive = "archive", root = root),
-               "can't add archive yet")
+               e)
+
+  expect_null(root$config$core$path_archive)
+  expect_false(fs::dir_exists(file.path(path, "archive")))
+})
+
+
+test_that("Validates path_archive", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  expect_error(outpack_config_set(core.path_archive = "/archive", root = root),
+               "'path_archive' must be relative path")
+  expect_null(root$config$core$path_archive)
+
+  dir.create(file.path(path, "archive"))
+  expect_error(outpack_config_set(core.path_archive = "archive", root = root),
+               "Directory already exists")
+  expect_null(root$config$core$path_archive)
+
+  outpack_config_set(core.path_archive = "new-archive", root = root)
+  expect_error(outpack_config_set(core.path_archive = "/archive", root = root),
+               "'path_archive' must be relative path")
+  expect_error(outpack_config_set(core.path_archive = "archive", root = root),
+               "Directory already exists")
+  expect_equal(root$config$core$path_archive, "new-archive")
 })
 
 
