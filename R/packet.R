@@ -109,21 +109,33 @@ outpack_packet_end <- function() {
 ##'   times within a single packet run (or zero times!) as needed.
 ##'
 ##' @param envir Environment in which to run the script
-outpack_packet_run <- function(script, envir = .GlobalEnv) {
+##'
+##' @param echo Print the result of running the R code to the
+##'   console. This may be difficult to suppress in some context, as
+##'   it comes directly from R's [source] function.
+outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE) {
   p <- outpack_packet_current()
   assert_relative_path(script, no_dots = TRUE)
   assert_file_exists(script, p$path, "Script")
 
-  ## TODO: Logging
+  ## TODO: not sure that this is the correct environment; should it be
+  ## parent.frame() perhaps (see default args to new.env)
 
-  ## TODO: Control over echo (as in orderly)
+  ## TODO: Logging; if we are logging then should we also echo to log
+  ## too? In addition to the console or instead, and what controls
+  ## that?
 
   ## TODO: Control over running in separate process (if we do that,
-  ## the process should return session, too)
+  ## the process should return session, too). This is probably a bit
+  ## hard to get right as we'd need to know what bits of the session
+  ## need replaying into the second session - I suspect it should be
+  ## an entirely different function. More likely we'll run the whole
+  ## packet setup in a new process as we currently do in orderly.
 
   ## TODO: What should we do/store on error?
-
-  with_dir(p$path, sys.source(script, envir = envir))
+  with_dir(
+    p$path,
+    source_script(script, envir, echo))
 
   p$script <- c(p$script, script)
   current$packet <- p

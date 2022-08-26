@@ -18,7 +18,7 @@ outpack_packet_current()
 
 outpack_packet_end()
 
-outpack_packet_run(script, envir = .GlobalEnv)
+outpack_packet_run(script, envir = .GlobalEnv, echo = FALSE)
 
 outpack_packet_use_dependency(id, files)
 
@@ -43,6 +43,10 @@ relative path).  This function can be safely called multiple
 times within a single packet run (or zero times!) as needed.}
 
 \item{envir}{Environment in which to run the script}
+
+\item{echo}{Print the result of running the R code to the
+console. This may be difficult to suppress in some context, as
+it comes directly from R's \link{source} function.}
 
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the

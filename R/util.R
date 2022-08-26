@@ -146,3 +146,48 @@ last <- function(x) {
 deparse_str <- function(expr) {
   paste(deparse(expr), collapse = "\n")
 }
+
+
+source_script <- function(path, envir, echo) {
+  source(path, local = envir, # nolint
+         echo = echo, max.deparse.length = Inf)
+}
+
+
+## This block is rrq's "Eval safely" which allows collection of traces
+## nicely, probably something worth doing.
+collector <- function(init = character(0)) {
+  env <- new.env(parent = emptyenv())
+  env$res <- init
+  add <- function(x) {
+    env$res <- c(env$res, x)
+  }
+  list(add = add,
+       get = function() env$res)
+}
+
+
+expression_eval_safely <- function(expr, envir) {
+  warnings <- collector()
+  trace <- collector()
+
+  handler <- function(e) {
+    e$trace <- trace$get()
+    w <- warnings$get()
+    if (length(w) > 0) {
+      e$warnings <- w
+    }
+    class(e) <- c("rrq_task_error", class(e))
+    e
+  }
+
+  value <- tryCatch(
+    withCallingHandlers(
+      eval(expr, envir),
+      warning = function(e) warnings$add(e$message),
+      error = function(e) trace$add(utils::limitedLabels(sys.calls()))),
+    error = handler)
+
+  list(value = value,
+       success = !inherits(value, "rrq_task_error"))
+}
