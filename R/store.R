@@ -45,13 +45,19 @@ file_store <- R6::R6Class(
     ## though that requires working out what the algorithm should be.
     ## Our current use knows the hash at the point of insertion and
     ## the validation is very useful!
-    put = function(src, hash) {
+    put = function(src, hash, move = FALSE) {
       hash_validate(src, hash)
       dst <- self$filename(hash)
       if (!fs::file_exists(dst)) {
         fs::dir_create(dirname(dst))
-        fs::file_copy(src, dst)
+        if (move) {
+          fs::file_move(src, dst)
+        } else {
+          fs::file_copy(src, dst)
+        }
         fs::file_chmod(dst, "a-wx")
+      } else if (move) {
+        unlink(src)
       }
       invisible(hash)
     },
@@ -65,6 +71,12 @@ file_store <- R6::R6Class(
 
     destroy = function() {
       fs::dir_delete(self$path)
+    },
+
+    tmp = function() {
+      path <- file.path(self$path, "tmp")
+      fs::dir_create(file.path(self$path, "tmp"))
+      tempfile(tmpdir = path)
     }
   )
 )

@@ -334,10 +334,22 @@ location_pull_files_store <- function(root, driver, packet_id) {
     meta <- root$metadata(packet_id)
     files_exist <- root$files$exists(meta$files$hash)
     for (h in meta$files$hash[!files_exist]) {
+      ## TODO: for the location archive we don't want to copy twice if
+      ## we can avoid it really - so what we've done is return a
+      ## read-only pointer to the file. But that works poorly for the
+      ## http version which will need to save a file that can be
+      ## *moved* into place.
+      ##
+      ## So if we provide a destination argument here, then the store
+      ## becomes the "owner" and this works much better as we can
+      ## ensure it's on the same filesystem (check for other uses of
+      ## put though).
+
       ## TODO: Should we support bulk download? This might be more
       ## efficient for some drivers (e.g., async http or streaming a
       ## single zip)
-      root$files$put(driver$fetch_file(h), h)
+      dest <- root$files$tmp()
+      root$files$put(driver$fetch_file(h, dest), h, move = TRUE)
     }
   }
 }
@@ -359,8 +371,9 @@ location_pull_files_archive <- function(root, driver, packet_id) {
       fs::dir_create(dirname(dest))
       for (i in seq_len(nrow(meta$files))) {
         hash <- meta$files$hash[[i]]
-        src <- find_file_by_hash(root, hash) %||% driver$fetch_file(hash)
-        fs::file_copy(src, dest[[i]])
+        ## Again here a destination arg would be nice
+        src <- find_file_by_hash(root, hash) %||%
+          driver$fetch_file(hash, dest[[i]])
       }
     }
   }

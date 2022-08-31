@@ -101,8 +101,11 @@ test_that("can locate files from the store", {
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
-  expect_equal(normalizePath(loc$fetch_file(h)),
-               normalizePath(root$files$filename(h)))
+  dest <- tempfile()
+  on.exit(unlink(dest), add = TRUE)
+  res <- loc$fetch_file(h, dest)
+  expect_identical(res, dest)
+  expect_identical(hash_file(res), h)
 })
 
 
@@ -113,9 +116,11 @@ test_that("sensible error if file not found in store", {
   outpack_init(path, use_file_store = TRUE)
   loc <- outpack_location_path$new(path)
   h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
+  dest <- tempfile()
   expect_error(
-    loc$fetch_file(h),
+    loc$fetch_file(h, dest),
     "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
+  expect_false(file.exists(dest))
 })
 
 
@@ -130,8 +135,11 @@ test_that("Can find file from archive", {
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
-  expect_equal(loc$fetch_file(h),
-               file.path(path, "archive", "data", ids[[1]], "data.rds"))
+  dest <- tempfile()
+  on.exit(unlink(dest), add = TRUE)
+  res <- loc$fetch_file(h, dest)
+  expect_identical(res, dest)
+  expect_identical(hash_file(dest), h)
 })
 
 
@@ -142,7 +150,9 @@ test_that("sensible error if file not found in archive", {
   outpack_init(path, use_file_store = FALSE)
   loc <- outpack_location_path$new(path)
   h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
+  dest <- tempfile()
   expect_error(
-    loc$fetch_file(h),
+    loc$fetch_file(h, dest),
     "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
+  expect_false(file.exists(dest))
 })
