@@ -114,6 +114,17 @@ test_that("Can't rename a location using an existent name", {
 })
 
 
+test_that("Can't rename a  non-existent location", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_equal(outpack_location_list(root = path), "local")
+
+  expect_error(outpack_location_rename("a", "b", root),
+               "No location with name 'a' exists")
+})
+
+
 test_that("Can't rename default locations", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
