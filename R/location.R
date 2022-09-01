@@ -63,6 +63,47 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
 }
 
 
+##' Rename an existing location
+##'
+##' @title Rename a location
+##'
+##' @param old The current short name of the location.
+##' Cannot rename `local` or `orphan`
+##'
+##' @param new The desired short name of the location.
+##' Cannot be one of `local` or `orphan`
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##' @export
+outpack_location_rename <- function(old, new, root = NULL) {
+  root <- outpack_root_open(root, locate = TRUE)
+  assert_scalar_character(new)
+
+  if (old %in% location_reserved_name) {
+    stop(sprintf("Cannot rename default location '%s'",
+                 old))
+  }
+  if (new %in% outpack_location_list(root)) {
+    stop(sprintf("A location with name '%s' already exists",
+                 new))
+  }
+  if (!(old %in% outpack_location_list(root))) {
+    stop(sprintf("No location with name '%s' exists",
+                 old))
+  }
+
+  config <- root$config
+  id <- lookup_location_id(old, root)
+  config$location$name[config$location$id == id] <- new
+  config_write(config, root$path)
+
+  root$config <- config_read(root$path)
+  invisible()
+}
+
+
 ##' List known locations.
 ##'
 ##' @title List known pack locations
