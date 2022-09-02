@@ -39,3 +39,41 @@ test_that("Can store files", {
   on.exit(unlink(dest, recursive = TRUE))
   obj$get(obj$list(), dest)
 })
+
+
+test_that("can move files into place", {
+  tmp <- tempfile()
+  on.exit(unlink(tmp, recursive = TRUE))
+  dir.create(tmp)
+  for (i in 1:2) {
+    saveRDS(runif(10), file.path(tmp, letters[i]))
+  }
+  pa <- file.path(tmp, "a")
+  pb <- file.path(tmp, "b")
+  ha <- hash_file(pa)
+  hb <- hash_file(pb)
+
+  obj <- file_store$new(tempfile())
+  on.exit(unlink(obj$path, recursive = TRUE), add = TRUE)
+  obj$put(pa, ha, move = FALSE)
+  ## Original file has not been moved:
+  expect_true(file.exists(pa))
+
+  ## Moving files removes the source file whether or not a move was
+  ## completed:
+  obj$put(pa, ha, move = TRUE)
+  obj$put(pb, hb, move = TRUE)
+  expect_false(file.exists(pa))
+  expect_false(file.exists(pb))
+})
+
+
+test_that("can create a filename within the store", {
+  obj <- file_store$new(tempfile())
+  on.exit(unlink(obj$path, recursive = TRUE), add = TRUE)
+  p <- obj$tmp()
+  expect_equal(normalizePath(dirname(p)),
+               normalizePath(file.path(obj$path, "tmp")))
+  expect_false(file.exists(p))
+  expect_true(file.exists(file.path(obj$path, "tmp")))
+})
