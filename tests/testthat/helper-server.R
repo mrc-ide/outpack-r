@@ -9,7 +9,7 @@
 ## For an eventual CRAN release we'l need some other way of doing this
 ## though.
 install_deps <- function() {
-  if (!requireNamespace("outpack.server")) {
+  if (!requireNamespace("outpack.server", quietly = TRUE)) {
     message("Installing additional requirements")
     getNamespace("remotes")$install_github("mrc-ide/outpack.server",
                                            upgrade = FALSE)

@@ -18,7 +18,8 @@ outpack_http_client <- R6::R6Class(
   ))
 
 
-http_client_request <- function(verb, server, path, ..., parse_json = TRUE, download = NULL) {
+http_client_request <- function(verb, server, path, ..., parse_json = TRUE,
+                                download = NULL) {
   if (is.null(download)) {
     response <- verb(paste0(server, path), ...)
   } else {
