@@ -89,8 +89,13 @@ test_that("Can rename a location", {
   outpack_location_add("b", root$b$path, root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
 
+  ids <- outpack_root_open(root$a, locate = TRUE)$config$location$id
+
   outpack_location_rename("b", "c", root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "c"))
+
+  expect_setequal(outpack_root_open(root$a, locate = TRUE)$config$location$id,
+                  ids)
 })
 
 

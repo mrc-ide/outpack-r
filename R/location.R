@@ -32,10 +32,7 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   assert_scalar_character(name)
   assert_scalar_numeric(priority)
 
-  if (name %in% location_reserved_name) {
-    stop(sprintf("Cannot add a location with reserved name '%s'",
-                 name))
-  }
+  location_check_new_name(root, name)
   if (name %in% outpack_location_list(root)) {
     stop(sprintf("A location with name '%s' already exists",
                  name))
@@ -85,14 +82,8 @@ outpack_location_rename <- function(old, new, root = NULL) {
     stop(sprintf("Cannot rename default location '%s'",
                  old))
   }
-  if (new %in% outpack_location_list(root)) {
-    stop(sprintf("A location with name '%s' already exists",
-                 new))
-  }
-  if (!(old %in% outpack_location_list(root))) {
-    stop(sprintf("No location with name '%s' exists",
-                 old))
-  }
+  location_check_new_name(root, new)
+  location_check_exists(root, old)
 
   config <- root$config
   id <- lookup_location_id(old, root)
@@ -431,4 +422,20 @@ lookup_location_id <- function(name, root) {
 
 lookup_location_name <- function(id, root) {
   root$config$location$name[match(id, root$config$location$id)]
+}
+
+
+location_check_new_name <- function(root, name) {
+  if (name %in% outpack_location_list(root)) {
+    stop(sprintf("A location with name '%s' already exists",
+                 name))
+  }
+}
+
+
+location_check_exists <- function(root, name) {
+  if (!(name %in% outpack_location_list(root))) {
+    stop(sprintf("No location with name '%s' exists",
+                 name))
+  }
 }
