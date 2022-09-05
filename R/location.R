@@ -32,11 +32,11 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   assert_scalar_character(name)
   assert_scalar_numeric(priority)
 
-  location_check_new_name(root, name)
-  if (name %in% outpack_location_list(root)) {
-    stop(sprintf("A location with name '%s' already exists",
+  if (name %in% location_reserved_name) {
+    stop(sprintf("Cannot add a location with reserved name '%s'",
                  name))
   }
+  location_check_new_name(root, name)
 
   ## We won't be necessarily be able to do this _generally_ but here,
   ## let's confirm that we can read from the outpack archive at the
