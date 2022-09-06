@@ -33,9 +33,11 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v1
 
-      - name: Install Linux system dependencies
-        if: runner.os == "Linux"
-        run: sudo apt install libsodium-dev
+      - name: Install system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          set -x
+          sudo apt install libsodium-dev
 
       - uses: r-lib/actions/setup-r@v1
         with:
