@@ -20,7 +20,7 @@ outpack_packet_run)"><!-- mathjax --><script src="https://cdnjs.cloudflare.com/a
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.5</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.1.7</span>
       </span>
     </div>
 
@@ -74,7 +74,7 @@ the current packet (<code>outpack_packet_use_dependency</code>,
 <span></span>
 <span><span class="fu">outpack_packet_end</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span><span class="op">)</span></span>
+<span><span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span>, echo <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">outpack_packet_use_dependency</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span><span class="op">)</span></span>
 <span></span>
@@ -114,6 +114,12 @@ times within a single packet run (or zero times!) as needed.</p></dd>
 
 <dt>envir</dt>
 <dd><p>Environment in which to run the script</p></dd>
+
+
+<dt>echo</dt>
+<dd><p>Print the result of running the R code to the
+console. This may be difficult to suppress in some context, as
+it comes directly from R's <a href="https://rdrr.io/r/base/source.html" class="external-link">source</a> function.</p></dd>
 
 
 <dt>files</dt>
