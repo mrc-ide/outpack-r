@@ -23,6 +23,7 @@ Suggests:
     jsonvalidate (>= 1.4.0),
     knitr,
     mockery,
+    remotes,
     rmarkdown,
     testthat (>= 3.0.0),
     withr
