@@ -121,7 +121,7 @@ outpack_location_remove <- function(name, root = NULL) {
   packets <- index$location$packet[index$location$location == id]
 
   if (length(packets) > 0) {
-    if (!("orphan" %in% outpack_location_list(root))) {
+    if (!location_exists(root, "orphan")) {
       config$location <- rbind(
         config$location,
         new_location_entry(orphan, -1, "orphan", NULL))
@@ -131,7 +131,7 @@ outpack_location_remove <- function(name, root = NULL) {
     }
 
     orphan_id <- config$location$id[match("orphan", config$location$name)]
-    orphan_location(id, packets, orphan_id, root)
+    mark_packets_orphaned(id, packets, orphan_id, root)
     root$index(refresh = TRUE)
   }
 
@@ -474,7 +474,7 @@ lookup_location_name <- function(id, root) {
 
 
 location_check_new_name <- function(root, name) {
-  if (name %in% outpack_location_list(root)) {
+  if (location_exists(root, name)) {
     stop(sprintf("A location with name '%s' already exists",
                  name))
   }
@@ -482,14 +482,19 @@ location_check_new_name <- function(root, name) {
 
 
 location_check_exists <- function(root, name) {
-  if (!(name %in% outpack_location_list(root))) {
+  if (!location_exists(root, name)) {
     stop(sprintf("No location with name '%s' exists",
                  name))
   }
 }
 
 
-orphan_location <- function(location_id, packet_id, orphan_id, root) {
+location_exists <- function(root, name) {
+  name %in% outpack_location_list(root)
+}
+
+
+mark_packets_orphaned <- function(location_id, packet_id, orphan_id, root) {
   location <- file.path(root$path, ".outpack", "location", location_id, packet_id)
   dest <- file.path(root$path, ".outpack", "location", orphan_id, packet_id)
   fs::dir_create(dirname(dest))
