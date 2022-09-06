@@ -95,7 +95,8 @@ outpack_location_rename <- function(old, new, root = NULL) {
 }
 
 
-##' Remove an existing location
+##' Remove an existing location. Any packets from this location
+##' will now be associated with the 'orphan' location instead.
 ##'
 ##' @title Remove a location
 ##'
