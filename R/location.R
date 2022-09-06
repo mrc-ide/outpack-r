@@ -496,7 +496,8 @@ location_exists <- function(root, name) {
 
 
 mark_packets_orphaned <- function(location_id, packet_id, orphan_id, root) {
-  location <- file.path(root$path, ".outpack", "location", location_id, packet_id)
+  location <- file.path(root$path, ".outpack", "location", location_id,
+                        packet_id)
   dest <- file.path(root$path, ".outpack", "location", orphan_id, packet_id)
   fs::dir_create(dirname(dest))
   fs::file_move(location, dest)
