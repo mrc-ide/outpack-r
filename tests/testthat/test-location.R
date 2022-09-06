@@ -148,22 +148,31 @@ test_that("Can remove a location", {
   on.exit(unlink(path, recursive = TRUE))
 
   root <- list()
-  for (p in c("a", "b")) {
+  for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
   outpack_location_add("b", root$b$path, root = root$a)
-  expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
+  outpack_location_add("c", root$c$path, root = root$a)
+  expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
 
-  id <- create_random_packet(root$b)
+  id1 <- create_random_packet(root$b)
+  id2 <- create_random_packet(root$b)
   outpack_location_pull_metadata(root = root$a)
 
+  # remove a location without any packets
+  outpack_location_remove("c", root = root$a)
+  expect_setequal(outpack_location_list(root = root$a),
+                  c("local", "b"))
+
+  # remove a location with packets
   outpack_location_remove("b", root = root$a)
-  expect_setequal(outpack_location_list(root = root$a), c("local", "orphan"))
+  expect_setequal(outpack_location_list(root = root$a),
+                  c("local", "orphan"))
   config <- outpack_root_open(root$a, locate = TRUE)$config
   orphan_id <- config$location$id[config$location$name == "orphan"]
-  expect_equal(root$a$index()$location$location, orphan_id)
+  expect_equal(root$a$index()$location$location, c(orphan_id, orphan_id))
 })
 
 
@@ -177,6 +186,17 @@ test_that("Can't remove default locations", {
                "Cannot remove default location 'local'")
   expect_error(outpack_location_remove("orphan", root),
                "Cannot remove default location 'orphan'")
+})
+
+
+test_that("Can't remove non-existent location", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- outpack_init(path)
+
+  expect_error(outpack_location_remove("b",  root),
+               "No location with name 'b' exists")
 })
 
 
