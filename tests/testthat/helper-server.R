@@ -12,7 +12,8 @@ install_deps <- function() {
   if (!requireNamespace("outpack.server", quietly = TRUE)) {
     message("Installing additional requirements")
     if (!requireNamespace("remotes", quietly = TRUE)) {
-      install.packages("remotes")
+      install.packages("remotes",
+                       repos = c(CRAN = "https://cloud.r-project.org"))
     }
     getNamespace("remotes")$install_github("mrc-ide/outpack.server@mrc-3605",
                                            upgrade = FALSE)
