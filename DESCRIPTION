@@ -19,6 +19,7 @@ Imports:
     jsonlite,
     openssl
 Suggests:
+    httr,
     jsonvalidate (>= 1.4.0),
     knitr,
     mockery,
