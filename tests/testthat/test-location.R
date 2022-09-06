@@ -76,6 +76,73 @@ test_that("Require that (for now) locations must be paths", {
 })
 
 
+test_that("Can rename a location", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  outpack_location_add("b", root$b$path, root = root$a)
+  expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
+
+  ids <- outpack_root_open(root$a, locate = TRUE)$config$location$id
+
+  outpack_location_rename("b", "c", root = root$a)
+  expect_setequal(outpack_location_list(root = root$a), c("local", "c"))
+
+  expect_setequal(outpack_root_open(root$a, locate = TRUE)$config$location$id,
+                  ids)
+})
+
+
+test_that("Can't rename a location using an existent name", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b", "c")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  outpack_location_add("b", root$b$path, root = root$a)
+  outpack_location_add("c", root$c$path, root = root$a)
+
+  expect_error(outpack_location_rename("b", "c", root$a),
+               "A location with name 'c' already exists")
+  expect_error(outpack_location_rename("b", "local", root$a),
+               "A location with name 'local' already exists")
+})
+
+
+test_that("Can't rename a  non-existent location", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_equal(outpack_location_list(root = path), "local")
+
+  expect_error(outpack_location_rename("a", "b", root),
+               "No location with name 'a' exists")
+})
+
+
+test_that("Can't rename default locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- outpack_init(path)
+
+  expect_error(outpack_location_rename("local", "desktop", root),
+               "Cannot rename default location 'local'")
+  expect_error(outpack_location_rename("orphan", "removed", root),
+               "Cannot rename default location 'orphan'")
+})
+
+
 test_that("can pull metadata from a file base location", {
   tmp <- tempfile()
   on.exit(unlink(tmp, recursive = TRUE))

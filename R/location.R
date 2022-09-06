@@ -36,10 +36,7 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
     stop(sprintf("Cannot add a location with reserved name '%s'",
                  name))
   }
-  if (name %in% outpack_location_list(root)) {
-    stop(sprintf("A location with name '%s' already exists",
-                 name))
-  }
+  location_check_new_name(root, name)
 
   ## We won't be necessarily be able to do this _generally_ but here,
   ## let's confirm that we can read from the outpack archive at the
@@ -56,6 +53,41 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   config$location <- config$location[
     order(config$location$priority, decreasing = TRUE), ]
   rownames(config$location) <- NULL
+  config_write(config, root$path)
+
+  root$config <- config_read(root$path)
+  invisible()
+}
+
+
+##' Rename an existing location
+##'
+##' @title Rename a location
+##'
+##' @param old The current short name of the location.
+##' Cannot rename `local` or `orphan`
+##'
+##' @param new The desired short name of the location.
+##' Cannot be one of `local` or `orphan`
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##' @export
+outpack_location_rename <- function(old, new, root = NULL) {
+  root <- outpack_root_open(root, locate = TRUE)
+  assert_scalar_character(new)
+
+  if (old %in% location_reserved_name) {
+    stop(sprintf("Cannot rename default location '%s'",
+                 old))
+  }
+  location_check_new_name(root, new)
+  location_check_exists(root, old)
+
+  config <- root$config
+  id <- lookup_location_id(old, root)
+  config$location$name[config$location$id == id] <- new
   config_write(config, root$path)
 
   root$config <- config_read(root$path)
@@ -390,4 +422,20 @@ lookup_location_id <- function(name, root) {
 
 lookup_location_name <- function(id, root) {
   root$config$location$name[match(id, root$config$location$id)]
+}
+
+
+location_check_new_name <- function(root, name) {
+  if (name %in% outpack_location_list(root)) {
+    stop(sprintf("A location with name '%s' already exists",
+                 name))
+  }
+}
+
+
+location_check_exists <- function(root, name) {
+  if (!(name %in% outpack_location_list(root))) {
+    stop(sprintf("No location with name '%s' exists",
+                 name))
+  }
 }
