@@ -143,6 +143,43 @@ test_that("Can't rename default locations", {
 })
 
 
+test_that("Can remove a location", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  outpack_location_add("b", root$b$path, root = root$a)
+  expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
+
+  id <- create_random_packet(root$b)
+  outpack_location_pull_metadata(root = root$a)
+
+  outpack_location_remove("b", root = root$a)
+  expect_setequal(outpack_location_list(root = root$a), c("local", "orphan"))
+  config <- outpack_root_open(root$a, locate = TRUE)$config
+  orphan_id <- config$location$id[config$location$name == "orphan"]
+  expect_equal(root$a$index()$location$location, orphan_id)
+})
+
+
+test_that("Can't remove default locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- outpack_init(path)
+
+  expect_error(outpack_location_remove("local",  root),
+               "Cannot remove default location 'local'")
+  expect_error(outpack_location_remove("orphan", root),
+               "Cannot remove default location 'orphan'")
+})
+
+
 test_that("can pull metadata from a file base location", {
   tmp <- tempfile()
   on.exit(unlink(tmp, recursive = TRUE))

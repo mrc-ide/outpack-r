@@ -95,6 +95,54 @@ outpack_location_rename <- function(old, new, root = NULL) {
 }
 
 
+##' Remove an existing location
+##'
+##' @title Remove a location
+##'
+##' @param name The short name of the location.
+##' Cannot remove `local` or `orphan`
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Nothing
+##' @export
+outpack_location_remove <- function(name, root = NULL) {
+  root <- outpack_root_open(root, locate = TRUE)
+
+  if (name %in% location_reserved_name) {
+    stop(sprintf("Cannot remove default location '%s'",
+                 name))
+  }
+  location_check_exists(root, name)
+
+  index <- root$index()
+  config <- root$config
+  id <- lookup_location_id(name, root)
+  packets <- index$location$packet[index$location$location == id]
+
+  if (length(packets) > 0) {
+    if (!("orphan" %in% outpack_location_list(root))) {
+      config$location <- rbind(
+        config$location,
+        new_location_entry(orphan, -1, "orphan", NULL))
+      config$location <- config$location[
+        order(config$location$priority, decreasing = TRUE), ]
+      rownames(config$location) <- NULL
+    }
+
+    orphan_id <- config$location$id[match("orphan", config$location$name)]
+    orphan_location(id, packets, orphan_id, root)
+    root$index(refresh = TRUE)
+  }
+
+  config$location <- config$location[config$location$name != name, ]
+  config_write(config, root$path)
+
+  root$config <- config_read(root$path)
+  invisible()
+}
+
+
 ##' List known locations.
 ##'
 ##' @title List known pack locations
@@ -438,4 +486,12 @@ location_check_exists <- function(root, name) {
     stop(sprintf("No location with name '%s' exists",
                  name))
   }
+}
+
+
+orphan_location <- function(location_id, packet_id, orphan_id, root) {
+  location <- file.path(root$path, ".outpack", "location", location_id, packet_id)
+  dest <- file.path(root$path, ".outpack", "location", orphan_id, packet_id)
+  fs::dir_create(dirname(dest))
+  fs::file_move(location, dest)
 }
