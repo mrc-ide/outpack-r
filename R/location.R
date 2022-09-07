@@ -53,9 +53,7 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
   config$location <- config$location[
     order(config$location$priority, decreasing = TRUE), ]
   rownames(config$location) <- NULL
-  config_write(config, root$path)
-
-  root$config <- config_read(root$path)
+  root$update_config(config)
   invisible()
 }
 
@@ -88,9 +86,7 @@ outpack_location_rename <- function(old, new, root = NULL) {
   config <- root$config
   id <- lookup_location_id(old, root)
   config$location$name[config$location$id == id] <- new
-  config_write(config, root$path)
-
-  root$config <- config_read(root$path)
+  root$update_config(config)
   invisible()
 }
 
@@ -119,9 +115,11 @@ outpack_location_remove <- function(name, root = NULL) {
   index <- root$index()
   config <- root$config
   id <- lookup_location_id(name, root)
-  packets <- index$location$packet[index$location$location == id]
+  known_here <- index$location$packet[index$location$location == id]
+  known_elsewhere <- index$location$packet[index$location$location != id]
+  only_here <- setdiff(known_here, known_elsewhere)
 
-  if (length(packets) > 0) {
+  if (length(only_here) > 0) {
     if (!location_exists(root, "orphan")) {
       config$location <- rbind(
         config$location,
@@ -132,14 +130,16 @@ outpack_location_remove <- function(name, root = NULL) {
     }
 
     orphan_id <- config$location$id[match("orphan", config$location$name)]
-    mark_packets_orphaned(id, packets, orphan_id, root)
-    root$index(refresh = TRUE)
+    mark_packets_orphaned(id, only_here, orphan_id, root)
   }
 
+  location_path <- file.path(root$path, ".outpack", "location", id)
+  if (fs::dir_exists(location_path)) {
+    fs::dir_delete(location_path)
+  }
+  root$index(refresh = TRUE)
   config$location <- config$location[config$location$name != name, ]
-  config_write(config, root$path)
-
-  root$config <- config_read(root$path)
+  root$update_config(config)
   invisible()
 }
 

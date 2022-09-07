@@ -147,6 +147,7 @@ test_that("Can remove a location", {
   path <- tempfile()
   on.exit(unlink(path, recursive = TRUE))
 
+  path <- "wkdir"
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -157,11 +158,10 @@ test_that("Can remove a location", {
   outpack_location_add("c", root$c$path, root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
 
-  id1 <- create_random_packet(root$b)
-  id2 <- create_random_packet(root$b)
+  id <- create_random_packet(root$b)
   outpack_location_pull_metadata(root = root$a)
 
-  # remove a location without any packets
+  # remove a location without packets
   outpack_location_remove("c", root = root$a)
   expect_setequal(outpack_location_list(root = root$a),
                   c("local", "b"))
@@ -170,9 +170,59 @@ test_that("Can remove a location", {
   outpack_location_remove("b", root = root$a)
   expect_setequal(outpack_location_list(root = root$a),
                   c("local", "orphan"))
+
   config <- outpack_root_open(root$a, locate = TRUE)$config
   orphan_id <- config$location$id[config$location$name == "orphan"]
-  expect_equal(root$a$index()$location$location, c(orphan_id, orphan_id))
+  expect_equal(root$a$index()$location$location, c(orphan_id))
+})
+
+
+test_that("Removing a location orphans packets only from that location", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+
+  root <- list()
+  for (p in c("a", "b", "c")) {
+    fs::dir_create(file.path(path, p))
+    root[[p]] <- outpack_init(file.path(path, p))
+  }
+
+  outpack_location_add("c", root$c$path, root = root$b)
+  outpack_location_add("b", root$b$path, root = root$a)
+  outpack_location_add("c", root$c$path, root = root$a)
+  expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
+  expect_setequal(outpack_location_list(root = root$b), c("local", "c"))
+
+  id1 <- create_random_packet(root$c)
+  id2 <- create_random_packet(root$b)
+  outpack_location_pull_metadata(root = root$b)
+  outpack_location_pull_metadata(root = root$a)
+
+  # id1 should now be found in both b and c
+  index <- root$a$index()
+  config <- outpack_root_open(root$a, locate = TRUE)$config
+  b_id <- config$location$id[config$location$name == "b"]
+  c_id <- config$location$id[config$location$name == "c"]
+  expect_equal(index$location$location[index$location$packet == id1],
+               c(b_id, c_id))
+
+  # id2 should just be found in b
+  expect_equal(index$location$location[index$location$packet == id2], b_id)
+
+  # remove location b
+  outpack_location_remove("b", root = root$a)
+  expect_setequal(outpack_location_list(root = root$a),
+                  c("local", "orphan", "c"))
+
+  # id1 should now only be found in c
+  config <- outpack_root_open(root$a, locate = TRUE)$config
+  index <- root$a$index()
+  expect_equal(index$location$location[index$location$packet == id1], c_id)
+
+  # id2 should be orphaned
+  orphan_id <- config$location$id[config$location$name == "orphan"]
+  expect_equal(index$location$location[index$location$packet == id2], orphan_id)
+
 })
 
 

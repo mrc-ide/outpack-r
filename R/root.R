@@ -136,6 +136,11 @@ outpack_root <- R6::R6Class(
     remove_file_store = function() {
       self$files$destroy()
       self$files <- NULL
+    },
+
+    update_config = function(config) {
+      config_write(config, self$path)
+      self$config <- config_read(self$path)
     }
   ))
 
