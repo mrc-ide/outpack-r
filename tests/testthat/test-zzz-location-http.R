@@ -15,7 +15,6 @@ describe("server integration tests", {
   ids <- create_random_packet_chain(path, 4)
 
   it("returns sensible list data when non-empty", {
-    client_http <- outpack_location_http$new(url)
     expect_identical(client_http$list(),
                      client_path$list())
   })
