@@ -53,3 +53,51 @@ describe("server integration tests", {
     expect_false(file.exists(path2))
   })
 })
+
+
+describe("http location integration tests", {
+  path <- tempfile()
+  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  server <- outpack_server(path)
+  url <- server$url("")
+
+  ids <- vcapply(1:3, function(i) create_random_packet(path))
+
+  it("can pull metadata", {
+    tmp <- tempfile()
+    on.exit(unlink(tmp, recursive = TRUE))
+    path_downstream <- file.path(tmp, "downstream")
+    outpack_init(path_downstream, use_file_store = TRUE)
+    expect_equal(names(outpack_root_open(path_downstream)$index()$metadata),
+                 character())
+    outpack_location_add("upstream", "http", list(url = url),
+                         root = path_downstream)
+    expect_equal(outpack_location_list(root = path_downstream),
+                 c("local", "upstream"))
+    outpack_location_pull_metadata("upstream", root = path_downstream)
+
+    root_downstream <- outpack_root_open(path_downstream)
+    idx <- root_downstream$index()
+    expect_equal(names(idx$metadata), ids)
+  })
+
+  it("can locate files from the store", {
+    hash <- root$files$list()[[1]]
+    dest <- tempfile()
+    loc <- outpack_location_http$new(url)
+    on.exit(unlink(dest), add = TRUE)
+    res <- loc$fetch_file(hash, dest)
+    expect_identical(res, dest)
+    expect_identical(hash_file(res), hash)
+  })
+
+  test_that("sensible error if file not found in store", {
+    loc <- outpack_location_http$new(url)
+    h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
+    dest <- tempfile()
+    expect_error(
+      loc$fetch_file(h, dest),
+      "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
+    expect_false(file.exists(dest))
+  })
+})

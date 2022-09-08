@@ -171,7 +171,8 @@ test_that("location based queries", {
   for (name in c("x", "y", "z")) {
     path[[name]] <- file.path(tmp, name)
     root[[name]] <- outpack_init(path[[name]], use_file_store = TRUE)
-    outpack_location_add(name, path[[name]], root = path$a)
+    outpack_location_add(name, "path", list(path = path[[name]]),
+                         root = path$a)
   }
 
   ids <- list()
@@ -274,7 +275,8 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   for (name in c("x", "y", "z")) {
     path[[name]] <- file.path(tmp, name)
     root[[name]] <- outpack_init(path[[name]], use_file_store = TRUE)
-    outpack_location_add(name, path[[name]], root = path$a)
+    outpack_location_add(name, "path", list(path = path[[name]]),
+                         root = path$a)
   }
 
   ids <- list()
