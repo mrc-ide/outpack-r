@@ -3,7 +3,9 @@ test_that("client sends well formed requests", {
   verb <- mockery::mock(mock_response(json_string("[1,2,3]")))
 
   res <- http_client_request(verb, "http://example.com", "/path")
-  expect_equal(res, list(1, 2, 3))
+  expect_mapequal(
+    res,
+    list(status = "success", errors = NULL, data = list(1, 2, 3)))
   mockery::expect_called(verb, 1)
   expect_equal(mockery::mock_args(verb)[[1]],
                list("http://example.com/path"))
@@ -14,7 +16,7 @@ test_that("client can return json verbatim as text", {
   skip_if_not_installed("mockery")
   ## A little whitespace here to ensure that this has not gone through
   ## any json processor
-  verb <- mockery::mock(mock_response(json_string("[1,2, 3]")))
+  verb <- mockery::mock(mock_response(json_string("[1,2, 3]"), wrap = FALSE))
 
   res <- http_client_request(verb, "http://example.com", "/path",
                              parse_json = FALSE)
@@ -43,21 +45,6 @@ test_that("client can download files", {
 
   mockery::expect_called(mock_download_options, 1)
   expect_equal(mockery::mock_args(mock_download_options)[[1]], list(dest))
-})
-
-
-test_that("can strip the response wrapper sensibly", {
-  content <- list(status = scalar("success"),
-                  errors = NULL,
-                  data = 1:3)
-  expected <- to_json(content$data, NULL)
-  expect_identical(strip_response_wrapper(to_json(content, NULL)), expected)
-  order <- list(c(1, 2, 3), c(1, 3, 2), c(2, 1, 3), c(2, 3, 1),
-                c(3, 1, 2), c(3, 2, 1))
-  for (i in order) {
-    expect_identical(strip_response_wrapper(to_json(content[i], NULL)),
-                     expected)
-  }
 })
 
 
@@ -91,7 +78,9 @@ test_that("can use the client to make requests", {
   mock_get <- mockery::mock(mock_response(json_string("[1,2,3]")))
   mockery::stub(cl$get, "httr::GET", mock_get)
   res <- cl$get("/path")
-  expect_equal(res, list(1, 2, 3))
+  expect_mapequal(
+    res,
+    list(status = "success", errors = NULL, data = list(1, 2, 3)))
   mockery::expect_called(mock_get, 1)
   expect_equal(mockery::mock_args(mock_get)[[1]],
                list("http://example.com/path"))

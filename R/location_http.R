@@ -11,7 +11,7 @@ outpack_location_http <- R6::R6Class(
     },
 
     list = function() {
-      dat <- private$client$get("/metadata/list", parse_json = TRUE)
+      dat <- private$client$get("/metadata/list", parse_json = TRUE)$data
       data_frame(
         packet = vcapply(dat, "[[", "packet"),
         time = num_to_time(vnapply(dat, "[[", "time")),
@@ -21,7 +21,8 @@ outpack_location_http <- R6::R6Class(
     metadata = function(packet_ids) {
       ret <- vcapply(packet_ids, function(id) {
         tryCatch(
-          private$client$get(sprintf("/metadata/%s", id), parse_json = FALSE),
+          private$client$get(sprintf("/metadata/%s/text", id),
+                             parse_json = FALSE),
           outpack_http_client_error = function(e) {
             if (e$code == 404) {
               e$message <- sprintf("Some packet ids not found: '%s'", id)
