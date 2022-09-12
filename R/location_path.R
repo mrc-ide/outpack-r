@@ -36,7 +36,7 @@ outpack_location_path <- R6::R6Class(
       ret
     },
 
-    fetch_file = function(hash) {
+    fetch_file = function(hash, dest) {
       ## TODO: we might need to give some better hints here as to what
       ## the user was looking for, but almost certainly that's better
       ## done by the calling function.
@@ -51,6 +51,7 @@ outpack_location_path <- R6::R6Class(
           stop(sprintf("Hash '%s' not found at location", hash))
         }
       }
-      path
+      fs::file_copy(path, dest)
+      dest
     }
   ))

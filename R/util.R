@@ -102,6 +102,11 @@ to_json <- function(x, schema) {
 }
 
 
+from_json <- function(x, ...) {
+  jsonlite::fromJSON(x, simplifyVector = FALSE, ...)
+}
+
+
 data_frame <- function(...) {
   ret <- data.frame(..., stringsAsFactors = FALSE, check.names = FALSE)
   rownames(ret) <- NULL
