@@ -14,14 +14,14 @@ test_that("can alert to device stack imbalance", {
   ## Too many open
   expect_error(check_device_stack(0),
                "Script left 2 devices open")
-  mockery::expect_called(mock_dev_list, 2) # 1 + 1
-  mockery::expect_called(mock_dev_off, 2) # 2 + 0
+  mockery::expect_called(mock_dev_list, 2)
+  mockery::expect_called(mock_dev_off, 2)
 
   ## Too many closed
   expect_error(check_device_stack(4),
                "Script closed 2 more devices than it opened!")
-  mockery::expect_called(mock_dev_list, 3) # 1 + 2
-  mockery::expect_called(mock_dev_off, 2) # 0 + 2
+  mockery::expect_called(mock_dev_list, 3)
+  mockery::expect_called(mock_dev_off, 2)
 })
 
 
@@ -41,12 +41,12 @@ test_that("can alert to sink stack imbalance", {
   ## Too many open
   expect_error(check_sink_stack(0),
                "Script left 2 sinks open")
-  mockery::expect_called(mock_sink_number, 2) # 1 + 1
-  mockery::expect_called(mock_sink, 2) # 2 + 0
+  mockery::expect_called(mock_sink_number, 2)
+  mockery::expect_called(mock_sink, 2)
 
   ## Too many closed
   expect_error(check_sink_stack(4),
                "Script closed 2 more sinks than it opened!")
-  mockery::expect_called(mock_sink_number, 3) # 1 + 2
-  mockery::expect_called(mock_sink, 2) # 0 + 2
+  mockery::expect_called(mock_sink_number, 3)
+  mockery::expect_called(mock_sink, 2)
 })
