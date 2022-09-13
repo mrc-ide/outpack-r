@@ -133,9 +133,9 @@ test_that("File store is not added if a hash cannot be resolved", {
                             root$metadata(id)$files$path))
   regex <- paste("Error adding file store:(.*)",
     "the following files were missing or corrupted: 'data.rds'")
-  expect_error(outpack_config_set(core.use_file_store = TRUE, root = root),
-               regex
-  )
+  expect_error(suppressMessages(
+    outpack_config_set(core.use_file_store = TRUE, root = root)),
+    regex)
   expect_false(root$config$core$use_file_store)
   expect_null(root$config$files)
 })
@@ -154,7 +154,7 @@ test_that("Files will be searched for by hash when adding file store", {
   fs::file_delete(file.path(path, "archive", "data", id,
                             root$metadata(id)$files$path))
 
-  outpack_config_set(core.use_file_store = TRUE, root = root)
+  suppressMessages(outpack_config_set(core.use_file_store = TRUE, root = root))
 
   expect_true(root$config$core$use_file_store)
 
