@@ -133,9 +133,16 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE) {
   ## packet setup in a new process as we currently do in orderly.
 
   ## TODO: What should we do/store on error?
-  with_dir(
-    p$path,
-    source_script(script, envir, echo))
+
+  info <- outpack_packet_run_global_state()
+
+  ## It's important to do the global state check in the packet working
+  ## directory (not the calling working directory) otherwise we might
+  ## write out files in unexpected places when flushing devices.
+  with_dir(p$path, {
+    source_script(script, envir, echo)
+    outpack_packet_run_check_global_state(info)
+  })
 
   p$script <- c(p$script, script)
   current$packet <- p
@@ -363,6 +370,18 @@ outpack_packet_file_list <- function() {
 
 outpack_packet_clear <- function() {
   current$packet <- NULL
+}
+
+
+outpack_packet_run_global_state <- function() {
+  list(n_open_devices = length(grDevices::dev.list()),
+       n_open_sinks = sink.number())
+}
+
+
+outpack_packet_run_check_global_state <- function(info) {
+  check_device_stack(info$n_open_devices)
+  check_sink_stack(info$n_open_sinks)
 }
 
 
