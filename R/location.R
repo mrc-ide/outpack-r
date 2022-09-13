@@ -69,18 +69,18 @@ outpack_location_add <- function(name, type, args, priority = 0, root = NULL) {
   }
   location_check_new_name(root, name)
 
-  ## We won't be necessarily be able to do this _generally_ but here,
-  ## let's confirm that we can read from the outpack archive at the
-  ## requested path; this will just fail but without providing the
-  ## user with anything actionable yet.
-  assert_scalar_character(path)
-  outpack_root_open(path, locate = FALSE)
+  loc <- new_location_entry(name, priority, type, args)
+  if (type == "path") {
+    ## We won't be necessarily be able to do this _generally_ but
+    ## here, let's confirm that we can read from the outpack archive
+    ## at the requested path; this will just fail but without
+    ## providing the user with anything actionable yet.
+    assert_scalar_character(loc$args[[1]]$path, name = "args$path")
+    outpack_root_open(loc$args[[1]]$path, locate = FALSE)
+  }
 
   config <- root$config
-
-  config$location <- rbind(
-    config$location,
-    new_location_entry(name, priority, type, args))
+  config$location <- rbind(config$location, loc)
   config$location <- config$location[
     order(config$location$priority, decreasing = TRUE), ]
   rownames(config$location) <- NULL
@@ -501,7 +501,7 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
 
 
 new_location_entry <- function(name, priority, type, args) {
-  match_value(type, c("local", "path", "http"))
+  match_value(type, c("local", "path", "http", "orphan"))
   required <- NULL
   if (type == "path") {
     required <- "path"

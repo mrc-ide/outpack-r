@@ -89,7 +89,7 @@ test_that("Can rename a location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
 
   ids <- outpack_root_open(root$a, locate = TRUE)$config$location$id
@@ -112,8 +112,8 @@ test_that("Can't rename a location using an existent name", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
 
   expect_error(outpack_location_rename("b", "c", root$a),
                "A location with name 'c' already exists")
@@ -157,8 +157,8 @@ test_that("Can remove a location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
 
   id <- create_random_packet(root$b)
@@ -190,9 +190,9 @@ test_that("Removing a location orphans packets only from that location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("c", root$c$path, root = root$b)
-  outpack_location_add("b", root$b$path, root = root$a)
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$b)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
   expect_setequal(outpack_location_list(root = root$b), c("local", "c"))
 

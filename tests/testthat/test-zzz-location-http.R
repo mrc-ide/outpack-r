@@ -68,8 +68,7 @@ describe("http location integration tests", {
     on.exit(unlink(tmp, recursive = TRUE))
     path_downstream <- file.path(tmp, "downstream")
     outpack_init(path_downstream, use_file_store = TRUE)
-    expect_equal(names(outpack_root_open(path_downstream)$index()$metadata),
-                 character())
+    expect_null(names(outpack_root_open(path_downstream)$index()$metadata))
     outpack_location_add("upstream", "http", list(url = url),
                          root = path_downstream)
     expect_equal(outpack_location_list(root = path_downstream),
