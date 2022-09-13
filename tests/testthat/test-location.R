@@ -828,3 +828,29 @@ test_that("if recursive pulls are required, pulls are recursive by default", {
   outpack_location_pull_packet(id[["c"]], recursive = NULL, root = root$deep)
   expect_setequal(root$deep$index()$unpacked$packet, id)
 })
+
+
+test_that("can't add unknown location type", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(
+    outpack_location_add("other", "magic", list(arg = 1), root = path),
+    "type must be one of 'path', 'http'")
+})
+
+
+test_that("validate arguments to path locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(
+    outpack_location_add("other", "path", list(root = "mypath"),
+                         root = path),
+    "Fields missing from args: 'path'")
+  expect_error(
+    outpack_location_add("other", "http", list(server = "example.com"),
+                         root = path),
+    "Fields missing from args: 'url'")
+  expect_equal(outpack_location_list(root = path), "local")
+})

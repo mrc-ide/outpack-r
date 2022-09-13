@@ -67,7 +67,9 @@ outpack_location_add <- function(name, type, args, priority = 0, root = NULL) {
     stop(sprintf("Cannot add a location with reserved name '%s'",
                  name))
   }
+
   location_check_new_name(root, name)
+  match_value(type, setdiff(location_types, location_reserved_name))
 
   loc <- new_location_entry(name, priority, type, args)
   if (type == "path") {
@@ -319,15 +321,11 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 
 location_driver <- function(location_id, root) {
   i <- match(location_id, root$config$location$id)
-  ## Once we support multiple location types, we'll need to consider
-  ## this more carefully; leaving an assertion in to make it more
-  ## obvious where change is needed.
   type <- root$config$location$type[[i]]
   args <- root$config$location$args[[i]]
   switch(type,
          path = outpack_location_path$new(args$path),
-         http = outpack_location_http$new(args$url),
-         stop(sprintf("Invalid location type '%s'", type)))
+         http = outpack_location_http$new(args$url))
 }
 
 
@@ -368,17 +366,6 @@ location_pull_files_store <- function(root, driver, packet_id) {
     meta <- root$metadata(packet_id)
     files_exist <- root$files$exists(meta$files$hash)
     for (h in meta$files$hash[!files_exist]) {
-      ## TODO: for the location archive we don't want to copy twice if
-      ## we can avoid it really - so what we've done is return a
-      ## read-only pointer to the file. But that works poorly for the
-      ## http version which will need to save a file that can be
-      ## *moved* into place.
-      ##
-      ## So if we provide a destination argument here, then the store
-      ## becomes the "owner" and this works much better as we can
-      ## ensure it's on the same filesystem (check for other uses of
-      ## put though).
-
       ## TODO: Should we support bulk download? This might be more
       ## efficient for some drivers (e.g., async http or streaming a
       ## single zip)
@@ -500,8 +487,11 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
 }
 
 
+## This validation probably will need generalising in future as we add
+## new types. The trick is going to be making sure that we can support
+## different location types in different target languages effectively.
 new_location_entry <- function(name, priority, type, args) {
-  match_value(type, c("local", "path", "http", "orphan"))
+  match_value(type, location_types)
   required <- NULL
   if (type == "path") {
     required <- "path"
@@ -515,7 +505,7 @@ new_location_entry <- function(name, priority, type, args) {
   msg <- setdiff(required, names(args))
   if (length(msg) > 0) {
     stop(sprintf("Fields missing from args: %s",
-                 paste(msg, collapse = ", ")))
+                 paste(squote(msg), collapse = ", ")))
   }
 
   location_id <- paste(as.character(openssl::rand_bytes(4)), collapse = "")
