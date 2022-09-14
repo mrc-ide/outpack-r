@@ -643,3 +643,21 @@ test_that("Can echo log to console", {
   expect_equal(res2$output, "")
   outpack_packet_end()
 })
+
+
+test_that("can detect device imbalance", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+  path_script <- file.path(path_src, "script.R")
+  code <- readLines(path_script)
+  writeLines(code[!grepl("^dev.off", code)], path_script)
+
+  stack <- dev.list()
+
+  p <- outpack_packet_start(path_src, "example", root = root)
+  expect_error(outpack_packet_run("script.R"),
+               "Script left 1 device open")
+  ## Handler has fixed the stack for us:
+  expect_equal(stack, dev.list())
+})
