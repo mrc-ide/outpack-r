@@ -16,10 +16,10 @@ test_that("Can add a location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
 
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
 })
 
@@ -34,7 +34,8 @@ test_that("Can't add a location with reserved name", {
   upstream <- outpack_init(path_upstream)
 
   expect_error(
-    outpack_location_add("local", path_upstream, root = path),
+    outpack_location_add("local", "path", list(path = path_upstream),
+                         root = path),
     "Cannot add a location with reserved name 'local'")
 })
 
@@ -49,9 +50,11 @@ test_that("Can't add a location with existing name", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("upstream", root$b$path, root = root$a)
+  outpack_location_add("upstream", "path", list(path = root$b$path),
+                       root = root$a)
   expect_error(
-    outpack_location_add("upstream", root$c$path, root = root$a),
+    outpack_location_add("upstream", "path", list(path = root$c$path),
+                         root = root$a),
     "A location with name 'upstream' already exists")
   expect_equal(outpack_location_list(root = root$a),
                c("local", "upstream"))
@@ -67,11 +70,11 @@ test_that("Require that (for now) locations must be paths", {
   other <- tempfile()
   on.exit(unlink(other, recursive = TRUE), add = TRUE)
   expect_error(
-    outpack_location_add("other", other, root = path),
+    outpack_location_add("other", "path", list(path = other), root = path),
     "Directory does not exist:")
   fs::dir_create(other)
   expect_error(
-    outpack_location_add("other", other, root = path),
+    outpack_location_add("other", "path", list(path = other), root = path),
     "'.+' does not look like an outpack root")
 })
 
@@ -86,7 +89,7 @@ test_that("Can rename a location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b"))
 
   ids <- outpack_root_open(root$a, locate = TRUE)$config$location$id
@@ -109,8 +112,8 @@ test_that("Can't rename a location using an existent name", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
 
   expect_error(outpack_location_rename("b", "c", root$a),
                "A location with name 'c' already exists")
@@ -154,8 +157,8 @@ test_that("Can remove a location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, root = root$a)
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
 
   id <- create_random_packet(root$b)
@@ -187,9 +190,9 @@ test_that("Removing a location orphans packets only from that location", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("c", root$c$path, root = root$b)
-  outpack_location_add("b", root$b$path, root = root$a)
-  outpack_location_add("c", root$c$path, root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$b)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$a)
   expect_setequal(outpack_location_list(root = root$a), c("local", "b", "c"))
   expect_setequal(outpack_location_list(root = root$b), c("local", "c"))
 
@@ -262,7 +265,8 @@ test_that("can pull metadata from a file base location", {
   path_downstream <- file.path(tmp, "downstream")
   outpack_init(path_downstream, use_file_store = TRUE)
 
-  outpack_location_add("upstream", path_upstream, root = path_downstream)
+  outpack_location_add("upstream", "path", list(path = path_upstream),
+                       root = path_downstream)
   expect_equal(outpack_location_list(root = path_downstream),
                c("local", "upstream"))
 
@@ -293,7 +297,8 @@ test_that("can pull empty metadata", {
   path_downstream <- file.path(tmp, "downstream")
   outpack_init(path_downstream, use_file_store = TRUE)
 
-  outpack_location_add("upstream", path_upstream, root = path_downstream)
+  outpack_location_add("upstream", "path", list(path = path_upstream),
+                       root = path_downstream)
   outpack_location_pull_metadata("upstream", root = path_downstream)
 
   index <- outpack_root_open(path_downstream)$index()
@@ -312,7 +317,8 @@ test_that("pull metadata from subset of locations", {
   for (name in c("x", "y", "z")) {
     path[[name]] <- file.path(tmp, name)
     root[[name]] <- outpack_init(path[[name]], use_file_store = TRUE)
-    outpack_location_add(name, path[[name]], root = path$a)
+    outpack_location_add(name, "path", list(path = path[[name]]),
+                         root = path$a)
   }
 
   expect_equal(outpack_location_list(root = path$a),
@@ -385,10 +391,10 @@ test_that("Can pull metadata through chain of locations", {
   ## knowing directly about an earlier location
   ## > a -> b -> c -> d
   ## >      `--------/
-  outpack_location_add("a", root$a$path, root = root$b)
-  outpack_location_add("b", root$b$path, root = root$c)
-  outpack_location_add("b", root$b$path, root = root$d)
-  outpack_location_add("c", root$c$path, root = root$d)
+  outpack_location_add("a", "path", list(path = root$a$path), root = root$b)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$c)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$d)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$d)
 
   ## Create a packet and make sure it's in both b and c
   id1 <- create_random_packet(root$a)
@@ -428,7 +434,8 @@ test_that("can pull a packet from one location to another, using file store", {
   }
 
   id <- create_random_packet(root$src)
-  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
   outpack_location_pull_packet(id, root = root$dst)
 
@@ -452,7 +459,8 @@ test_that("can pull a packet from one location to another, archive only", {
   }
 
   id <- create_random_packet(root$src)
-  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
   outpack_location_pull_packet(id, root = root$dst)
 
@@ -485,7 +493,8 @@ test_that("detect and avoid modified files in source repository", {
     outpack_packet_end()
   }
 
-  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
 
   ## Corrupt the file in the first id by truncating it:
@@ -514,7 +523,8 @@ test_that("Do not unpack a packet twice", {
   }
 
   id <- create_random_packet(root$src)
-  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
   outpack_location_pull_packet(id, "src", root = root$dst)
 
@@ -535,7 +545,8 @@ test_that("Sensible error if packet not known", {
   }
 
   id <- create_random_packet(root$src)
-  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
   expect_error(
     outpack_location_pull_packet(id, "src", root = root$dst),
     "Failed to find packet at location 'src': '.+'")
@@ -574,7 +585,8 @@ test_that("Can pull a tree recursively", {
   outpack_packet_run("script.R")
   outpack_packet_end()
 
-  outpack_location_add("src", root$src$path, root = root$dst)
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
   outpack_location_pull_metadata(root = root$dst)
   expect_equal(
     outpack_location_pull_packet(id$c, "src", recursive = TRUE,
@@ -604,8 +616,10 @@ test_that("Can add locations with different priorities", {
     root[[p]] <- outpack_init(file.path(path, p))
   }
 
-  outpack_location_add("b", root$b$path, priority = 5, root = root$a)
-  outpack_location_add("c", root$b$path, priority = 10, root = root$a)
+  outpack_location_add("b", "path", list(path = root$b$path), priority = 5,
+                       root = root$a)
+  outpack_location_add("c", "path", list(path = root$b$path), priority = 10,
+                       root = root$a)
   expect_equal(root$a$config$location$name, c("c", "b", "local"))
   expect_equal(root$a$config$location$priority, c(10, 5, 0))
 
@@ -627,8 +641,8 @@ test_that("Can resolve locations", {
 
   priority <- c(a = -5, b = 20, c = 10, d = 15)
   for (i in names(priority)) {
-    outpack_location_add(i, root[[i]]$path, priority = priority[[i]],
-                         root = root$dst)
+    outpack_location_add(i, "path", list(path = root[[i]]$path),
+                         priority = priority[[i]], root = root$dst)
   }
 
   location_id <- set_names(
@@ -707,21 +721,21 @@ test_that("Can filter locations", {
   }
 
   ids_a <- vcapply(1:3, function(i) create_random_packet(root$a$path))
-  outpack_location_add("a", root$a$path, root = root$b)
+  outpack_location_add("a", "path", list(path = root$a$path), root = root$b)
   outpack_location_pull_metadata(root = root$b)
   ids_b <- c(ids_a,
              vcapply(1:3, function(i) create_random_packet(root$b$path)))
   ids_c <- vcapply(1:3, function(i) create_random_packet(root$c$path))
-  outpack_location_add("a", root$a$path, root = root$d)
-  outpack_location_add("c", root$c$path, root = root$d)
+  outpack_location_add("a", "path", list(path = root$a$path), root = root$d)
+  outpack_location_add("c", "path", list(path = root$c$path), root = root$d)
   outpack_location_pull_metadata(root = root$d)
   ids_d <- c(ids_c,
              vcapply(1:3, function(i) create_random_packet(root$d$path)))
 
   priority <- c(a = 20, b = 15, c = 10, d = 5)
   for (i in names(priority)) {
-    outpack_location_add(i, root[[i]]$path, priority = priority[[i]],
-                         root = root$dst)
+    outpack_location_add(i, "path", list(path = root[[i]]$path),
+                         priority = priority[[i]], root = root$dst)
   }
   outpack_location_pull_metadata(root = root$dst)
 
@@ -804,7 +818,7 @@ test_that("if recursive pulls are required, pulls are recursive by default", {
   id <- create_random_packet_chain(root$src, 3)
 
   for (r in root[c("shallow", "deep")]) {
-    outpack_location_add("src", root$src$path, root = r)
+    outpack_location_add("src", "path", list(path = root$src$path), root = r)
     outpack_location_pull_metadata(root = r)
   }
 
@@ -813,4 +827,30 @@ test_that("if recursive pulls are required, pulls are recursive by default", {
 
   outpack_location_pull_packet(id[["c"]], recursive = NULL, root = root$deep)
   expect_setequal(root$deep$index()$unpacked$packet, id)
+})
+
+
+test_that("can't add unknown location type", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(
+    outpack_location_add("other", "magic", list(arg = 1), root = path),
+    "type must be one of 'path', 'http'")
+})
+
+
+test_that("validate arguments to path locations", {
+  path <- tempfile()
+  on.exit(unlink(path, recursive = TRUE))
+  root <- outpack_init(path)
+  expect_error(
+    outpack_location_add("other", "path", list(root = "mypath"),
+                         root = path),
+    "Fields missing from args: 'path'")
+  expect_error(
+    outpack_location_add("other", "http", list(server = "example.com"),
+                         root = path),
+    "Fields missing from args: 'url'")
+  expect_equal(outpack_location_list(root = path), "local")
 })

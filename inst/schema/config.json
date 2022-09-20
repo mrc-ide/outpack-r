@@ -44,7 +44,7 @@
                         "type": "number"
                     },
                     "type": {
-                        "enum": ["local", "orphan", "path"]
+                        "enum": ["http", "local", "orphan", "path"]
                     }
                 },
                 "required": ["name", "id", "priority", "type"]

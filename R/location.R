@@ -2,9 +2,35 @@
 ##' and pulled into your local archive.  Currently only file-based
 ##' locations are supported.
 ##'
+##' We currently support two types of locations - `path`, which points
+##' to an outpack archive accessible by path (e.g., on the same
+##' computer or on a mounted network share) and `http`, which requires
+##' that an outpack server is running at some url and uses an HTTP API
+##' to communicate. More types may be added later, and more
+##' configuration options to these location types will definitely be
+##' needed in future.
+##'
+##' Configuration options for different location types:
+##'
+##' **Path locations**:
+##'
+##' * `path`: The path to the other archive root. This should
+##'   generally be an absolute path, or the behaviour of outpack will
+##'   be unreliable.
+##'
+##' **HTTP locations**:
+##'
+##' Accessing outpack over HTTP requires that an outpack server is
+##'   running. The interface here is expected to change as we expand
+##'   the API, but also as we move to support things like TLS and
+##'   authentication.
+##'
+##' * `url`: The location of the server, including protocol, for
+##'   example `http://example.com:8080`
+##'
 ##' @section Warning:
 ##'
-##' The API here will change as we move to support different types of
+##' The API here may change as we move to support different types of
 ##'   locations.
 ##'
 ##' @title Add a new location
@@ -12,8 +38,13 @@
 ##' @param name The short name of the location to use.  Cannot be in
 ##'   use, and cannot be one of `local` or `orphan`
 ##'
-##' @param path The path to the directory containing another outpack
-##'   archive.
+##' @param type The type of location to add. Currently supported
+##'   values are `path` (a location that exists elsewhere on the
+##'   filesystem) and `http` (a location accessed over outpack's http
+##'   API).
+##'
+##' @param args Arguments to the location driver. The arguments here
+##'   will vary depending on the type used, see Details.
 ##'
 ##' @param priority The priority of the location. This is used when
 ##'   deciding where to pull packets from
@@ -27,7 +58,7 @@
 ##'
 ##' @return Nothing
 ##' @export
-outpack_location_add <- function(name, path, priority = 0, root = NULL) {
+outpack_location_add <- function(name, type, args, priority = 0, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   assert_scalar_character(name)
   assert_scalar_numeric(priority)
@@ -36,20 +67,22 @@ outpack_location_add <- function(name, path, priority = 0, root = NULL) {
     stop(sprintf("Cannot add a location with reserved name '%s'",
                  name))
   }
-  location_check_new_name(root, name)
 
-  ## We won't be necessarily be able to do this _generally_ but here,
-  ## let's confirm that we can read from the outpack archive at the
-  ## requested path; this will just fail but without providing the
-  ## user with anything actionable yet.
-  assert_scalar_character(path)
-  outpack_root_open(path, locate = FALSE)
+  location_check_new_name(root, name)
+  match_value(type, setdiff(location_types, location_reserved_name))
+
+  loc <- new_location_entry(name, priority, type, args)
+  if (type == "path") {
+    ## We won't be necessarily be able to do this _generally_ but
+    ## here, let's confirm that we can read from the outpack archive
+    ## at the requested path; this will just fail but without
+    ## providing the user with anything actionable yet.
+    assert_scalar_character(loc$args[[1]]$path, name = "args$path")
+    outpack_root_open(loc$args[[1]]$path, locate = FALSE)
+  }
 
   config <- root$config
-
-  config$location <- rbind(
-    config$location,
-    new_location_entry(name, priority, "path", list(path = path)))
+  config$location <- rbind(config$location, loc)
   config$location <- config$location[
     order(config$location$priority, decreasing = TRUE), ]
   rownames(config$location) <- NULL
@@ -288,12 +321,11 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 
 location_driver <- function(location_id, root) {
   i <- match(location_id, root$config$location$id)
-  ## Once we support multiple location types, we'll need to consider
-  ## this more carefully; leaving an assertion in to make it more
-  ## obvious where change is needed.
-  stopifnot(!is.na(i), root$config$location$type[[i]] == "path")
-  path <- root$config$location$args[[i]]$path
-  outpack_location_path$new(path)
+  type <- root$config$location$type[[i]]
+  args <- root$config$location$args[[i]]
+  switch(type,
+         path = outpack_location_path$new(args$path),
+         http = outpack_location_http$new(args$url))
 }
 
 
@@ -334,17 +366,6 @@ location_pull_files_store <- function(root, driver, packet_id) {
     meta <- root$metadata(packet_id)
     files_exist <- root$files$exists(meta$files$hash)
     for (h in meta$files$hash[!files_exist]) {
-      ## TODO: for the location archive we don't want to copy twice if
-      ## we can avoid it really - so what we've done is return a
-      ## read-only pointer to the file. But that works poorly for the
-      ## http version which will need to save a file that can be
-      ## *moved* into place.
-      ##
-      ## So if we provide a destination argument here, then the store
-      ## becomes the "owner" and this works much better as we can
-      ## ensure it's on the same filesystem (check for other uses of
-      ## put though).
-
       ## TODO: Should we support bulk download? This might be more
       ## efficient for some drivers (e.g., async http or streaming a
       ## single zip)
@@ -466,7 +487,27 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
 }
 
 
+## This validation probably will need generalising in future as we add
+## new types. The trick is going to be making sure that we can support
+## different location types in different target languages effectively.
 new_location_entry <- function(name, priority, type, args) {
+  match_value(type, location_types)
+  required <- NULL
+  if (type == "path") {
+    required <- "path"
+  } else if (type == "http") {
+    required <- "url"
+  }
+  if (length(args) > 0) {
+    assert_is(args, "list")
+    assert_named(args)
+  }
+  msg <- setdiff(required, names(args))
+  if (length(msg) > 0) {
+    stop(sprintf("Fields missing from args: %s",
+                 paste(squote(msg), collapse = ", ")))
+  }
+
   location_id <- paste(as.character(openssl::rand_bytes(4)), collapse = "")
   ## NOTE: make sure this matches the order in config_read
   data_frame(name = name,
