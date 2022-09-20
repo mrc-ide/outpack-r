@@ -64,7 +64,7 @@ locations are supported.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_location_add</span><span class="op">(</span><span class="va">name</span>, <span class="va">path</span>, priority <span class="op">=</span> <span class="fl">0</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_location_add</span><span class="op">(</span><span class="va">name</span>, <span class="va">type</span>, <span class="va">args</span>, priority <span class="op">=</span> <span class="fl">0</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -74,9 +74,16 @@ locations are supported.</p>
 use, and cannot be one of <code>local</code> or <code>orphan</code></p></dd>
 
 
-<dt>path</dt>
-<dd><p>The path to the directory containing another outpack
-archive.</p></dd>
+<dt>type</dt>
+<dd><p>The type of location to add. Currently supported
+values are <code>path</code> (a location that exists elsewhere on the
+filesystem) and <code>http</code> (a location accessed over outpack's http
+API).</p></dd>
+
+
+<dt>args</dt>
+<dd><p>Arguments to the location driver. The arguments here
+will vary depending on the type used, see Details.</p></dd>
 
 
 <dt>priority</dt>
@@ -100,12 +107,32 @@ current directory if not given.</p></dd>
 
 <p>Nothing</p>
     </div>
+    <div id="details">
+    <h2>Details</h2>
+    <p>We currently support two types of locations - <code>path</code>, which points
+to an outpack archive accessible by path (e.g., on the same
+computer or on a mounted network share) and <code>http</code>, which requires
+that an outpack server is running at some url and uses an HTTP API
+to communicate. More types may be added later, and more
+configuration options to these location types will definitely be
+needed in future.</p>
+<p>Configuration options for different location types:</p>
+<p><strong>Path locations</strong>:</p><ul><li><p><code>path</code>: The path to the other archive root. This should
+generally be an absolute path, or the behaviour of outpack will
+be unreliable.</p></li>
+</ul><p><strong>HTTP locations</strong>:</p>
+<p>Accessing outpack over HTTP requires that an outpack server is
+running. The interface here is expected to change as we expand
+the API, but also as we move to support things like TLS and
+authentication.</p><ul><li><p><code>url</code>: The location of the server, including protocol, for
+example <code>http://example.com:8080</code></p></li>
+</ul></div>
     <div id="warning">
     <h2>Warning</h2>
     
 
 
-<p>The API here will change as we move to support different types of
+<p>The API here may change as we move to support different types of
 locations.</p>
     </div>
 
