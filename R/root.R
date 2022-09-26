@@ -274,14 +274,13 @@ index_update <- function(root, prev) {
   root_path <- root$path
   path_index <- file.path(root_path, ".outpack", "index", "outpack.rds")
 
-  if (is.null(prev)) {
-    data <- if (file.exists(path_index)) readRDS(path_index) else list()
-  } else {
-    data <- prev
+  if (is.null(prev) || length(prev) == 0) {
+    prev <- if (file.exists(path_index)) readRDS(path_index) else list()
   }
 
-  ## TODO: Add some logging through here.
+  data <- prev
 
+  ## TODO: Add some logging through here.
   data$location <- read_locations(root, data$location)
   data$metadata <- read_metadata(root, data$metadata)
   data$unpacked <- read_unpacked(root, data$unpacked)
