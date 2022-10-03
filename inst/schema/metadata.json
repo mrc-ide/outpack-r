@@ -6,7 +6,7 @@
 
     "type": "object",
     "properties": {
-        "schemaVersion": {
+        "schema_version": {
             "description": "Schema version, used to manage migrations",
             "type": "string",
             "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
@@ -110,5 +110,5 @@
             "description": "Information about the session; necessarily engine-specific format but in a standardised location"
         }
     },
-    "required": ["schemaVersion", "id", "name", "time", "files", "depends", "script", "custom", "session"]
+    "required": ["schema_version", "id", "name", "time", "files", "depends", "script", "custom", "session"]
 }

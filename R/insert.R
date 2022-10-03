@@ -58,7 +58,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
 
 mark_packet_known <- function(packet_id, location_id, hash, time, root) {
-  dat <- list(schemaVersion = scalar(outpack_schema_version()),
+  dat <- list(schema_version = scalar(outpack_schema_version()),
               packet = scalar(packet_id),
               time = scalar(time_to_num(time)),
               hash = scalar(hash))
@@ -69,7 +69,7 @@ mark_packet_known <- function(packet_id, location_id, hash, time, root) {
 
 
 mark_packet_unpacked <- function(packet_id, location_id, root) {
-  dat <- list(schemaVersion = scalar(outpack_schema_version()),
+  dat <- list(schema_version = scalar(outpack_schema_version()),
               packet = scalar(packet_id),
               time = scalar(time_to_num()),
               location = scalar(location_id))

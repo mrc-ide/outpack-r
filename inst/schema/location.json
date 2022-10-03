@@ -6,7 +6,7 @@
 
     "type": "object",
     "properties": {
-        "schemaVersion": {
+        "schema_version": {
             "description": "Schema version, used to manage migrations",
             "type": "string",
             "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
@@ -25,5 +25,5 @@
             "$ref": "hash.json"
         }
     },
-    "required": ["schemaVersion", "packet", "time", "hash"]
+    "required": ["schema_version", "packet", "time", "hash"]
 }

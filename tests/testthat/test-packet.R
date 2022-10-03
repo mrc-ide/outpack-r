@@ -54,10 +54,10 @@ test_that("Can run a basic packet", {
 
   expect_setequal(
     names(meta),
-    c("schemaVersion", "name", "id", "time", "parameters", "files",
+    c("schema_version", "name", "id", "time", "parameters", "files",
       "depends", "script", "session", "custom", "hash"))
 
-  expect_equal(meta$schemaVersion, outpack_schema_version())
+  expect_equal(meta$schema_version, outpack_schema_version())
   expect_equal(meta$name, "example")
   expect_equal(meta$id, id)
   expect_null(meta$parameters)
