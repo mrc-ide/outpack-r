@@ -7,9 +7,8 @@ test_that("Can run a basic packet", {
   ## things explicit for now.
 
   ## A simple example where we run something.
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('myplot.png')",
@@ -20,9 +19,8 @@ test_that("Can run a basic packet", {
             file.path(path_src, "data.csv"),
             row.names = FALSE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
   p <- outpack_packet_start(path_src, "example", root = root)
 
@@ -93,9 +91,8 @@ test_that("Can run a basic packet", {
 test_that("Can handle dependencies", {
   on.exit(outpack_packet_clear(), add = TRUE)
   ## A simple example where we run something.
-  path_src1 <- tempfile()
+  path_src1 <- temp_file()
   fs::dir_create(path_src1)
-  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('myplot.png')",
@@ -106,9 +103,8 @@ test_that("Can handle dependencies", {
             file.path(path_src1, "data.csv"),
             row.names = FALSE)
 
-  path_src2 <- tempfile()
+  path_src2 <- temp_file()
   fs::dir_create(path_src2)
-  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('incoming.csv')",
     "png('myplot.png')",
@@ -116,8 +112,7 @@ test_that("Can handle dependencies", {
     "dev.off()"),
     file.path(path_src2, "script.R"))
 
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
@@ -148,13 +143,11 @@ test_that("Can't start a packet twice", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
   ## A simple example where we run something.
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
   p1 <- outpack_packet_start(path_src, "example", root = root)
   ## TODO: We might expand this to indicate where the packet is
@@ -181,13 +174,11 @@ test_that("Can't add a packet twice", {
   on.exit(outpack_packet_clear())
 
   ## A simple example where we run something.
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
   p <- outpack_packet_start(path_src, "example", root = root)
   outpack_packet_end()
@@ -205,13 +196,11 @@ test_that("Can't use nonexistant id as dependency", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
   ## A simple example where we run something.
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
   p1 <- outpack_packet_start(path_src, "example", root = root)
   outpack_packet_end()
@@ -226,16 +215,13 @@ test_that("Can't use nonexistant id as dependency", {
 
 test_that("Can't use file that does not exist from dependency", {
   on.exit(outpack_packet_clear(), add = TRUE)
-  path_src1 <- tempfile()
+  path_src1 <- temp_file()
   fs::dir_create(path_src1)
-  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
 
-  path_src2 <- tempfile()
+  path_src2 <- temp_file()
   fs::dir_create(path_src2)
-  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
 
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
@@ -251,9 +237,8 @@ test_that("Can't use file that does not exist from dependency", {
 test_that("Can use dependency from outpack without file store", {
   on.exit(outpack_packet_clear(), add = TRUE)
   ## A simple example where we run something.
-  path_src1 <- tempfile()
+  path_src1 <- temp_file()
   fs::dir_create(path_src1)
-  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('myplot.png')",
@@ -264,9 +249,8 @@ test_that("Can use dependency from outpack without file store", {
             file.path(path_src1, "data.csv"),
             row.names = FALSE)
 
-  path_src2 <- tempfile()
+  path_src2 <- temp_file()
   fs::dir_create(path_src2)
-  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('incoming.csv')",
     "png('myplot.png')",
@@ -274,8 +258,7 @@ test_that("Can use dependency from outpack without file store", {
     "dev.off()"),
     file.path(path_src2, "script.R"))
 
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = FALSE)
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
@@ -301,9 +284,8 @@ test_that("Can use dependency from outpack without file store", {
 test_that("validate dependencies from archive", {
   on.exit(outpack_packet_clear(), add = TRUE)
   ## A simple example where we run something.
-  path_src1 <- tempfile()
+  path_src1 <- temp_file()
   fs::dir_create(path_src1)
-  on.exit(unlink(path_src1, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('myplot.png')",
@@ -314,9 +296,8 @@ test_that("validate dependencies from archive", {
             file.path(path_src1, "data.csv"),
             row.names = FALSE)
 
-  path_src2 <- tempfile()
+  path_src2 <- temp_file()
   fs::dir_create(path_src2)
-  on.exit(unlink(path_src2, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('incoming.csv')",
     "png('myplot.png')",
@@ -324,8 +305,7 @@ test_that("validate dependencies from archive", {
     "dev.off()"),
     file.path(path_src2, "script.R"))
 
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = FALSE)
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
@@ -348,8 +328,7 @@ test_that("validate dependencies from archive", {
 
 test_that("Can add additional data", {
   on.exit(outpack_packet_clear(), add = TRUE)
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  tmp <- temp_file()
 
   path_root <- file.path(tmp, "root")
   root <- outpack_init(path_root)
@@ -370,8 +349,7 @@ test_that("Can add additional data", {
 
 test_that("Can add multiple copies of extra data", {
   on.exit(outpack_packet_clear(), add = TRUE)
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  tmp <- temp_file()
 
   path_root <- file.path(tmp, "root")
   root <- outpack_init(path_root)
@@ -393,8 +371,7 @@ test_that("Can add multiple copies of extra data", {
 
 test_that("Can't add custom data for same app twice", {
   on.exit(outpack_packet_clear(), add = TRUE)
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  tmp <- temp_file()
 
   path_root <- file.path(tmp, "root")
   root <- outpack_init(path_root)
@@ -419,8 +396,7 @@ test_that("Can validate custom metadata against schema", {
     "type": "object",
     "properties": {"a": { "type": "string" }, "b": { "type": "number" }}}'
 
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  tmp <- temp_file()
 
   path_root <- file.path(tmp, "root")
   root <- outpack_init(path_root)
@@ -444,8 +420,7 @@ test_that("Can validate custom metadata against schema", {
 
 test_that("Can report nicely about json syntax errors", {
   on.exit(outpack_packet_clear(), add = TRUE)
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  tmp <- temp_file()
 
   path_root <- file.path(tmp, "root")
   root <- outpack_init(path_root)
@@ -462,14 +437,12 @@ test_that("Can report nicely about json syntax errors", {
 test_that("pre-prepared id can be used to start packet", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
   id <- outpack_id()
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
 
   p <- outpack_packet_start(path_src, "example", id = id, root = root)
   expect_equal(p$id, id)
@@ -483,17 +456,14 @@ test_that("pre-prepared id can be used to start packet", {
 test_that("Can hash files on startup", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
 
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "png('zzz.png')",
@@ -526,17 +496,14 @@ test_that("Can hash files on startup", {
 test_that("Can detect changes to hashed files", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
 
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   writeLines(c(
     "d <- read.csv('data.csv')",
     "file.create('data.csv')", # truncates file
@@ -560,11 +527,10 @@ test_that("Can detect changes to hashed files", {
 test_that("Re-adding files triggers hash", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- tempfile()
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
-  on.exit(unlink(path, recursive = TRUE), add = TRUE)
 
-  path_src <- tempfile()
+  path_src <- temp_file()
   fs::dir_create(path_src)
   on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   write.csv(mtcars, file.path(path_src, "data.csv"))

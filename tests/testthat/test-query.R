@@ -108,8 +108,7 @@ test_that("Queries can only be name and parameter", {
 
 
 test_that("Can run very basic queries", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- vcapply(1:3, function(i) create_random_packet(tmp))
   expect_equal(
@@ -143,8 +142,7 @@ test_that("Can run very basic queries", {
 
 
 test_that("Scope queries", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   x1 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 1)))
@@ -163,8 +161,7 @@ test_that("Scope queries", {
 
 
 test_that("location based queries", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   path <- root <- list()
   path$a <- file.path(tmp, "a")
   outpack_init(path$a, use_file_store = TRUE)
@@ -199,8 +196,7 @@ test_that("location based queries", {
 
 
 test_that("Can filter based on given values", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   x1 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 1)))
@@ -227,8 +223,7 @@ test_that("Can filter based on given values", {
 
 
 test_that("single requires exactly one packet", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   ids <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = i)))
@@ -267,8 +262,7 @@ test_that("switch statements will prevent regressions", {
 
 
 test_that("Can filter query to packets that are locally available (unpacked)", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   path <- root <- list()
   path$a <- file.path(tmp, "a")
   outpack_init(path$a, use_file_store = TRUE)
@@ -324,8 +318,7 @@ test_that("Parse literal id query", {
 
 
 test_that("outpack_query allows ids", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- vcapply(1:3, function(i) create_random_packet(tmp))
   expect_identical(outpack_query(ids[[1]], root = root), ids[[1]])
@@ -337,8 +330,7 @@ test_that("outpack_query allows ids", {
 
 
 test_that("correct behaviour with empty queries", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
   expect_equal(outpack_query("latest", root = root), NA_character_)
   expect_equal(outpack_query(quote(name == "data"), root = root),

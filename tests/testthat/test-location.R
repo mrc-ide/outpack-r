@@ -1,15 +1,12 @@
 test_that("No locations except local by default", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_equal(outpack_location_list(root = path), "local")
 })
 
 
 test_that("Can add a location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -25,12 +22,10 @@ test_that("Can add a location", {
 
 
 test_that("Can't add a location with reserved name", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
 
-  path_upstream <- tempfile()
-  on.exit(unlink(path_upstream, recursive = TRUE), add = TRUE)
+  path_upstream <- temp_file()
   upstream <- outpack_init(path_upstream)
 
   expect_error(
@@ -41,9 +36,7 @@ test_that("Can't add a location with reserved name", {
 
 
 test_that("Can't add a location with existing name", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -62,13 +55,11 @@ test_that("Can't add a location with existing name", {
 
 
 test_that("Require that (for now) locations must be paths", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_equal(outpack_location_list(root = path), "local")
 
-  other <- tempfile()
-  on.exit(unlink(other, recursive = TRUE), add = TRUE)
+  other <- temp_file()
   expect_error(
     outpack_location_add("other", "path", list(path = other), root = path),
     "Directory does not exist:")
@@ -80,9 +71,7 @@ test_that("Require that (for now) locations must be paths", {
 
 
 test_that("Can rename a location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b")) {
     fs::dir_create(file.path(path, p))
@@ -103,9 +92,7 @@ test_that("Can rename a location", {
 
 
 test_that("Can't rename a location using an existent name", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -123,8 +110,7 @@ test_that("Can't rename a location using an existent name", {
 
 
 test_that("Can't rename a  non-existent location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_equal(outpack_location_list(root = path), "local")
 
@@ -134,9 +120,7 @@ test_that("Can't rename a  non-existent location", {
 
 
 test_that("Can't rename default locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- outpack_init(path)
 
   expect_error(outpack_location_rename("local", "desktop", root),
@@ -147,10 +131,7 @@ test_that("Can't rename default locations", {
 
 
 test_that("Can remove a location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
-  path <- "wkdir"
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -181,9 +162,7 @@ test_that("Can remove a location", {
 
 
 test_that("Removing a location orphans packets only from that location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -230,9 +209,7 @@ test_that("Removing a location orphans packets only from that location", {
 
 
 test_that("Can't remove default locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- outpack_init(path)
 
   expect_error(outpack_location_remove("local",  root),
@@ -243,9 +220,7 @@ test_that("Can't remove default locations", {
 
 
 test_that("Can't remove non-existent location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- outpack_init(path)
 
   expect_error(outpack_location_remove("b",  root),
@@ -254,9 +229,7 @@ test_that("Can't remove non-existent location", {
 
 
 test_that("can pull metadata from a file base location", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
-
+  tmp <- temp_file()
   path_upstream <- file.path(tmp, "upstream")
   root_upstream <- outpack_init(path_upstream, use_file_store = TRUE)
 
@@ -288,9 +261,7 @@ test_that("can pull metadata from a file base location", {
 
 
 test_that("can pull empty metadata", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
-
+  tmp <- temp_file()
   path_upstream <- file.path(tmp, "upstream")
   root_upstream <- outpack_init(path_upstream, use_file_store = TRUE)
 
@@ -309,8 +280,7 @@ test_that("can pull empty metadata", {
 
 
 test_that("pull metadata from subset of locations", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   path <- root <- list()
   path$a <- file.path(tmp, "a")
   outpack_init(path$a, use_file_store = TRUE)
@@ -357,9 +327,7 @@ test_that("pull metadata from subset of locations", {
 
 
 test_that("Can't pull metadata from an unknown location", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   outpack_init(path)
   expect_error(
     outpack_location_pull_metadata("upstream", root = path),
@@ -368,9 +336,7 @@ test_that("Can't pull metadata from an unknown location", {
 
 
 test_that("No-op to pull metadata from no locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   outpack_init(path)
   expect_silent(outpack_location_pull_metadata("local", root = path))
   expect_silent(outpack_location_pull_metadata(root = path))
@@ -378,9 +344,7 @@ test_that("No-op to pull metadata from no locations", {
 
 
 test_that("Can pull metadata through chain of locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c", "d")) {
     fs::dir_create(file.path(path, p))
@@ -424,9 +388,7 @@ test_that("Can pull metadata through chain of locations", {
 
 
 test_that("can pull a packet from one location to another, using file store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -449,9 +411,7 @@ test_that("can pull a packet from one location to another, using file store", {
 
 
 test_that("can pull a packet from one location to another, archive only", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -473,17 +433,14 @@ test_that("can pull a packet from one location to another, archive only", {
 
 
 test_that("detect and avoid modified files in source repository", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
     root[[p]] <- outpack_init(file.path(path, p), use_file_store = FALSE)
   }
 
-  tmp <- fs::dir_create(tempfile())
-  on.exit(unlink(tmp, recursive = TRUE), add = TRUE)
+  tmp <- fs::dir_create(temp_file())
 
   saveRDS(runif(10), file.path(tmp, "a.rds"))
   saveRDS(runif(10), file.path(tmp, "b.rds"))
@@ -513,9 +470,7 @@ test_that("detect and avoid modified files in source repository", {
 
 
 test_that("Do not unpack a packet twice", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -535,9 +490,7 @@ test_that("Do not unpack a packet twice", {
 
 
 test_that("Sensible error if packet not known", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -556,9 +509,7 @@ test_that("Sensible error if packet not known", {
 test_that("Can pull a tree recursively", {
   ## Bit of tedious setup here; this just does a simple graph
   ## >  a -> b -> c
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -607,9 +558,7 @@ test_that("Can pull a tree recursively", {
 
 
 test_that("Can add locations with different priorities", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c")) {
     fs::dir_create(file.path(path, p))
@@ -630,9 +579,7 @@ test_that("Can add locations with different priorities", {
 
 
 test_that("Can resolve locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c", "d", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -692,8 +639,7 @@ test_that("Can resolve locations", {
 
 
 test_that("informative error message when no locations configured", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_equal(
     location_resolve_valid(NULL, root, FALSE, TRUE),
@@ -711,9 +657,7 @@ test_that("informative error message when no locations configured", {
 ## having location_path filtering metadata to the packets that it can
 ## actually provide.
 test_that("Can filter locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("a", "b", "c", "d", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -785,9 +729,7 @@ test_that("Can filter locations", {
 
 
 test_that("nonrecursive pulls are prevented by configuration", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   for (p in c("src", "dst")) {
     fs::dir_create(file.path(path, p))
@@ -795,8 +737,6 @@ test_that("nonrecursive pulls are prevented by configuration", {
   }
 
   id <- create_random_packet_chain(root$src, 3)
-
-
 
   expect_error(
     outpack_location_pull_packet(id[["c"]], recursive = FALSE, root = root$dst),
@@ -806,9 +746,7 @@ test_that("nonrecursive pulls are prevented by configuration", {
 
 
 test_that("if recursive pulls are required, pulls are recursive by default", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   root <- list()
   root$src <- outpack_init(file.path(path, "src"))
   root$shallow <- outpack_init(file.path(path, "shallow"))
@@ -831,8 +769,7 @@ test_that("if recursive pulls are required, pulls are recursive by default", {
 
 
 test_that("can't add unknown location type", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_error(
     outpack_location_add("other", "magic", list(arg = 1), root = path),
@@ -841,8 +778,7 @@ test_that("can't add unknown location type", {
 
 
 test_that("validate arguments to path locations", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_error(
     outpack_location_add("other", "path", list(root = "mypath"),

@@ -27,7 +27,7 @@ test_that("client can return json verbatim as text", {
 test_that("client can download files", {
   skip_if_not_installed("mockery")
   content <- charToRaw("result")
-  dest <- tempfile()
+  dest <- temp_file()
   verb <- mockery::mock(mock_response(content, download = dest))
 
   mock_download_options <- mockery::mock(list(TRUE))
@@ -64,7 +64,7 @@ test_that("handle errors", {
 
 
 test_that("can construct sensible download options", {
-  path <- tempfile()
+  path <- temp_file()
   res <- http_client_download_options(path)
   expect_s3_class(res, "request")
   expect_equal(res$headers, c(Accept = "application/octet-stream"))

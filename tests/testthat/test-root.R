@@ -1,7 +1,5 @@
 test_that("can create new root", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
-
+  path <- temp_file()
   r <- outpack_init(path)
   expect_s3_class(r, "outpack_root")
 
@@ -18,8 +16,7 @@ test_that("can create new root", {
 
 
 test_that("Re-initialising root errors", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   expect_silent(outpack_init(path))
   expect_error(r <- outpack_init(path),
@@ -28,8 +25,7 @@ test_that("Re-initialising root errors", {
 
 
 test_that("Can control root config on initialisation", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE,
                     require_complete_tree = TRUE)
@@ -43,7 +39,7 @@ test_that("Can control root config on initialisation", {
 
 
 test_that("Must include some packet storage", {
-  path <- tempfile()
+  path <- temp_file()
   expect_error(
     outpack_init(path, path_archive = NULL, use_file_store = FALSE),
     "If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
@@ -52,8 +48,7 @@ test_that("Must include some packet storage", {
 
 
 test_that("Can locate an outpack root", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   r <- outpack_init(path)
   p <- file.path(path, "a", "b", "c")
   fs::dir_create(p)
@@ -69,8 +64,7 @@ test_that("Can locate an outpack root", {
 
 
 test_that("outpack_root_open errors if it reaches toplevel", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   fs::dir_create(path)
   expect_error(
     outpack_root_open(path),
@@ -79,8 +73,7 @@ test_that("outpack_root_open errors if it reaches toplevel", {
 
 
 test_that("outpack_root_open does not recurse if locate = FALSE", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   r <- outpack_init(path)
   expect_identical(outpack_root_open(r, locate = FALSE), r)
   expect_equal(outpack_root_open(path, locate = FALSE)$path, path)
@@ -95,8 +88,7 @@ test_that("outpack_root_open does not recurse if locate = FALSE", {
 
 test_that("root configuration matches schema", {
   skip_if_not_installed("jsonvalidate")
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   r <- outpack_init(path)
   path_config <- file.path(path, ".outpack", "config.json")
   expect_true(outpack_schema("config")$validate(path_config))
@@ -104,8 +96,7 @@ test_that("root configuration matches schema", {
 
 
 test_that("Can't get nonexistant metadata", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
   id <- outpack_id()
@@ -119,8 +110,7 @@ test_that("Can't get nonexistant metadata", {
 
 
 test_that("empty root has nothing unpacked", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   r <- outpack_init(path)
   index <- r$index()
@@ -132,8 +122,7 @@ test_that("empty root has nothing unpacked", {
 
 
 test_that("Can read full metadata via root", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   r <- outpack_init(path)
   id1 <- create_random_packet(path)
   id2 <- create_random_packet(path)

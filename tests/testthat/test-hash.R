@@ -1,6 +1,5 @@
 test_that("Can hash file", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp))
+  tmp <- temp_file()
 
   writeLines("hello world", tmp)
   expected <- unname(tools::md5sum(tmp))

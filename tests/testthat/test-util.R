@@ -7,9 +7,8 @@ test_that("null-or-value works", {
 
 
 test_that("Descend failure", {
-  path <- tempfile()
+  path <- temp_file()
   dir.create(path)
-  on.exit(unlink(path, recursive = TRUE))
   expect_null(find_file_descend(".orderly_foobar", tempdir(), path))
   expect_null(find_file_descend(".orderly_foobar", "/", path))
   expect_null(find_file_descend(".orderly_foobar", "/", "/"))
