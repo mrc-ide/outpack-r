@@ -177,7 +177,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
   hash_algorithm <- "sha256"
 
   list(
-    schemaVersion = outpack_schema_version(),
+    schema_version = outpack_schema_version(),
     core = list(
       path_archive = path_archive,
       use_file_store = use_file_store,
@@ -188,7 +188,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
 
 
 config_serialise <- function(config, path) {
-  config$schemaVersion <- scalar(config$schemaVersion) # nolint
+  config$schema_version <- scalar(config$schema_version)
   config$core <- lapply(config$core, scalar)
 
   prepare_location <- function(loc) {

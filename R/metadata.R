@@ -91,7 +91,7 @@ outpack_metadata_create <- function(path, name, id, time, files,
                         vcapply(custom, "[[", "application"))
   }
 
-  ret <- list(schemaVersion = scalar(outpack_schema_version()),
+  ret <- list(schema_version = scalar(outpack_schema_version()),
               name = scalar(name),
               id = scalar(id),
               time = time,

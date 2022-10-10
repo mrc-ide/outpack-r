@@ -6,7 +6,7 @@
 
     "type": "object",
     "properties": {
-        "schemaVersion": {
+        "schema_version": {
             "description": "Schema version, used to manage migrations",
             "type": "string",
             "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
@@ -26,5 +26,5 @@
             "$ref": "locationId.json"
         }
     },
-    "required": ["schemaVersion", "packet", "time", "location"]
+    "required": ["schema_version", "packet", "time", "location"]
 }
