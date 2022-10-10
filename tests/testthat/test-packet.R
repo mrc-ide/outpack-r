@@ -532,7 +532,6 @@ test_that("Re-adding files triggers hash", {
 
   path_src <- temp_file()
   fs::dir_create(path_src)
-  on.exit(unlink(path_src, recursive = TRUE), add = TRUE)
   write.csv(mtcars, file.path(path_src, "data.csv"))
 
   p <- outpack_packet_start(path_src, "example", root = root)

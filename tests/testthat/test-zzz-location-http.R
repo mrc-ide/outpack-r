@@ -82,7 +82,6 @@ describe("http location integration tests", {
     hash <- root$files$list()[[1]]
     dest <- temp_file()
     loc <- outpack_location_http$new(url)
-    on.exit(unlink(dest), add = TRUE)
     res <- loc$fetch_file(hash, dest)
     expect_identical(res, dest)
     expect_identical(hash_file(res), hash)

@@ -34,9 +34,8 @@ test_that("Can store files", {
   expect_length(obj$list(), 10)
   expect_equal(file.exists(obj$filename(obj$list())),
                rep(TRUE, 10))
-  dest <- tempfile()
+  dest <- temp_file()
   dir.create(dest)
-  on.exit(unlink(dest, recursive = TRUE))
   obj$get(obj$list(), dest)
 })
 
