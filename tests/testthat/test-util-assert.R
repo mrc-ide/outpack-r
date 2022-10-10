@@ -62,7 +62,7 @@ test_that("assert_file_exists", {
 
 
 test_that("assert_directory", {
-  tmp <- tempfile()
+  tmp <- temp_file()
   file.create(tmp)
   expect_silent(assert_directory(dirname(tmp)))
   expect_error(assert_directory(tmp), "Directory must be a directory")

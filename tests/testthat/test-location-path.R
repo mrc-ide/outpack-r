@@ -1,6 +1,5 @@
 test_that("can construct a outpack_location_path object", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path)
   loc <- outpack_location_path$new(path)
@@ -13,8 +12,7 @@ test_that("can construct a outpack_location_path object", {
 
 
 test_that("outpack_location_path requires exact root", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   expect_error(
     outpack_location_path$new(path),
@@ -32,8 +30,7 @@ test_that("outpack_location_path requires exact root", {
 
 
 test_that("outpack_location_path returns list of packet ids", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path)
   loc <- outpack_location_path$new(path)
@@ -52,8 +49,7 @@ test_that("outpack_location_path returns list of packet ids", {
 
 
 test_that("outpack_location_path can return metadata", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path)
   loc <- outpack_location_path$new(path)
@@ -70,8 +66,7 @@ test_that("outpack_location_path can return metadata", {
 
 
 test_that("requesting nonexistant metadata is an error", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path)
   loc <- outpack_location_path$new(path)
@@ -91,8 +86,7 @@ test_that("requesting nonexistant metadata is an error", {
 
 
 test_that("can locate files from the store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path, use_file_store = TRUE)
   loc <- outpack_location_path$new(path)
@@ -101,8 +95,7 @@ test_that("can locate files from the store", {
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
-  dest <- tempfile()
-  on.exit(unlink(dest), add = TRUE)
+  dest <- temp_file()
   res <- loc$fetch_file(h, dest)
   expect_identical(res, dest)
   expect_identical(hash_file(res), h)
@@ -110,13 +103,12 @@ test_that("can locate files from the store", {
 
 
 test_that("sensible error if file not found in store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path, use_file_store = TRUE)
   loc <- outpack_location_path$new(path)
   h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
-  dest <- tempfile()
+  dest <- temp_file()
   expect_error(
     loc$fetch_file(h, dest),
     "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
@@ -125,8 +117,7 @@ test_that("sensible error if file not found in store", {
 
 
 test_that("Can find file from archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path, use_file_store = FALSE)
   loc <- outpack_location_path$new(path)
@@ -135,8 +126,7 @@ test_that("Can find file from archive", {
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
-  dest <- tempfile()
-  on.exit(unlink(dest), add = TRUE)
+  dest <- temp_file()
   res <- loc$fetch_file(h, dest)
   expect_identical(res, dest)
   expect_identical(hash_file(dest), h)
@@ -144,13 +134,12 @@ test_that("Can find file from archive", {
 
 
 test_that("sensible error if file not found in archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   outpack_init(path, use_file_store = FALSE)
   loc <- outpack_location_path$new(path)
   h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
-  dest <- tempfile()
+  dest <- temp_file()
   expect_error(
     loc$fetch_file(h, dest),
     "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")

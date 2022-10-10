@@ -1,5 +1,5 @@
 test_that("Can create file store", {
-  tmp <- tempfile()
+  tmp <- temp_file()
   obj <- file_store$new(tmp)
   expect_equal(obj$list(), character(0))
   expect_error(
@@ -9,13 +9,13 @@ test_that("Can create file store", {
 
 
 test_that("Can store files", {
-  tmp <- tempfile()
+  tmp <- temp_file()
   dir.create(tmp)
   for (i in 1:10) {
     saveRDS(runif(10), file.path(tmp, letters[i]))
   }
 
-  obj <- file_store$new(tempfile())
+  obj <- file_store$new(temp_file())
 
   p <- file.path(tmp, "a")
   h <- hash_file(p)
@@ -34,16 +34,14 @@ test_that("Can store files", {
   expect_length(obj$list(), 10)
   expect_equal(file.exists(obj$filename(obj$list())),
                rep(TRUE, 10))
-  dest <- tempfile()
+  dest <- temp_file()
   dir.create(dest)
-  on.exit(unlink(dest, recursive = TRUE))
   obj$get(obj$list(), dest)
 })
 
 
 test_that("can move files into place", {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
+  tmp <- temp_file()
   dir.create(tmp)
   for (i in 1:2) {
     saveRDS(runif(10), file.path(tmp, letters[i]))
@@ -53,8 +51,7 @@ test_that("can move files into place", {
   ha <- hash_file(pa)
   hb <- hash_file(pb)
 
-  obj <- file_store$new(tempfile())
-  on.exit(unlink(obj$path, recursive = TRUE), add = TRUE)
+  obj <- file_store$new(temp_file())
   obj$put(pa, ha, move = FALSE)
   ## Original file has not been moved:
   expect_true(file.exists(pa))
@@ -69,8 +66,7 @@ test_that("can move files into place", {
 
 
 test_that("can create a filename within the store", {
-  obj <- file_store$new(tempfile())
-  on.exit(unlink(obj$path, recursive = TRUE), add = TRUE)
+  obj <- file_store$new(temp_file())
   p <- obj$tmp()
   expect_equal(normalizePath(dirname(p)),
                normalizePath(file.path(obj$path, "tmp")))

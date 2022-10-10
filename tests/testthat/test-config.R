@@ -1,6 +1,5 @@
 test_that("Validate inputs to config set", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
 
   expect_error(
@@ -13,8 +12,7 @@ test_that("Validate inputs to config set", {
 
 
 test_that("Setting no options does nothing", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   config <- root$config
   outpack_config_set(root = root)
@@ -23,8 +21,7 @@ test_that("Setting no options does nothing", {
 
 
 test_that("Disallow unknown configuration options", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_error(
     outpack_config_set(whatever = TRUE, root = root),
@@ -33,8 +30,7 @@ test_that("Disallow unknown configuration options", {
 
 
 test_that("Can update core.require_complete_tree in empty archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_false(root$config$core$require_complete_tree)
 
@@ -46,8 +42,7 @@ test_that("Can update core.require_complete_tree in empty archive", {
 
 
 test_that("Can remove file_store if path_archive exists", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, use_file_store = TRUE)
   expect_true(root$config$core$use_file_store)
 
@@ -68,8 +63,7 @@ test_that("Can remove file_store if path_archive exists", {
 
 
 test_that("Cannot remove file_store if no path_archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, use_file_store = TRUE, path_archive = NULL)
   file_store <- root$files$path
   expect_true(fs::dir_exists(file_store))
@@ -83,8 +77,7 @@ test_that("Cannot remove file_store if no path_archive", {
 
 
 test_that("Can add file_store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- list()
   root$src <- outpack_init(file.path(path, "src"))
   root$dst <- outpack_init(file.path(path, "dst"))
@@ -107,9 +100,8 @@ test_that("Can add file_store", {
   hash_pulled <- root$dst$metadata(id[["c"]])$files$hash
   expect_equal(length(hash_pulled), 3)
 
-  dest <- tempfile()
+  dest <- temp_file()
   dir.create(dest)
-  on.exit(unlink(path, recursive = TRUE))
   root$dst$files$get(hash_pulled[[1]], dest)
   root$dst$files$get(hash_pulled[[2]], dest)
   root$dst$files$get(hash_pulled[[3]], dest)
@@ -121,8 +113,7 @@ test_that("Can add file_store", {
 
 
 test_that("File store is not added if a hash cannot be resolved", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_false(root$config$core$use_file_store)
 
@@ -142,8 +133,7 @@ test_that("File store is not added if a hash cannot be resolved", {
 
 
 test_that("Files will be searched for by hash when adding file store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_false(root$config$core$use_file_store)
 
@@ -158,16 +148,14 @@ test_that("Files will be searched for by hash when adding file store", {
 
   expect_true(root$config$core$use_file_store)
 
-  dest <- tempfile()
+  dest <- temp_file()
   dir.create(dest)
-  on.exit(unlink(path, recursive = TRUE))
   root$files$get(root$metadata(id)$files$hash, dest)
 })
 
 
 test_that("Can remove uninitialised archive if using file store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive",
                        use_file_store = TRUE)
 
@@ -178,8 +166,7 @@ test_that("Can remove uninitialised archive if using file store", {
 
 
 test_that("Can remove initialised archive if using file store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive",
                        use_file_store = TRUE)
 
@@ -201,8 +188,7 @@ test_that("Can remove initialised archive if using file store", {
 
 
 test_that("Can rename uninitialised archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive")
 
   expect_equal(root$config$core$path_archive, "archive")
@@ -214,8 +200,7 @@ test_that("Can rename uninitialised archive", {
 
 
 test_that("Can rename initialised archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive")
 
   create_random_packet(root)
@@ -234,8 +219,7 @@ test_that("Can rename initialised archive", {
 
 
 test_that("Cannot remove archive if not using file store", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = "archive")
 
   expect_error(outpack_config_set(core.path_archive = NULL, root = root),
@@ -244,8 +228,7 @@ test_that("Cannot remove archive if not using file store", {
 
 
 test_that("Can add archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
 
   id <- create_random_packet_chain(root, 3)
@@ -273,9 +256,8 @@ test_that("Can add archive", {
   hash <- root$metadata(id[["c"]])$files$hash
   expect_equal(length(hash), 3)
 
-  dest <- tempfile()
+  dest <- temp_file()
   dir.create(dest)
-  on.exit(unlink(dest, recursive = TRUE))
   root$files$get(hash[[1]], dest)
   root$files$get(hash[[2]], dest)
   root$files$get(hash[[3]], dest)
@@ -283,8 +265,7 @@ test_that("Can add archive", {
 
 
 test_that("Archive is not added if file store is corrupt", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
 
   id <- create_random_packet_chain(root, 3)
@@ -300,8 +281,7 @@ test_that("Archive is not added if file store is corrupt", {
 
 
 test_that("Validates path_archive", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
   expect_error(outpack_config_set(core.path_archive = "/archive", root = root),
                "'path_archive' must be relative path")
@@ -322,8 +302,7 @@ test_that("Validates path_archive", {
 
 
 test_that("Enabling recursive pulls forces pulling missing packets", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
 
   root <- list()
   root$src <- outpack_init(file.path(path, "src"))
@@ -346,8 +325,7 @@ test_that("Enabling recursive pulls forces pulling missing packets", {
 
 
 test_that("Unchanged require_complete_tree prints message", {
-  path <- tempfile()
-  on.exit(unlink(path, recursive = TRUE))
+  path <- temp_file()
   root <- outpack_init(path)
   expect_false(root$config$core$require_complete_tree)
   expect_message(
