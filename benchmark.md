@@ -7,16 +7,17 @@ Measuring time to get the index
     system.time(root$index(skip_cache=TRUE))
 
     ##    user  system elapsed 
-    ##   3.155   0.000   3.166
+    ##   3.077   0.000   3.077
 
 ### Adding a packet and then opening the root again
 
     root <- outpack_root_open("montagu-reports")
-    create_random_packet(root)
+    system.time(create_random_packet(root))
 
-    ## [1] "20221101-132140-d4811f07"
+    ##    user  system elapsed 
+    ##   0.857   0.000   0.836
 
     system.time(root$index())
 
     ##    user  system elapsed 
-    ##   0.026   0.000   0.026
+    ##   0.027   0.000   0.027
