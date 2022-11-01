@@ -56,7 +56,7 @@ outpack_root <- R6::R6Class(
   cloneable = FALSE,
 
   private = list(
-    index_data = NULL,
+    index_data = list(),
     metadata_read = function(id) {
       path_metadata <- file.path(self$path, ".outpack", "metadata", id)
       if (!file.exists(path_metadata)) {
@@ -108,9 +108,9 @@ outpack_root <- R6::R6Class(
       }
     },
 
-    index = function(refresh = FALSE) {
-      prev <- if (refresh) list() else private$index_data
-      private$index_data <- index_update(self, prev)
+    index = function(skip_cache = FALSE) {
+      prev <- if (skip_cache) list() else private$index_data
+      private$index_data <- index_update(self, prev, skip_cache)
       private$index_data
     },
 
@@ -270,15 +270,15 @@ read_unpacked <- function(root, prev) {
 ## Later on we'll want to have some sort of index over this (e.g.,
 ## name/id/parameters) to support the query interface, but that can
 ## wait.
-index_update <- function(root, prev) {
+index_update <- function(root, prev, skip_cache) {
   root_path <- root$path
   path_index <- file.path(root_path, ".outpack", "index", "outpack.rds")
 
-  if (is.null(prev)) {
-    data <- if (file.exists(path_index)) readRDS(path_index) else list()
-  } else {
-    data <- prev
+  if (length(prev) == 0 && file.exists(path_index) && !skip_cache) {
+    prev <- readRDS(path_index)
   }
+
+  data <- prev
 
   ## TODO: Add some logging through here.
 
