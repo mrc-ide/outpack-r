@@ -11,12 +11,12 @@ devtools::load_all()
 ## Measuring time to get the index
 
 ### Opening an outpack root for the first time
-```{r echo=FALSE}
+```{r}
 root <- outpack_root_open("montagu-reports")
 system.time(root$index())
 ```
 ### Adding a packet and then opening the root again
-```{r echo=FALSE}
+```{r}
 root <- outpack_root_open("montagu-reports")
 create_random_packet(root)
 system.time(root$index())
