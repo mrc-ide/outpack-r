@@ -22,3 +22,8 @@ system.time(create_random_packet(root))
 system.time(root$index())
 ```
 
+### Getting the index from cache
+```{r}
+root <- outpack_root_open("montagu-reports")
+system.time(root$index())
+```
