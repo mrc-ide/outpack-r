@@ -11,7 +11,7 @@
 install_deps <- function() {
   if (!requireNamespace("outpack.server", quietly = TRUE)) {
     message("Installing additional requirements")
-    getNamespace("remotes")$install_github("mrc-ide/outpack.server",
+    getNamespace("remotes")$install_github("mrc-ide/outpack.server@mrc-3112",
                                            upgrade = FALSE)
   }
 }

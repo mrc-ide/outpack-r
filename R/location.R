@@ -170,7 +170,7 @@ outpack_location_remove <- function(name, root = NULL) {
   if (fs::dir_exists(location_path)) {
     fs::dir_delete(location_path)
   }
-  root$index(refresh = TRUE)
+  root$index(skip_cache = TRUE)
   config$location <- config$location[config$location$name != name, ]
   root$update_config(config)
   invisible()
