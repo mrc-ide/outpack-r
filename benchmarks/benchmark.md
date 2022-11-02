@@ -1,6 +1,9 @@
 Measuring time to get the index
 -------------------------------
 
+Running this code requires having a copy of `montagu-reports` in the root directory of
+this repo. It can be downloaded at: https://mrc-ide.myjetbrains.com/youtrack/issue/mrc-3112
+
 ### Opening an outpack root for the first time
 
     root <- outpack_root_open("montagu-reports")
