@@ -53,7 +53,7 @@ test_that("Can run a basic packet", {
   expect_setequal(
     names(meta),
     c("schema_version", "name", "id", "time", "parameters", "files",
-      "depends", "script", "session", "custom", "hash"))
+      "depends", "script", "session", "custom", "git", "hash"))
 
   expect_equal(meta$schema_version, outpack_schema_version())
   expect_equal(meta$name, "example")
@@ -67,6 +67,7 @@ test_that("Can run a basic packet", {
   expect_equal(meta$files$hash,
                hash_files(file.path(path_src, meta$files$path)))
   expect_null(meta$custom)
+  expect_null(meta$git)
 
   ## Copy of the files in human readable archive:
   expect_true(all(file.exists(

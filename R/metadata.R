@@ -91,6 +91,12 @@ outpack_metadata_create <- function(path, name, id, time, files,
                         vcapply(custom, "[[", "application"))
   }
 
+  git <- git_info(path)
+  if (!is.null(git)) {
+    git$sha <- scalar(git$sha)
+    git$branch <- scalar(git$branch)
+  }
+
   ret <- list(schema_version = scalar(outpack_schema_version()),
               name = scalar(name),
               id = scalar(id),
@@ -100,6 +106,7 @@ outpack_metadata_create <- function(path, name, id, time, files,
               depends = depends,
               script = script,
               session = session,
+              git = git,
               custom = custom)
 
   to_json(ret, "metadata")
@@ -122,6 +129,9 @@ outpack_metadata_load <- function(json) {
       data_frame(here = vcapply(x$files, "[[", "here"),
                  there = vcapply(x$files, "[[", "there"))
     })))
+  if (!is.null(data$git)) {
+    data$git$url <- vcapply(data$git$url, identity)
+  }
 
   data
 }

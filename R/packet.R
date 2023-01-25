@@ -368,25 +368,6 @@ outpack_packet_file_list <- function() {
 }
 
 
-##' Add git metadata to the current packet. This stores some key
-##' metadata (current branch, commit, and urls of known remote
-##' repositories) to the packet metadata.
-##'
-##' @title Add git metadata to current packet
-##'
-##' @return Invisibly, a logical indicating if git information was
-##'   successfully added. This will be `FALSE` if the repository is
-##'   not under version control
-##'
-##' @export
-outpack_packet_add_git <- function() {
-  p <- outpack_packet_current()
-  info <- git_info(p$root$path)
-  current$packet$git <- info
-  invisible(!is.null(info))
-}
-
-
 outpack_packet_clear <- function() {
   current$packet <- NULL
 }

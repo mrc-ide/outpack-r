@@ -29,3 +29,45 @@ test_that("can get git information from a path", {
          branch = branch,
          url = c("git@example.com/example", "https://example.com/git/example")))
 })
+
+
+test_that("store git information into packet, if under git's control", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+
+  ## Note that the git repo is in the src, not in the outpack root
+  gert::git_init(path_src)
+  gert::git_add(".", repo = path_src)
+  user <- "author <author@example.com>"
+  sha <- gert::git_commit("initial", author = user, committer = user,
+                          repo = path_src)
+  branch <- gert::git_branch(repo = path_src)
+  url <- "https://example.com/git"
+  gert::git_remote_add(url, repo = path_src)
+
+  p <- outpack_packet_start(path_src, "example", root = root)
+  id <- p$id
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  meta <- outpack_root_open(root$path)$metadata(id, TRUE)
+  expect_mapequal(meta$git,
+                  list(branch = branch, sha = sha, url = url))
+})
+
+
+test_that("store no information into packet, if no git found", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+
+  p <- outpack_packet_start(path_src, "example", root = root)
+  id <- p$id
+  outpack_packet_run("script.R")
+  outpack_packet_end()
+
+  meta <- outpack_root_open(root$path)$metadata(id, TRUE)
+  expect_true("git" %in% names(meta))
+  expect_null(meta$git)
+})
