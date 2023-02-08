@@ -106,9 +106,16 @@
             "type": ["null", "object"]
         },
 
+        "git": {
+            "oneOf": [
+                { "type": "null" },
+                { "$ref": "git.json" }
+            ]
+        },
+
         "session": {
             "description": "Information about the session; necessarily engine-specific format but in a standardised location"
         }
     },
-    "required": ["schema_version", "id", "name", "time", "files", "depends", "script", "custom", "session"]
+    "required": ["schema_version", "id", "name", "time", "files", "depends", "script", "custom", "git", "session"]
 }
