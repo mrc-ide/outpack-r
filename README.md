@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 [![Project Status: Concept – Minimal or no implementation has been done yet, or the repository is only intended to be a limited example, demo, or proof-of-concept.](https://www.repostatus.org/badges/latest/concept.svg)](https://www.repostatus.org/#concept)
-[![R build status](https://github.com/mrc-ide/outpack/workflows/R-CMD-check/badge.svg)](https://github.com/mrc-ide/outpack/actions)
+[![R-CMD-check](https://github.com/mrc-ide/outpack/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mrc-ide/outpack/actions/workflows/R-CMD-check.yaml)
 [![codecov.io](https://codecov.io/github/mrc-ide/outpack/coverage.svg?branch=main)](https://codecov.io/github/mrc-ide/outpack?branch=main)
 <!-- badges: end -->
 
