@@ -4,7 +4,7 @@ test_that("can compute checksum", {
   ids <- vcapply(1:3, function(i) create_random_packet(tmp))
   hash <- outpack_checksum(root = tmp)
   expect_equal(hash_parse(hash)$algorithm, "sha256")
-  expect_equal(hash, hash_data(paste(ids, collapse = "")), "sha256")
+  expect_equal(hash, hash_data(paste(ids, collapse = ""), "sha256"))
 })
 
 test_that("can compute checksum on empty root", {
