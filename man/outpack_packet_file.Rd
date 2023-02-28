@@ -5,9 +5,9 @@
 \alias{outpack_packet_file_list}
 \title{Mark files during packet run}
 \usage{
-outpack_packet_file_mark(files, status)
+outpack_packet_file_mark(files, status, packet = NULL)
 
-outpack_packet_file_list()
+outpack_packet_file_list(packet = NULL)
 }
 \arguments{
 \item{files}{A character vector of relative paths}

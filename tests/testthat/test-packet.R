@@ -23,12 +23,17 @@ test_that("Can run a basic packet", {
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
 
   p <- outpack_packet_start(path_src, "example", root = root)
+  expect_s3_class(p, "outpack_packet")
+  expect_null(p$complete)
+  expect_identical(p, current$packet)
 
   outpack_packet_run("script.R")
   expect_true(file.exists(file.path(path_src, "myplot.png")))
   expect_equal(outpack_packet_current()$script, "script.R")
 
   outpack_packet_end()
+  expect_true(p$complete)
+  expect_null(current$p)
 
   index <- root$index()
   expect_length(index$metadata, 1)
@@ -167,7 +172,7 @@ test_that("Can't use a nonexistant running packet", {
   outpack_packet_clear()
   expect_error(
     outpack_packet_current(),
-    "No current packet")
+    "No currently active packet")
 })
 
 
