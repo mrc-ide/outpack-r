@@ -659,3 +659,20 @@ test_that("Validate a packet", {
   expect_error(check_current_packet(p2),
                "Packet '.+' is complete")
 })
+
+
+test_that("run basic report with explicit packet", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+
+  inputs <- c("data.csv", "script.R")
+  env <- new.env()
+
+  p <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
+  outpack_packet_run("script.R", env, echo = FALSE, packet = p)
+  outpack_packet_end(packet = p)
+
+  expect_equal(names(root$index()$metadata), p$id)
+  expect_true(p$complete)
+})
