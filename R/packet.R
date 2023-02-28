@@ -419,7 +419,7 @@ check_current_packet <- function(packet) {
       stop("No currently active packet")
     }
   } else {
-    assert_is(packet, "packet")
+    assert_is(packet, "outpack_packet")
     if (isTRUE(packet$complete)) {
       stop(sprintf("Packet '%s' is complete", packet$id))
     }

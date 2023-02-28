@@ -632,3 +632,30 @@ test_that("can detect device imbalance", {
   ## Handler has fixed the stack for us:
   expect_equal(stack, dev.list())
 })
+
+
+test_that("Validate a packet", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+
+  p1 <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
+  expect_null(current$packet)
+  p2 <- outpack_packet_start(path_src, "example", root = root)
+  expect_false(identical(p1, p2))
+  expect_identical(p2, current$packet)
+
+  expect_identical(check_current_packet(NULL), p2)
+  expect_identical(check_current_packet(p1), p1)
+  expect_identical(check_current_packet(p2), p2)
+
+  outpack_packet_finish(p1)
+  outpack_packet_finish(p2)
+
+  expect_error(check_current_packet(NULL),
+               "No currently active packet")
+  expect_error(check_current_packet(p1),
+               "Packet '.+' is complete")
+  expect_error(check_current_packet(p2),
+               "Packet '.+' is complete")
+})
