@@ -330,6 +330,9 @@ outpack_packet_add_custom <- function(application, data, schema = NULL,
 ##' @param status A status to mark the file with. Must be "immutable"
 ##'   or "ignored"
 ##'
+##' @param packet Optionally, an explicitly-passed packet; see
+##'   [outpack::outpack_packet_start()] for details.
+##'
 ##' @return Depending on function
 ##'
 ##' * `outpack_packet_file_mark` returns nothing
