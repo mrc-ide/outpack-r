@@ -336,3 +336,21 @@ test_that("correct behaviour with empty queries", {
   expect_equal(outpack_query(quote(name == "data"), root = root),
                character(0))
 })
+
+test_that("named queries", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 1))
+  y2 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_equal(
+    outpack_query(quote(latest()), name = "x", root = root),
+    x2)
+  expect_equal(
+    outpack_query(quote(latest()), scope = quote(parameter:a == 1),
+                  name = "x", root = root),
+    x1)
+})

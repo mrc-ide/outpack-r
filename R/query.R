@@ -11,6 +11,10 @@
 ##' @param scope Optionally, a scope query to limit the packets
 ##'   searched by `pars`
 ##'
+##' @param name Optionally, the name of the packet to scope the query on. This
+##'   will be intersected with `scope` arg and is a shorthand way of running
+##'   `scope = list(name = "name")`
+##'
 ##' @param require_unpacked Logical, indicating if we should require
 ##'   that the packets are unpacked. If `FALSE` (the default) we
 ##'   search through all packets known to this outpack root,
@@ -23,7 +27,8 @@
 ##' @return A character vector of matching ids
 ##' @export
 outpack_query <- function(expr, pars = NULL, scope = NULL,
-                          require_unpacked = FALSE, root = NULL) {
+                          name = NULL, require_unpacked = FALSE,
+                          root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   expr_parsed <- query_parse(expr)
   validate_parameters(pars)
@@ -42,8 +47,19 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
     parameters = I(lapply(root$index()$metadata, "[[", "parameters")),
     location = I(location))
 
+  if (!is.null(name)) {
+    name_call <- call("==", quote(name), name)
+    if (is.null(scope)) {
+      scope <- name_call
+    } else {
+      scope <- call("&&", name_call, scope)
+    }
+  }
+
   if (!is.null(scope)) {
-    ids <- outpack_query(scope, pars, NULL, require_unpacked, root)
+    ids <- outpack_query(scope, pars, scope = NULL,
+                         require_unpacked = require_unpacked,
+                         root = root)
     index <- index[index$id %in% ids, ]
   } else if (require_unpacked) {
     index <- index[index$id %in% idx$unpacked$packet, ]

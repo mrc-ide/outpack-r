@@ -8,6 +8,7 @@ outpack_query(
   expr,
   pars = NULL,
   scope = NULL,
+  name = NULL,
   require_unpacked = FALSE,
   root = NULL
 )
@@ -20,6 +21,10 @@ into the query (using the \verb{this:} prefix)}
 
 \item{scope}{Optionally, a scope query to limit the packets
 searched by \code{pars}}
+
+\item{name}{Optionally, the name of the packet to scope the query on. This
+will be intersected with \code{scope} arg and is a shorthand way of running
+\code{scope = list(name = "name")}}
 
 \item{require_unpacked}{Logical, indicating if we should require
 that the packets are unpacked. If \code{FALSE} (the default) we
