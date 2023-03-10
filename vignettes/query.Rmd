@@ -69,7 +69,7 @@ Scoping queries can be used to reduce the set of packets that are searched over.
 For example, the query
 
 ```r
-outpack_query(quote(parameter:x == 1), quote(name == "data"))`
+outpack_query(quote(parameter:x == 1), scope = quote(name == "data"))
 ```
 
 is equivalent to
@@ -81,6 +81,20 @@ outpack_query(quote(parameter:x == 1 && name == "data"))
 except that in the former we only check the parameter values of packets called "data".
 
 Orderly will use this functionality when resolving dependencies.
+
+### Scoping on name
+
+Very often users will want to scope by name so instead of passing `scope` argument there is a shorthand `name` argument for usability.
+
+```r
+outpack_query(quote(parameter:x == 1), name = "data")
+```
+
+Which is the equivalent of
+
+```r
+outpack_query(quote(parameter:x == 1), scope = quote(name == "data"))
+```
 
 ## Possible future queries and interface improvements
 
