@@ -18,7 +18,7 @@ of matching packet ids."><!-- mathjax --><script src="https://cdnjs.cloudflare.c
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.2</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.3</span>
       </span>
     </div>
 
@@ -66,6 +66,7 @@ of matching packet ids.</p>
 <span>  <span class="va">expr</span>,</span>
 <span>  pars <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  require_unpacked <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  root <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -85,6 +86,12 @@ into the query (using the <code>this:</code> prefix)</p></dd>
 <dt>scope</dt>
 <dd><p>Optionally, a scope query to limit the packets
 searched by <code>pars</code></p></dd>
+
+
+<dt>name</dt>
+<dd><p>Optionally, the name of the packet to scope the query on. This
+will be intersected with <code>scope</code> arg and is a shorthand way of running
+<code>scope = list(name = "name")</code></p></dd>
 
 
 <dt>require_unpacked</dt>
