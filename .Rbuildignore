@@ -23,3 +23,5 @@
 \.*gcov$
 ^TODO\.md$
 ^benchmarks$
+^.*\.Rproj$
+^\.Rproj\.user$
