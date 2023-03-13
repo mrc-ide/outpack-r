@@ -118,6 +118,10 @@ test_that("Can run very basic queries", {
     outpack_query(quote(latest()), root = root),
     last(ids))
   expect_equal(
+    outpack_query(substitute(id == x, as.environment(list(x = ids[[1]]))),
+                  root = root),
+    ids[[1]])
+  expect_equal(
     outpack_query(quote(name == "data"), root = root),
     ids)
   expect_equal(
@@ -138,6 +142,12 @@ test_that("Can run very basic queries", {
   expect_equal(
     outpack_query(quote(!(name == "other") && name == "data"), root = root),
     ids)
+  expect_equal(
+    outpack_query(substitute(
+      latest(id == x1 || id == x2),
+      as.environment(list(x1 = ids[[1]], x2 = ids[[2]]))),
+      root = root),
+    ids[[2]])
 })
 
 
@@ -352,5 +362,38 @@ test_that("named queries", {
   expect_equal(
     outpack_query(quote(latest()), scope = quote(parameter:a == 1),
                   name = "x", root = root),
+    x1)
+})
+
+test_that("outpack_query can include subqueries", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 1))
+  y2 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_equal(
+    outpack_query(quote(latest(sub)),
+                  subquery = list(sub = list(expr = quote(name == "x"))),
+                  root = root),
+    x2)
+})
+
+test_that("outpack_query subqueries can include scope", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 1))
+  y2 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_equal(
+    outpack_query(quote(latest(sub)),
+                  subquery = list(sub = list(expr = quote(parameter:a == 1),
+                                             scope = quote(name == "x"))),
+                  root = root),
     x1)
 })
