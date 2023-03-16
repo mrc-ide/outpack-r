@@ -364,6 +364,19 @@ test_that("named queries", {
     x1)
 })
 
+
+test_that("outpack_query none type returns no results", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 1)))
+
+  expect_equal(
+    outpack_query(quote(none()), root = root),
+    NA_character_)
+})
+
+
 test_that("outpack_query can include subqueries", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)

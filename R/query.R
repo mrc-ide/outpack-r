@@ -103,7 +103,7 @@ query_parse <- function(expr, subquery_env, root) {
 query_functions <- list(
   group = list("(" = 1, "!" = 1, "&&" = 2, "||" = 2),
   test = list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2),
-  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf)))
+  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf), none = 0))
 
 
 query_component <- function(type, expr, context, args, ...) {
@@ -120,6 +120,7 @@ query_parse_expr <- function(expr, context, subquery_env, root) {
          single = query_parse_single(expr, context, subquery_env, root),
          at_location = query_parse_at_location(expr, context),
          subquery = query_parse_subquery(expr, context, subquery_env, root),
+         none = query_parse_none(expr, context),
          ## normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -142,6 +143,11 @@ query_parse_group <- function(expr, context, subquery_env, root) {
 query_parse_latest <- function(expr, context, subquery_env, root) {
   args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
   query_component("latest", expr, context, args)
+}
+
+
+query_parse_none <- function(expr, context) {
+  query_component("none", expr, context, args = NULL)
 }
 
 
@@ -204,20 +210,22 @@ query_parse_subquery <- function(expr, context, subquery_env, root) {
   ids <- if (is_outpack_query_evaluated(subquery)) {
     subquery_env[[name]]$result
   } else {
-    browser()
     subquery_env[[name]]$result <- as_outpack_query_evaluated(
       outpack_query(subquery$expr,
                     scope = subquery$scope,
                     root = root))
     subquery_env[[name]]$result
   }
-  ## TODO: What if res returns no packets?
-  ## parse res some ids into id == "awdad" || id == "qadwwda"
-  exprs <- lapply(ids, function(id) {
-    bquote(id == .(id))
-  })
+  evaluated_expr <- if (length(ids) == 0) {
+      quote(none())
+  } else {
+    exprs <- lapply(ids, function(id) {
+      bquote(id == .(id))
+    })
+    query_build_or(exprs)
+  }
 
-  query_parse_expr(query_build_or(exprs),
+  query_parse_expr(evaluated_expr,
                    context = context,
                    subquery_env = subquery_env,
                    root = root)
@@ -340,6 +348,7 @@ query_eval <- function(query, index, pars) {
          latest = query_eval_latest(query, index, pars),
          single = query_eval_single(query, index, pars),
          at_location = query_eval_at_location(query, index, pars),
+         none = query_eval_none(query, index, pars),
          ## Normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -374,6 +383,11 @@ query_eval_at_location <- function(query, index, pars) {
   location <- vcapply(query$args, "[[", "value")
   i <- vlapply(index$location, function(x) any(x %in% location))
   index$id[i]
+}
+
+
+query_eval_none <- function(query, index, pars) {
+  NA_character_
 }
 
 
