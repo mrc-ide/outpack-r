@@ -36,7 +36,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
     assert_named(subquery) ## TODO: more validation?
     subquery_env <- as.environment(subquery)
   }
-  expr_parsed <- query_parse(expr, subquery)
+  expr_parsed <- query_parse(expr, subquery_env, root)
   validate_parameters(pars)
 
   ## We will want to do this processing more generally later (in the
@@ -75,7 +75,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
 }
 
 
-query_parse <- function(expr, subquery_env) {
+query_parse <- function(expr, subquery_env, root) {
   if (is.character(expr)) {
     if (length(expr) == 1 && grepl(re_id, expr)) {
       ## If we're given a single id, we construct a simple query with it
@@ -96,7 +96,7 @@ query_parse <- function(expr, subquery_env) {
     expr <- quote(latest())
   }
 
-  query_parse_expr(expr, expr, subquery_env)
+  query_parse_expr(expr, expr, subquery_env, root)
 }
 
 
@@ -111,14 +111,15 @@ query_component <- function(type, expr, context, args, ...) {
 }
 
 
-query_parse_expr <- function(expr, context, subquery_env) {
+query_parse_expr <- function(expr, context, subquery_env, root) {
   type <- query_parse_check_call(expr, context, subquery_env)
   switch(type,
          test = query_parse_test(expr, context),
-         group = query_parse_group(expr, context),
-         latest = query_parse_latest(expr, context),
-         single = query_parse_single(expr, context),
+         group = query_parse_group(expr, context, subquery_env, root),
+         latest = query_parse_latest(expr, context, subquery_env, root),
+         single = query_parse_single(expr, context, subquery_env, root),
          at_location = query_parse_at_location(expr, context),
+         subquery = query_parse_subquery(expr, context, subquery_env, root),
          ## normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -131,21 +132,21 @@ query_parse_test <- function(expr, context) {
 }
 
 
-query_parse_group <- function(expr, context) {
-  args <- lapply(expr[-1], query_parse_expr, context)
+query_parse_group <- function(expr, context, subquery_env, root) {
+  args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
   name <- deparse(expr[[1]])
   query_component("group", expr, context, args, name = name)
 }
 
 
-query_parse_latest <- function(expr, context) {
-  args <- lapply(expr[-1], query_parse_expr, context)
+query_parse_latest <- function(expr, context, subquery_env, root) {
+  args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
   query_component("latest", expr, context, args)
 }
 
 
-query_parse_single <- function(expr, context) {
-  args <- lapply(expr[-1], query_parse_expr, context)
+query_parse_single <- function(expr, context, subquery_env, root) {
+  args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
   query_component("single", expr, context, args)
 }
 
@@ -186,15 +187,70 @@ query_eval_error <- function(msg, expr, context) {
   query_error(msg, expr, context, "while evaluating")
 }
 
+
 as_outpack_query_evaluated <- function(x) {
   structure(x, class = "outpack_query_evaluated")
 }
+
 
 is_outpack_query_evaluated <- function(x) {
   inherits(x, "outpack_query_evaluated")
 }
 
+
+query_parse_subquery <- function(expr, context, subquery_env, root) {
+  name <- as.character(expr)
+  subquery <- get(name, envir = subquery_env)
+  ids <- if (is_outpack_query_evaluated(subquery)) {
+    subquery_env[[name]]$result
+  } else {
+    browser()
+    subquery_env[[name]]$result <- as_outpack_query_evaluated(
+      outpack_query(subquery$expr,
+                    scope = subquery$scope,
+                    root = root))
+    subquery_env[[name]]$result
+  }
+  ## TODO: What if res returns no packets?
+  ## parse res some ids into id == "awdad" || id == "qadwwda"
+  exprs <- lapply(ids, function(id) {
+    bquote(id == .(id))
+  })
+
+  query_parse_expr(query_build_or(exprs),
+                   context = context,
+                   subquery_env = subquery_env,
+                   root = root)
+}
+
+
+query_build_or <- function(exprs) {
+  if (length(exprs) == 1) {
+    return(exprs[[1]])
+  }
+  concatenated <- exprs[[1]]
+  exprs <- exprs[-1]
+  add_or <- function(exprs, concatenated) {
+    concatenated <- call("||", concatenated, exprs[[1]])
+    if (length(exprs[-1]) > 0) {
+      add_or(exprs[-1], concatenated)
+    } else {
+      concatenated
+    }
+  }
+  add_or(exprs, concatenated)
+}
+
+
+is_subquery <- function(expr, subquery_env) {
+  is.name(expr) && exists(as.character(expr), where = subquery_env)
+}
+
+
 query_parse_check_call <- function(expr, context, subquery_env) {
+  if (is_subquery(expr, subquery_env)) {
+    return("subquery")
+  }
   if (!is.call(expr)) {
     query_parse_error(sprintf(
       "Invalid query '%s'; expected some sort of expression",
@@ -203,27 +259,12 @@ query_parse_check_call <- function(expr, context, subquery_env) {
   }
 
   fn <- as.character(expr[[1]])
-  # if (fn %in% ls(subquery_env)) {
-  #   query_parse_subquery()
-  #   type <- "subquery"
-  #   len <- 0
-  #   subquery <- get(fn, envir = subquery_env)
-  #   res <- if (is_outpack_query_evaluated(subquery)) {
-  #     subquery_env[[fn]]$result
-  #   } else {
-  #     subquery_env[[fn]]$result <- as_outpack_query_evaluated(
-  #       outpack_query(subquery$expr, scope = subquery$scope))
-  #     subquery_env[[fn]]$result
-  #   }
-  #   ## TODO: What if res returns no packets?
-  #
-  # }
 
   if (fn %in% names(query_functions$group)) {
     type <- "group"
   } else if (fn %in% names(query_functions$test)) {
     type <- "test"
-  } else { # fn is in names(query_functions$other)
+  } else {
     type <- "other"
   }
   len <- query_functions[[type]][[fn]]

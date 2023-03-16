@@ -118,8 +118,7 @@ test_that("Can run very basic queries", {
     outpack_query(quote(latest()), root = root),
     last(ids))
   expect_equal(
-    outpack_query(substitute(id == x, as.environment(list(x = ids[[1]]))),
-                  root = root),
+    outpack_query(bquote(id == .(ids[[1]])), root = root),
     ids[[1]])
   expect_equal(
     outpack_query(quote(name == "data"), root = root),
@@ -380,6 +379,21 @@ test_that("outpack_query can include subqueries", {
                   root = root),
     x2)
 })
+
+
+test_that("outpack_query returns no results when subquery has no results", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+
+  expect_equal(
+    outpack_query(quote(latest(sub)),
+                  subquery = list(sub = list(expr = quote(name == "y"))),
+                  root = root),
+    NA_character_)
+})
+
 
 test_that("outpack_query subqueries can include scope", {
   tmp <- temp_file()
