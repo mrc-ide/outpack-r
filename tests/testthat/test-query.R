@@ -37,13 +37,13 @@ test_that("print context around parse errors", {
 
 test_that("Expressions must be calls", {
   expect_error(
-    query_parse(quote(name)),
+    query_parse(quote(name), emptyenv(), NULL),
     "Invalid query 'name'; expected some sort of expression")
   expect_error(
-    query_parse(quote(latest(name))),
+    query_parse(quote(latest(name)), emptyenv(), NULL),
     "Invalid query 'name'; expected some sort of expression")
   expect_error(
-    query_parse(quote(latest(parameter:x == 1 && name))),
+    query_parse(quote(latest(parameter:x == 1 && name)), emptyenv(), NULL),
     "Invalid query 'name'; expected some sort of expression")
 })
 
@@ -249,7 +249,7 @@ test_that("switch statements will prevent regressions", {
                 mockery::mock("other"))
   expr <- quote(some_function())
   expect_error(
-    query_parse_expr(expr, expr),
+    query_parse_expr(expr, expr, emptyenv(), NULL),
     "Unhandled expression [outpack bug - please report]",
     fixed = TRUE)
 
