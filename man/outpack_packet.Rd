@@ -10,19 +10,26 @@
 \alias{outpack_packet_add_custom}
 \title{Start, interact with, and end a packet build}
 \usage{
-outpack_packet_start(path, name, parameters = NULL, id = NULL, root = NULL)
+outpack_packet_start(
+  path,
+  name,
+  parameters = NULL,
+  id = NULL,
+  local = FALSE,
+  root = NULL
+)
 
-outpack_packet_cancel()
+outpack_packet_cancel(packet = NULL)
 
 outpack_packet_current()
 
-outpack_packet_end()
+outpack_packet_end(packet = NULL)
 
-outpack_packet_run(script, envir = .GlobalEnv, echo = FALSE)
+outpack_packet_run(script, envir = .GlobalEnv, echo = FALSE, packet = NULL)
 
-outpack_packet_use_dependency(id, files)
+outpack_packet_use_dependency(id, files, packet = NULL)
 
-outpack_packet_add_custom(application, data, schema = NULL)
+outpack_packet_add_custom(application, data, schema = NULL, packet = NULL)
 }
 \arguments{
 \item{path}{Path to the build / output directory.}
@@ -35,8 +42,17 @@ atomics (logical, integer, numeric, character)}
 
 \item{id}{The id of an existing packet to use files from}
 
+\item{local}{Logical, indicating if this should be considered a
+"local" packet and not set as the default for other packet
+functions. If \code{TRUE}, then you must explicitly pass the packet
+(the return value from \code{outpack_packet_start}) into each of the
+other packet functions (e.g, \code{outpack_packet_run} and
+\code{outpack_packet_end})}
+
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
+
+\item{packet}{Optionally, an explicitly-passed packet; see Details}
 
 \item{script}{Path to the script within the packet directory (a
 relative path).  This function can be safely called multiple
@@ -65,13 +81,22 @@ validation.  Will be passed to \link[jsonvalidate:json_schema]{jsonvalidate::jso
 can be a string containing the schema or a path to the schema.}
 }
 \value{
-Invisibly, a copy of the packet data
+Invisibly, a copy of the packet data; this can be passed
+as the \code{packet} argument.
 }
 \description{
 Start a packet build (\code{outpack_packet_start}), end one
 (\code{outpack_packet_cancel}, \code{outpack_packet_end}) and interact with
 the current packet (\code{outpack_packet_use_dependency},
 \code{outpack_packet_run})
+}
+\details{
+There are two ways of using these functions - normally you call
+\code{outpack_packet_start}, which registers an "active" packet,
+following this all other functions (e.g., \code{outpack_packet_run})
+use this active packet. The other approach is to take the return
+value from \code{outpack_packet_start} and pass that through as the
+\code{packet} argument to any other function.
 }
 \section{Custom metadata}{
 
