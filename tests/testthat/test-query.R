@@ -142,9 +142,7 @@ test_that("Can run very basic queries", {
     outpack_query(quote(!(name == "other") && name == "data"), root = root),
     ids)
   expect_equal(
-    outpack_query(substitute(
-      latest(id == x1 || id == x2),
-      as.environment(list(x1 = ids[[1]], x2 = ids[[2]]))),
+    outpack_query(bquote(latest(id == .(ids[[1]]) || id == .(ids[[2]]))),
       root = root),
     ids[[2]])
 })
@@ -365,7 +363,7 @@ test_that("named queries", {
 })
 
 
-test_that("outpack_query none type returns no results", {
+test_that("outpack_query returns no results when searching for none()", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
 

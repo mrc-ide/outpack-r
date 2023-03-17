@@ -169,31 +169,6 @@ query_parse_at_location <- function(expr, context) {
 }
 
 
-query_error <- function(msg, expr, context, prefix) {
-  if (identical(expr, context)) {
-    stop(sprintf("%s\n  - %s %s", msg, prefix, deparse_str(expr)),
-         call. = FALSE)
-  } else {
-    width <- max(nchar(prefix), nchar("within"))
-    stop(sprintf("%s\n  - %s %s\n  - %s %s",
-                 msg,
-                 format(prefix, width = width), deparse_str(expr),
-                 format("within", width = width), deparse_str(context)),
-         call. = FALSE)
-  }
-}
-
-
-query_parse_error <- function(msg, expr, context) {
-  query_error(msg, expr, context, "in")
-}
-
-
-query_eval_error <- function(msg, expr, context) {
-  query_error(msg, expr, context, "while evaluating")
-}
-
-
 as_outpack_query_evaluated <- function(x) {
   structure(x, class = "outpack_query_evaluated")
 }
@@ -217,7 +192,7 @@ query_parse_subquery <- function(expr, context, subquery_env, root) {
     subquery_env[[name]]$result
   }
   evaluated_expr <- if (length(ids) == 0) {
-      quote(none())
+    quote(none())
   } else {
     exprs <- lapply(ids, function(id) {
       bquote(id == .(id))
@@ -247,6 +222,31 @@ query_build_or <- function(exprs) {
     }
   }
   add_or(exprs, concatenated)
+}
+
+
+query_error <- function(msg, expr, context, prefix) {
+  if (identical(expr, context)) {
+    stop(sprintf("%s\n  - %s %s", msg, prefix, deparse_str(expr)),
+         call. = FALSE)
+  } else {
+    width <- max(nchar(prefix), nchar("within"))
+    stop(sprintf("%s\n  - %s %s\n  - %s %s",
+                 msg,
+                 format(prefix, width = width), deparse_str(expr),
+                 format("within", width = width), deparse_str(context)),
+         call. = FALSE)
+  }
+}
+
+
+query_parse_error <- function(msg, expr, context) {
+  query_error(msg, expr, context, "in")
+}
+
+
+query_eval_error <- function(msg, expr, context) {
+  query_error(msg, expr, context, "while evaluating")
 }
 
 
