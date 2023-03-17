@@ -35,13 +35,14 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
                           require_unpacked = FALSE,
                           root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
-  subquery_env <- new.env(parent = emptyenv())
   if (!is.null(subquery)) {
-    assert_named(subquery)
+    assert_named(subquery, unique = TRUE)
     for (query in subquery) {
       assert_has_names(query, "expr")
     }
     subquery_env <- as.environment(subquery)
+  } else {
+    subquery_env <- new.env(parent = emptyenv())
   }
   expr_parsed <- query_parse(expr, subquery_env, root)
   validate_parameters(pars)
@@ -176,28 +177,15 @@ query_parse_at_location <- function(expr, context) {
 }
 
 
-as_outpack_query_evaluated <- function(x) {
-  structure(x, class = "outpack_query_evaluated")
-}
-
-
-is_outpack_query_evaluated <- function(x) {
-  inherits(x, "outpack_query_evaluated")
-}
-
-
 query_parse_subquery <- function(expr, context, subquery_env, root) {
   name <- as.character(expr)
   subquery <- get(name, envir = subquery_env)
-  ids <- if (is_outpack_query_evaluated(subquery)) {
-    subquery_env[[name]]$result
-  } else {
-    subquery_env[[name]]$result <- as_outpack_query_evaluated(
-      outpack_query(subquery$expr,
-                    scope = subquery$scope,
-                    root = root))
-    subquery_env[[name]]$result
+  if(is.null(subquery$result)) {
+    subquery_env[[name]]$result <- outpack_query(subquery$expr,
+                                                 scope = subquery$scope,
+                                                 root = root)
   }
+  ids <- subquery_env[[name]]$result
   evaluated_expr <- if (length(ids) == 0) {
     quote(none())
   } else {

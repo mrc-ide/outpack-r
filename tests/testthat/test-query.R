@@ -389,6 +389,12 @@ test_that("outpack_query can include subqueries", {
                   subquery = list(sub = list(expr = quote(name == "x"))),
                   root = root),
     x2)
+  expect_equal(
+    outpack_query(
+      quote(sub),
+      subquery = list(sub = list(expr = quote(latest(name == "x")))),
+      root = root),
+    x2)
 })
 
 
