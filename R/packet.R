@@ -3,6 +3,13 @@
 ##' the current packet (`outpack_packet_use_dependency`,
 ##' `outpack_packet_run`)
 ##'
+##' There are two ways of using these functions - normally you call
+##' `outpack_packet_start`, which registers an "active" packet,
+##' following this all other functions (e.g., `outpack_packet_run`)
+##' use this active packet. The other approach is to take the return
+##' value from `outpack_packet_start` and pass that through as the
+##' `packet` argument to any other function.
+##'
 ##' @title Start, interact with, and end a packet build
 ##'
 ##' @param path Path to the build / output directory.
@@ -13,25 +20,32 @@
 ##'   names must be unique, and the values must all be non-NA scalar
 ##'   atomics (logical, integer, numeric, character)
 ##'
+##' @param local Logical, indicating if this should be considered a
+##'   "local" packet and not set as the default for other packet
+##'   functions. If `TRUE`, then you must explicitly pass the packet
+##'   (the return value from `outpack_packet_start`) into each of the
+##'   other packet functions (e.g, `outpack_packet_run` and
+##'   `outpack_packet_end`)
+##'
 ##' @param id Optionally, an outpack id via [outpack::outpack_id]. If
 ##'   not given a new id will be generated.
 ##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
-##' @return Invisibly, a copy of the packet data
+##' @return Invisibly, a copy of the packet data; this can be passed
+##'   as the `packet` argument.
+##'
 ##' @rdname outpack_packet
 ##' @export
 outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
-                                 root = NULL) {
+                                 local = FALSE, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
-  if (!is.null(current$packet)) {
+  assert_scalar_logical(local)
+  if (!is.null(current$packet) && !local) {
     ## * Could make this root specific?
-    ## * Could make this path specific?
-    ## * Could use a stack?
-    ## * Could automatically exit?
-    ## * Could be fine if name/id match
-    stop("Already a current packet - call outpack_packet_cancel()")
+    stop(paste("Already a current packet - call outpack_packet_cancel()",
+               "or use local = TRUE for an isolated packet"))
   }
 
   assert_scalar_character(name)
@@ -49,41 +63,47 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
   ## LOGGING: name / id / path, start time, parameters
   ##
   ## We log these all in orderly and that's super useful
-  current$packet <- list(
-    name = name,
-    id = id,
-    path = path,
-    parameters = parameters,
-    files = list(),
-    time = time,
-    root = root)
+  packet <- structure(
+    list2env(
+      list(
+        name = name,
+        id = id,
+        path = path,
+        parameters = parameters,
+        files = list(),
+        time = time,
+        root = root),
+      parent = emptyenv()),
+    class = "outpack_packet")
 
-  invisible(current$packet)
+  if (!local) {
+    current$packet <- packet
+  }
+
+  invisible(packet)
 }
 
 
 ##' @export
 ##' @rdname outpack_packet
-outpack_packet_cancel <- function() {
-  p <- outpack_packet_current()
-  outpack_packet_clear()
+##' @param packet Optionally, an explicitly-passed packet; see Details
+outpack_packet_cancel <- function(packet = NULL) {
+  p <- check_current_packet(packet)
+  outpack_packet_finish(p)
 }
 
 
 ##' @export
 ##' @rdname outpack_packet
 outpack_packet_current <- function() {
-  if (is.null(current$packet)) {
-    stop("No current packet")
-  }
-  current$packet
+  check_current_packet(NULL)
 }
 
 
 ##' @export
 ##' @rdname outpack_packet
-outpack_packet_end <- function() {
-  p <- outpack_packet_current()
+outpack_packet_end <- function(packet = NULL) {
+  p <- check_current_packet(packet)
   p$time$end <- Sys.time()
   hash_algorithm <- p$root$config$core$hash_algorithm
   json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
@@ -97,7 +117,7 @@ outpack_packet_end <- function() {
                                   file_ignore = p$files$ignored,
                                   hash_algorithm = hash_algorithm)
   outpack_insert_packet(p$path, json, p$root)
-  outpack_packet_clear()
+  outpack_packet_finish(p)
 }
 
 
@@ -113,8 +133,9 @@ outpack_packet_end <- function() {
 ##' @param echo Print the result of running the R code to the
 ##'   console. This may be difficult to suppress in some context, as
 ##'   it comes directly from R's [source] function.
-outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE) {
-  p <- outpack_packet_current()
+outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
+                               packet = NULL) {
+  p <- check_current_packet(packet)
   assert_relative_path(script, no_dots = TRUE)
   assert_file_exists(script, p$path, "Script")
 
@@ -145,7 +166,6 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE) {
   })
 
   p$script <- c(p$script, script)
-  current$packet <- p
 
   ## What is a good return value here?
   invisible()
@@ -160,8 +180,8 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE) {
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
-outpack_packet_use_dependency <- function(id, files) {
-  p <- outpack_packet_current()
+outpack_packet_use_dependency <- function(id, files, packet = NULL) {
+  p <- check_current_packet(packet)
   root <- p$root
 
   ## TODO: currently no capacity here for *querying* to find the id
@@ -190,7 +210,7 @@ outpack_packet_use_dependency <- function(id, files) {
 
   depends <- list(packet = id,
                   files = data_frame(here = names(files), there = src))
-  current$packet$depends <- c(p$depends, list(depends))
+  p$depends <- c(p$depends, list(depends))
 
   invisible()
 }
@@ -262,8 +282,9 @@ outpack_packet_use_dependency <- function(id, files) {
 ##'   `outpack.schema_validate` is `TRUE`, as for the main schema
 ##'   validation.  Will be passed to [jsonvalidate::json_schema], so
 ##'   can be a string containing the schema or a path to the schema.
-outpack_packet_add_custom <- function(application, data, schema = NULL) {
-  p <- outpack_packet_current()
+outpack_packet_add_custom <- function(application, data, schema = NULL,
+                                      packet = NULL) {
+  p <- check_current_packet(packet)
 
   assert_scalar_character(application)
   assert_scalar_character(data)
@@ -291,7 +312,7 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
   }
 
   custom <- list(application = application, data = data)
-  current$packet$custom <- c(p$custom, list(custom))
+  p$custom <- c(p$custom, list(custom))
   invisible()
 }
 
@@ -309,6 +330,9 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
 ##' @param status A status to mark the file with. Must be "immutable"
 ##'   or "ignored"
 ##'
+##' @param packet Optionally, an explicitly-passed packet; see
+##'   [outpack::outpack_packet_start()] for details.
+##'
 ##' @return Depending on function
 ##'
 ##' * `outpack_packet_file_mark` returns nothing
@@ -318,9 +342,9 @@ outpack_packet_add_custom <- function(application, data, schema = NULL) {
 ##' @rdname outpack_packet_file
 ##'
 ##' @export
-outpack_packet_file_mark <- function(files, status) {
+outpack_packet_file_mark <- function(files, status, packet = NULL) {
   status <- match_value(status, c("immutable", "ignored"))
-  p <- outpack_packet_current()
+  p <- check_current_packet(packet)
 
   assert_relative_path(files, no_dots = TRUE)
   assert_file_exists(files, p$path)
@@ -341,7 +365,7 @@ outpack_packet_file_mark <- function(files, status) {
       value <- value[!(names(value) %in% names(p$files))]
     }
 
-    current$packet$files$immutable <- c(p$files$immutable, value)
+    p$files$immutable <- c(p$files$immutable, value)
   } else if (status == "ignored") {
     if (any(files %in% names(p$files$immutable))) {
       stop(sprintf("Cannot mark immutable files as ignored: %s",
@@ -349,7 +373,7 @@ outpack_packet_file_mark <- function(files, status) {
                          collapse = ", ")))
     }
 
-    current$packet$files$ignored <- union(p$files$ignored, files)
+    p$files$ignored <- union(p$files$ignored, files)
   }
   invisible()
 }
@@ -357,8 +381,8 @@ outpack_packet_file_mark <- function(files, status) {
 
 ##' @export
 ##' @rdname outpack_packet_file
-outpack_packet_file_list <- function() {
-  p <- outpack_packet_current()
+outpack_packet_file_list <- function(packet = NULL) {
+  p <- check_current_packet(packet)
   files <- with_dir(p$path,
                     dir(all.files = TRUE, recursive = TRUE, no.. = TRUE))
   status <- rep("unknown", length(files))
@@ -368,8 +392,42 @@ outpack_packet_file_list <- function() {
 }
 
 
+
+## Mostly used in tests as an unconditional "remove any packet with no
+## chance of failure" (vs outpack_packet_finish, which does a more
+## careful tidyup)
 outpack_packet_clear <- function() {
-  current$packet <- NULL
+  if (!is.null(current$packet)) {
+    current$packet$complete <- TRUE
+    current$packet <- NULL
+  }
+}
+
+
+outpack_packet_finish <- function(packet) {
+  packet$complete <- TRUE
+  if (identical(packet, current$packet)) {
+    current$packet <- NULL
+  }
+}
+
+
+## This is used in each of the functions that accept either 'packet'
+## as an argument and which will fall back onto the global active
+## packet.
+check_current_packet <- function(packet) {
+  if (is.null(packet)) {
+    packet <- current$packet
+    if (is.null(packet)) {
+      stop("No currently active packet")
+    }
+  } else {
+    assert_is(packet, "outpack_packet")
+    if (isTRUE(packet$complete)) {
+      stop(sprintf("Packet '%s' is complete", packet$id))
+    }
+  }
+  packet
 }
 
 

@@ -310,6 +310,50 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
 })
 
 
+test_that("scope and require_unpacked can be used together to filter query", {
+  t <- temp_file()
+  path$src <- file.path(t, "src")
+  path$dst <- file.path(t, "dst")
+  root <- list()
+  root$src <- outpack_init(path$src)
+  root$dst <- outpack_init(path$dst)
+  outpack_location_add("src", "path", list(path = path$src),
+                       root = path$dst)
+
+  x1 <- create_random_packet(path$src, "x", list(p = 1))
+  x2 <- create_random_packet(path$src, "x", list(p = 1))
+  y1 <- create_random_packet(path$src, "y", list(p = 1))
+  y2 <- create_random_packet(path$src, "y", list(p = 1))
+  outpack_location_pull_metadata(root = path$dst)
+
+  expect_equal(
+    outpack_query(quote(latest(parameter:p == 1)), require_unpacked = FALSE,
+                  scope = quote(name == "x"),
+                  root = path$dst),
+    x2)
+  expect_equal(
+    outpack_query(quote(latest(parameter:p == 1)), require_unpacked = TRUE,
+                  scope = quote(name == "x"),
+                  root = path$dst),
+    NA_character_)
+
+  for (i in c(x1, y1)) {
+    outpack_location_pull_packet(i, location = "src", root = path$dst)
+  }
+
+  expect_equal(
+    outpack_query(quote(latest(parameter:p == 1)), require_unpacked = FALSE,
+                  scope = quote(name == "x"),
+                  root = path$dst),
+    x2)
+  expect_equal(
+    outpack_query(quote(latest(parameter:p == 1)), require_unpacked = TRUE,
+                  scope = quote(name == "x"),
+                  root = path$dst),
+    x1)
+})
+
+
 test_that("Parse literal id query", {
   id <- "20220722-085951-148b7686"
   res <- query_parse(id)

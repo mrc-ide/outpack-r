@@ -23,12 +23,17 @@ test_that("Can run a basic packet", {
   root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
 
   p <- outpack_packet_start(path_src, "example", root = root)
+  expect_s3_class(p, "outpack_packet")
+  expect_null(p$complete)
+  expect_identical(p, current$packet)
 
   outpack_packet_run("script.R")
   expect_true(file.exists(file.path(path_src, "myplot.png")))
   expect_equal(outpack_packet_current()$script, "script.R")
 
   outpack_packet_end()
+  expect_true(p$complete)
+  expect_null(current$p)
 
   index <- root$index()
   expect_length(index$metadata, 1)
@@ -167,7 +172,7 @@ test_that("Can't use a nonexistant running packet", {
   outpack_packet_clear()
   expect_error(
     outpack_packet_current(),
-    "No current packet")
+    "No currently active packet")
 })
 
 
@@ -626,4 +631,48 @@ test_that("can detect device imbalance", {
                "Script left 1 device open")
   ## Handler has fixed the stack for us:
   expect_equal(stack, dev.list())
+})
+
+
+test_that("Validate a packet", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+
+  p1 <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
+  expect_null(current$packet)
+  p2 <- outpack_packet_start(path_src, "example", root = root)
+  expect_false(identical(p1, p2))
+  expect_identical(p2, current$packet)
+
+  expect_identical(check_current_packet(NULL), p2)
+  expect_identical(check_current_packet(p1), p1)
+  expect_identical(check_current_packet(p2), p2)
+
+  outpack_packet_finish(p1)
+  outpack_packet_finish(p2)
+
+  expect_error(check_current_packet(NULL),
+               "No currently active packet")
+  expect_error(check_current_packet(p1),
+               "Packet '.+' is complete")
+  expect_error(check_current_packet(p2),
+               "Packet '.+' is complete")
+})
+
+
+test_that("run basic report with explicit packet", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path_src <- create_temporary_simple_src()
+
+  inputs <- c("data.csv", "script.R")
+  env <- new.env()
+
+  p <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
+  outpack_packet_run("script.R", env, echo = FALSE, packet = p)
+  outpack_packet_end(packet = p)
+
+  expect_equal(names(root$index()$metadata), p$id)
+  expect_true(p$complete)
 })
