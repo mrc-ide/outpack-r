@@ -68,9 +68,9 @@ are marked (or unmarked) within the directory.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_packet_file_mark</span><span class="op">(</span><span class="va">files</span>, <span class="va">status</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_packet_file_mark</span><span class="op">(</span><span class="va">files</span>, <span class="va">status</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_file_list</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">outpack_packet_file_list</span><span class="op">(</span>packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -82,6 +82,11 @@ are marked (or unmarked) within the directory.</p>
 <dt>status</dt>
 <dd><p>A status to mark the file with. Must be "immutable"
 or "ignored"</p></dd>
+
+
+<dt>packet</dt>
+<dd><p>Optionally, an explicitly-passed packet; see
+<code><a href="outpack_packet.html">outpack_packet_start()</a></code> for details.</p></dd>
 
 </dl></div>
     <div id="value">

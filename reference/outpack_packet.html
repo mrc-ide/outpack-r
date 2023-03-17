@@ -66,19 +66,26 @@ the current packet (<code>outpack_packet_use_dependency</code>,
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_packet_start</span><span class="op">(</span><span class="va">path</span>, <span class="va">name</span>, parameters <span class="op">=</span> <span class="cn">NULL</span>, id <span class="op">=</span> <span class="cn">NULL</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_packet_start</span><span class="op">(</span></span>
+<span>  <span class="va">path</span>,</span>
+<span>  <span class="va">name</span>,</span>
+<span>  parameters <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  local <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  root <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_cancel</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">outpack_packet_cancel</span><span class="op">(</span>packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">outpack_packet_current</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_end</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="fu">outpack_packet_end</span><span class="op">(</span>packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span>, echo <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span>, echo <span class="op">=</span> <span class="cn">FALSE</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_use_dependency</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span><span class="op">)</span></span>
+<span><span class="fu">outpack_packet_use_dependency</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_add_custom</span><span class="op">(</span><span class="va">application</span>, <span class="va">data</span>, schema <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">outpack_packet_add_custom</span><span class="op">(</span><span class="va">application</span>, <span class="va">data</span>, schema <span class="op">=</span> <span class="cn">NULL</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -101,9 +108,22 @@ atomics (logical, integer, numeric, character)</p></dd>
 <dd><p>The id of an existing packet to use files from</p></dd>
 
 
+<dt>local</dt>
+<dd><p>Logical, indicating if this should be considered a
+"local" packet and not set as the default for other packet
+functions. If <code>TRUE</code>, then you must explicitly pass the packet
+(the return value from <code>outpack_packet_start</code>) into each of the
+other packet functions (e.g, <code>outpack_packet_run</code> and
+<code>outpack_packet_end</code>)</p></dd>
+
+
 <dt>root</dt>
 <dd><p>The outpack root. Will be searched for from the
 current directory if not given.</p></dd>
+
+
+<dt>packet</dt>
+<dd><p>Optionally, an explicitly-passed packet; see Details</p></dd>
 
 
 <dt>script</dt>
@@ -150,7 +170,17 @@ can be a string containing the schema or a path to the schema.</p></dd>
     <h2>Value</h2>
     
 
-<p>Invisibly, a copy of the packet data</p>
+<p>Invisibly, a copy of the packet data; this can be passed
+as the <code>packet</code> argument.</p>
+    </div>
+    <div id="details">
+    <h2>Details</h2>
+    <p>There are two ways of using these functions - normally you call
+<code>outpack_packet_start</code>, which registers an "active" packet,
+following this all other functions (e.g., <code>outpack_packet_run</code>)
+use this active packet. The other approach is to take the return
+value from <code>outpack_packet_start</code> and pass that through as the
+<code>packet</code> argument to any other function.</p>
     </div>
     <div id="custom-metadata">
     <h2>Custom metadata</h2>
