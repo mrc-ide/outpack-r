@@ -90,12 +90,3 @@ test_that("match_value", {
   expect_error(match_value("foo", letters), "must be one of")
   expect_silent(match_value("a", letters))
 })
-
-
-test_that("assert_has_names", {
-  object <- list(a = 1, b = 2, c = 3)
-  expect_silent(assert_has_names(object, "a"))
-  expect_silent(assert_has_names(object, c("a", "b")))
-  expect_error(assert_has_names(object, c("a", "x", "y")),
-               "Required names missing from 'object': 'x', 'y'")
-})

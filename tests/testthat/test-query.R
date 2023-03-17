@@ -1,6 +1,6 @@
 test_that("Parse basic query", {
-  res <- query_parse("latest(name == 'data')")
-  expect_identical(query_parse(quote(latest(name == "data"))), res)
+  res <- query_parse("latest(name == 'data')", emptyenv())
+  expect_identical(query_parse(quote(latest(name == "data")), emptyenv()), res)
   expect_equal(res$type, "latest")
   expect_length(res$args, 1)
   expect_equal(res$args[[1]]$type, "test")
@@ -12,22 +12,22 @@ test_that("Parse basic query", {
 
 
 test_that("Prevent unparseable queries", {
-  expect_error(query_parse(NULL),
+  expect_error(query_parse(NULL, emptyenv()),
                "Invalid input for query")
-  expect_error(query_parse("latest(); latest()"),
+  expect_error(query_parse("latest(); latest()", emptyenv()),
                "Expected a single expression")
 })
 
 
 test_that("print context around parse errors", {
   err <- expect_error(
-    query_parse(quote(a %in% b)),
+    query_parse(quote(a %in% b), emptyenv()),
     "Invalid query 'a %in% b'; unknown query component '%in%'",
     fixed = TRUE)
   expect_match(err$message, "  - in a %in% b", fixed = TRUE)
 
   err <- expect_error(
-    query_parse(quote(latest(a %in% b))),
+    query_parse(quote(latest(a %in% b)), emptyenv()),
     "Invalid query 'a %in% b'; unknown query component '%in%'",
     fixed = TRUE)
   expect_match(err$message, "  - in     a %in% b", fixed = TRUE)
@@ -37,13 +37,13 @@ test_that("print context around parse errors", {
 
 test_that("Expressions must be calls", {
   expect_error(
-    query_parse(quote(name)),
+    query_parse(quote(name), emptyenv()),
     "Invalid query 'name'; expected some sort of expression")
   expect_error(
-    query_parse(quote(latest(name))),
+    query_parse(quote(latest(name)), emptyenv()),
     "Invalid query 'name'; expected some sort of expression")
   expect_error(
-    query_parse(quote(latest(parameter:x == 1 && name))),
+    query_parse(quote(latest(parameter:x == 1 && name)), emptyenv()),
     "Invalid query 'name'; expected some sort of expression")
 })
 
@@ -53,31 +53,31 @@ test_that("validate argument numbers", {
   ## message is a bit weird too, but it will be reasonable for
   ## anything else that has a fixed number of args.
   expect_error(
-    query_parse(quote(`==`(a, b, c))),
-    "Invalid call to ==(); expected 2 args but recieved 3",
+    query_parse(quote(`==`(a, b, c)), emptyenv()),
+    "Invalid call to ==(); expected 2 args but received 3",
     fixed = TRUE)
   expect_error(
-    query_parse(quote(latest(a, b))),
-    "Invalid call to latest(); expected at most 1 args but recieved 2",
+    query_parse(quote(latest(a, b)), emptyenv()),
+    "Invalid call to latest(); expected at most 1 args but received 2",
     fixed = TRUE)
   expect_error(
-    query_parse(quote(latest(at_location()))),
-    "Invalid call to at_location(); expected at least 1 args but recieved 0",
+    query_parse(quote(latest(at_location())), emptyenv()),
+    "Invalid call to at_location(); expected at least 1 args but received 0",
     fixed = TRUE)
 })
 
 
 test_that("at_location requires string literal arguments", {
   expect_error(
-    query_parse(quote(latest(at_location(1, 2)))),
+    query_parse(quote(latest(at_location(1, 2))), emptyenv()),
     "All arguments to at_location() must be string literals",
     fixed = TRUE)
   expect_error(
-    query_parse(quote(latest(at_location("a", 2)))),
+    query_parse(quote(latest(at_location("a", 2))), emptyenv()),
     "All arguments to at_location() must be string literals",
     fixed = TRUE)
 
-  res <- query_parse(quote(at_location("a", "b")))
+  res <- query_parse(quote(at_location("a", "b")), emptyenv())
   expect_equal(res$type, "at_location")
   expect_equal(res$args, list(list(type = "literal", value = "a"),
                               list(type = "literal", value = "b")))
@@ -85,7 +85,7 @@ test_that("at_location requires string literal arguments", {
 
 
 test_that("Queries can only be name and parameter", {
-  res <- query_parse(quote(name == "data"))
+  res <- query_parse(quote(name == "data"), emptyenv())
   expect_equal(res$type, "test")
   expect_equal(res$name, "==")
   expect_equal(res$args,
@@ -96,7 +96,9 @@ test_that("Queries can only be name and parameter", {
   expect_equal(res$type, "test")
   expect_equal(res$name, "==")
   expect_equal(res$args,
-               list(list(type = "lookup", name = "parameter", query = "x"),
+               list(list(type = "lookup", name = "parameter", query = "x",
+                         expr = quote(parameter:x),
+                         context = quote(parameter:x == 1)),
                     list(type = "literal", value = 1)))
   expect_error(
     query_parse(quote(date >= "2022-02-04")),
@@ -224,7 +226,9 @@ test_that("Can filter based on given values", {
   expect_error(
     outpack_query(quote(latest(parameter:a == this:x)),
                   pars = list(a = 3), root = root),
-    "Did not find 'x' within given pars ('a')",
+    paste0("Did not find 'x' within given pars ('a')\n",
+           "  - while evaluating this:x\n",
+           "  - within           latest(parameter:a == this:x)"),
     fixed = TRUE)
 })
 
@@ -312,6 +316,7 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
 
 test_that("scope and require_unpacked can be used together to filter query", {
   t <- temp_file()
+  path <- list()
   path$src <- file.path(t, "src")
   path$dst <- file.path(t, "dst")
   root <- list()
@@ -407,18 +412,6 @@ test_that("named queries", {
 })
 
 
-test_that("outpack_query returns no results when searching for none()", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
-
-  x1 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 1)))
-
-  expect_equal(
-    outpack_query(quote(none()), root = root),
-    NA_character_)
-})
-
-
 test_that("outpack_query can include subqueries", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
@@ -429,16 +422,40 @@ test_that("outpack_query can include subqueries", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote(latest(sub)),
-                  subquery = list(sub = list(expr = quote(name == "x"))),
+    outpack_query(quote(latest({sub})),
+                  subquery = list(sub = quote(name == "x")),
                   root = root),
     x2)
   expect_equal(
     outpack_query(
-      quote(sub),
-      subquery = list(sub = list(expr = quote(latest(name == "x")))),
+      quote({sub}),
+      subquery = list(sub = quote(latest(name == "x"))),
       root = root),
     x2)
+})
+
+
+test_that("outpack_query returns useful error when subquery name unknown", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp)
+
+  expect_error(
+    outpack_query(quote(latest({sub})),
+                  root = root),
+    paste0("Cannot locate subquery named 'sub'. No subqueries provided.\n",
+           "  - in     {sub}\n",
+           "  - within latest({sub})"),
+    fixed = TRUE)
+  expect_error(
+    outpack_query(quote(latest({subq})),
+                  subquery = list(sub = quote(name == "x"),
+                                  foo = quote(name == "y")),
+                  root = root),
+    paste0("Cannot locate subquery named 'subq'. ",
+           "Available subqueries are 'foo', 'sub'.\n",
+           "  - in     {subq}\n",
+           "  - within latest({subq})"),
+    fixed = TRUE)
 })
 
 
@@ -448,15 +465,123 @@ test_that("outpack_query returns no results when subquery has no results", {
 
   x1 <- create_random_packet(tmp, "x", list(a = 1))
 
+  ## subquery itself has no results
+  expect_equal(outpack_query(quote(latest(name == "y")), root = root),
+               NA_character_)
+
   expect_equal(
-    outpack_query(quote(latest(sub)),
-                  subquery = list(sub = list(expr = quote(name == "y"))),
+    outpack_query(quote(latest({sub})),
+                  subquery = list(sub = quote(name == "y")),
                   root = root),
     NA_character_)
 })
 
 
-test_that("outpack_query subqueries can include scope", {
+test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  expect_error(
+    outpack_query(quote({sub} > 2),
+                  subquery = list(sub = quote(parameter:a == 2)),
+                  root = root),
+    paste0("Unhandled query expression value '{sub}'\n",
+           "  - in     {sub}\n",
+           "  - within {sub} > 2"),
+    fixed = TRUE)
+
+  expect_error(
+    outpack_query(quote(latest({sub}) > 2),
+                  subquery = list(sub = quote(parameter:a == 2)),
+                  root = root),
+    paste0("Unhandled query expression value 'latest({sub})'\n",
+           "  - in     latest({sub})\n",
+           "  - within latest({sub}) > 2"),
+    fixed = TRUE)
+
+  expect_error(
+    outpack_query(quote(latest({sub} == "hello")),
+                  subquery = list(sub = quote(name == "x")),
+                  root = root),
+    paste0("Unhandled query expression value '{sub}'\n",
+           "  - in     {sub}\n",
+           '  - within latest({sub} == "hello")'),
+    fixed = TRUE)
+})
+
+
+test_that("subqueries can be used in groups e.g. &&, ||, (), etc.", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_setequal(
+    outpack_query(quote({sub} || parameter:a == 2),
+                  subquery = list(sub = quote(name == "x")),
+                  root = root),
+    c(x1, x2, y1))
+
+  expect_setequal(
+    outpack_query(quote(!{sub}),
+                  subquery = list(sub = quote(name == "x")),
+                  root = root),
+    y1)
+
+  expect_setequal(
+    outpack_query(quote(parameter:a == 1 && {sub} || name == "y"),
+                  subquery = list(sub = quote(name == "x")),
+                  root = root),
+    c(x1, y1))
+  expect_setequal(
+    outpack_query(quote(parameter:a == 1 && ({sub} || name == "y")),
+                  subquery = list(sub = quote(name == "x")),
+                  root = root),
+    x1)
+})
+
+
+test_that("subqueries can be used within single", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_error(
+    outpack_query(quote(single({sub})),
+                  subquery = list(sub = quote(name == "x")),
+                  root = root),
+    paste0("Query found 2 packets, but expected exactly one\n",
+           "  - while evaluating single({sub})"),
+    fixed = TRUE)
+
+  expect_equal(
+    outpack_query(quote(single({sub})),
+                  subquery = list(sub = quote(name == "y")),
+                  root = root),
+    y1)
+})
+
+
+test_that("subqueries cannot be used within at_location", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  expect_error(
+    outpack_query(quote(at_location({sub})),
+                  subquery = list(sub = quote("x")),
+                  root = root),
+    paste0("All arguments to at_location() must be string literals\n",
+           "  - in at_location({sub})"),
+    fixed = TRUE)
+})
+
+
+test_that("outpack_query can include anonymous subqueries", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
 
@@ -466,9 +591,24 @@ test_that("outpack_query subqueries can include scope", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote(latest(sub)),
-                  subquery = list(sub = list(expr = quote(parameter:a == 1),
-                                             scope = quote(name == "x"))),
+    outpack_query(quote(latest({name == "x"})),
                   root = root),
-    x1)
+    x2)
+})
+
+
+test_that("anonymous subquery is printed nicely when it errors", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+
+  expect_error(
+    outpack_query(quote(latest({ at_location() })),
+                  root = root),
+    paste0("Invalid call to at_location(); ",
+           "expected at least 1 args but received 0\n",
+           "  - in     at_location()\n",
+           "  - within latest({at_location()})"),
+    fixed = TRUE)
 })
