@@ -149,3 +149,13 @@ match_value <- function(arg, choices, name = deparse(substitute(arg))) {
   }
   arg
 }
+
+
+assert_has_names <- function(x, required, name = deparse(substitute(x))) {
+  msg <- setdiff(required, names(x))
+  if (length(msg) > 0) {
+    stop(sprintf("Required names missing from '%s': %s",
+                 name, paste(squote(msg), collapse = ", ")))
+  }
+  invisible(x)
+}

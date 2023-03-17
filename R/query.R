@@ -15,6 +15,10 @@
 ##'   will be intersected with `scope` arg and is a shorthand way of running
 ##'   `scope = list(name = "name")`
 ##'
+##' @param subquery Optionally, named list of subqueries which can be
+##'   referenced by name from the `expr`. Each subquery must be a list
+##'   with at least an `expr` and optionally a `scope`.
+##'
 ##' @param require_unpacked Logical, indicating if we should require
 ##'   that the packets are unpacked. If `FALSE` (the default) we
 ##'   search through all packets known to this outpack root,
@@ -33,7 +37,10 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   root <- outpack_root_open(root, locate = TRUE)
   subquery_env <- new.env(parent = emptyenv())
   if (!is.null(subquery)) {
-    assert_named(subquery) ## TODO: more validation?
+    assert_named(subquery)
+    for (query in subquery) {
+      assert_has_names(query, "expr")
+    }
     subquery_env <- as.environment(subquery)
   }
   expr_parsed <- query_parse(expr, subquery_env, root)
