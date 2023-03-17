@@ -44,23 +44,14 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   } else {
     subquery_env <- new.env(parent = emptyenv())
   }
-  expr_parsed <- query_parse(expr, subquery_env, root)
+  expr_parsed <- query_parse(expr)
   validate_parameters(pars)
 
   ## We will want to do this processing more generally later (in the
   ## root object, saved as part of the index), because it will be a
   ## waste to do this every time. Ideally it can be done incrementally
   ## too.
-  idx <- root$index()
-  i <- match(idx$location$location, root$config$location$id)
-  location <- split(root$config$location$name[i], idx$location$packet)
-  index <- data_frame(
-    id = names(idx$metadata) %||% character(0),
-    name = vcapply(idx$metadata, "[[", "name"),
-    ## Wrap these in I() because they're list columns
-    parameters = I(lapply(idx$metadata, "[[", "parameters")),
-    location = I(location))
-
+  index <- query_index$new(root, require_unpacked)
   if (!is.null(name)) {
     name_call <- call("==", quote(name), name)
     if (is.null(scope)) {
@@ -69,7 +60,6 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
       scope <- call("&&", name_call, scope)
     }
   }
-
   if (!is.null(scope)) {
     ids <- outpack_query(scope, pars, scope = NULL,
                          require_unpacked = require_unpacked,
@@ -78,12 +68,15 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   } else if (require_unpacked) {
     index <- index[index$id %in% idx$unpacked$packet, ]
   }
+  index <- build_query_index(pars, scope, require_unpacked, root)
 
-  query_eval(expr_parsed, index, pars)
+  query_eval(expr_parsed, index, pars, subquery_env)
 }
 
 
-query_parse <- function(expr, subquery_env, root) {
+
+
+query_parse <- function(expr) {
   if (is.character(expr)) {
     if (length(expr) == 1 && grepl(re_id, expr)) {
       ## If we're given a single id, we construct a simple query with it
@@ -104,7 +97,7 @@ query_parse <- function(expr, subquery_env, root) {
     expr <- quote(latest())
   }
 
-  query_parse_expr(expr, expr, subquery_env, root)
+  query_parse_expr(expr, expr)
 }
 
 
@@ -119,15 +112,15 @@ query_component <- function(type, expr, context, args, ...) {
 }
 
 
-query_parse_expr <- function(expr, context, subquery_env, root) {
+query_parse_expr <- function(expr, context, subquery_env) {
   type <- query_parse_check_call(expr, context, subquery_env)
   switch(type,
          test = query_parse_test(expr, context),
-         group = query_parse_group(expr, context, subquery_env, root),
-         latest = query_parse_latest(expr, context, subquery_env, root),
-         single = query_parse_single(expr, context, subquery_env, root),
+         group = query_parse_group(expr, context, subquery_env),
+         latest = query_parse_latest(expr, context, subquery_env),
+         single = query_parse_single(expr, context, subquery_env),
          at_location = query_parse_at_location(expr, context),
-         subquery = query_parse_subquery(expr, context, subquery_env, root),
+         subquery = query_parse_subquery(expr, context, subquery_env),
          none = query_parse_none(expr, context),
          ## normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
@@ -141,15 +134,15 @@ query_parse_test <- function(expr, context) {
 }
 
 
-query_parse_group <- function(expr, context, subquery_env, root) {
-  args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
+query_parse_group <- function(expr, context, subquery_env) {
+  args <- lapply(expr[-1], query_parse_expr, context, subquery_env)
   name <- deparse(expr[[1]])
   query_component("group", expr, context, args, name = name)
 }
 
 
-query_parse_latest <- function(expr, context, subquery_env, root) {
-  args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
+query_parse_latest <- function(expr, context, subquery_env) {
+  args <- lapply(expr[-1], query_parse_expr, context, subquery_env)
   query_component("latest", expr, context, args)
 }
 
@@ -159,8 +152,8 @@ query_parse_none <- function(expr, context) {
 }
 
 
-query_parse_single <- function(expr, context, subquery_env, root) {
-  args <- lapply(expr[-1], query_parse_expr, context, subquery_env, root)
+query_parse_single <- function(expr, context, subquery_env) {
+  args <- lapply(expr[-1], query_parse_expr, context, subquery_env)
   query_component("single", expr, context, args)
 }
 
@@ -177,46 +170,12 @@ query_parse_at_location <- function(expr, context) {
 }
 
 
-query_parse_subquery <- function(expr, context, subquery_env, root) {
+query_parse_subquery <- function(expr, context, subquery_env) {
   name <- as.character(expr)
   subquery <- get(name, envir = subquery_env)
-  if(is.null(subquery$result)) {
-    subquery_env[[name]]$result <- outpack_query(subquery$expr,
-                                                 scope = subquery$scope,
-                                                 root = root)
-  }
-  ids <- subquery_env[[name]]$result
-  evaluated_expr <- if (length(ids) == 0) {
-    quote(none())
-  } else {
-    exprs <- lapply(ids, function(id) {
-      bquote(id == .(id))
-    })
-    query_build_or(exprs)
-  }
-
-  query_parse_expr(evaluated_expr,
-                   context = context,
-                   subquery_env = subquery_env,
-                   root = root)
-}
-
-
-query_build_or <- function(exprs) {
-  if (length(exprs) == 1) {
-    return(exprs[[1]])
-  }
-  concatenated <- exprs[[1]]
-  exprs <- exprs[-1]
-  add_or <- function(exprs, concatenated) {
-    concatenated <- call("||", concatenated, exprs[[1]])
-    if (length(exprs[-1]) > 0) {
-      add_or(exprs[-1], concatenated)
-    } else {
-      concatenated
-    }
-  }
-  add_or(exprs, concatenated)
+  expr_parsed <- query_parse(subquery$expr, scope = subquery$scope)
+  query_component("subquery", expr, context,
+                  args = list(name = name, query = expr_parsed))
 }
 
 
@@ -254,7 +213,8 @@ query_parse_check_call <- function(expr, context, subquery_env) {
   if (is_subquery(expr, subquery_env)) {
     return("subquery")
   }
-  if (!is.call(expr)) {
+
+  if (!is.call(expr) && !is_sub) {
     query_parse_error(sprintf(
       "Invalid query '%s'; expected some sort of expression",
       deparse_str(expr)),
@@ -267,7 +227,7 @@ query_parse_check_call <- function(expr, context, subquery_env) {
     type <- "group"
   } else if (fn %in% names(query_functions$test)) {
     type <- "test"
-  } else {
+  } else { # fn is in names(query_functions$other)
     type <- "other"
   }
   len <- query_functions[[type]][[fn]]
@@ -334,7 +294,7 @@ query_parse_value <- function(expr, context) {
 }
 
 
-query_eval <- function(query, index, pars) {
+query_eval <- function(query, index, pars, subquery_env) {
   switch(query$type,
          literal = query$value,
          lookup = query_eval_lookup(query, index, pars),
@@ -343,6 +303,7 @@ query_eval <- function(query, index, pars) {
          latest = query_eval_latest(query, index, pars),
          single = query_eval_single(query, index, pars),
          at_location = query_eval_at_location(query, index, pars),
+         subquery = query_eval_subquery(query, index, pars, subquery_env),
          none = query_eval_none(query, index, pars),
          ## Normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
@@ -376,6 +337,18 @@ query_eval_single <- function(query, index, pars) {
 
 query_eval_at_location <- function(query, index, pars) {
   location <- vcapply(query$args, "[[", "value")
+  i <- vlapply(index$location, function(x) any(x %in% location))
+  index$id[i]
+}
+
+
+query_eval_subquery <- function(query, index, pars, subquery_env) {
+  name <- vcapply(query$args, "[[", "name")
+  subquery <- get(name, envir = subquery_env)
+  if (is.null(subquery$result)) {
+    subquery$result <- query_eval()
+  }
+  full_index <- build_query_index(pars = NULL, scope = subquery$scope, require_unpacked = )
   i <- vlapply(index$location, function(x) any(x %in% location))
   index$id[i]
 }
