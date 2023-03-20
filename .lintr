@@ -4,7 +4,4 @@ linters: linters_with_defaults(
     cyclocomp_linter = NULL,
     brace_linter(TRUE) ## Allow open and close curlies on single line for subqueries
   )
-exclusions: list(
-    "tests/testthat.R",
-    "R/cpp11.R"
-  )
+exclusions: list("tests/testthat.R", "R/cpp11.R")
