@@ -41,7 +41,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   } else {
     subquery_env <- new.env(parent = emptyenv())
   }
-  expr_parsed <- query_parse(expr, subquery_env)
+  expr_parsed <- query_parse(expr, expr, subquery_env)
   validate_parameters(pars)
 
   ## We will want to do this processing more generally later (in the
@@ -69,7 +69,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
 }
 
 
-query_parse <- function(expr, subquery_env, context = NULL) {
+query_parse <- function(expr, context, subquery_env) {
   if (is.character(expr)) {
     if (length(expr) == 1 && grepl(re_id, expr)) {
       ## If we're given a single id, we construct a simple query with it
@@ -194,7 +194,7 @@ query_parse_subquery <- function(expr, context, subquery_env) {
     query_name <- ids::adjective_animal()
     subquery_env[[query_name]] <- subquery[[1]]
   }
-  parsed_query <- query_parse(subquery_env[[query_name]], context = context)
+  parsed_query <- query_parse(subquery_env[[query_name]], context, subquery_env)
   query_component("subquery", expr, context,
                   args = list(name = query_name,
                               subquery = parsed_query))

@@ -1,6 +1,7 @@
 test_that("Parse basic query", {
-  res <- query_parse("latest(name == 'data')", emptyenv())
-  expect_identical(query_parse(quote(latest(name == "data")), emptyenv()), res)
+  res <- query_parse("latest(name == 'data')", NULL, emptyenv())
+  expect_identical(query_parse(quote(latest(name == "data")), NULL, emptyenv()),
+                   res)
   expect_equal(res$type, "latest")
   expect_length(res$args, 1)
   expect_equal(res$args[[1]]$type, "test")
@@ -12,22 +13,22 @@ test_that("Parse basic query", {
 
 
 test_that("Prevent unparseable queries", {
-  expect_error(query_parse(NULL, emptyenv()),
+  expect_error(query_parse(NULL, NULL, emptyenv()),
                "Invalid input for query")
-  expect_error(query_parse("latest(); latest()", emptyenv()),
+  expect_error(query_parse("latest(); latest()", NULL, emptyenv()),
                "Expected a single expression")
 })
 
 
 test_that("print context around parse errors", {
   err <- expect_error(
-    query_parse(quote(a %in% b), emptyenv()),
+    query_parse(quote(a %in% b), NULL, emptyenv()),
     "Invalid query 'a %in% b'; unknown query component '%in%'",
     fixed = TRUE)
   expect_match(err$message, "  - in a %in% b", fixed = TRUE)
 
   err <- expect_error(
-    query_parse(quote(latest(a %in% b)), emptyenv()),
+    query_parse(quote(latest(a %in% b)), NULL, emptyenv()),
     "Invalid query 'a %in% b'; unknown query component '%in%'",
     fixed = TRUE)
   expect_match(err$message, "  - in     a %in% b", fixed = TRUE)
@@ -37,13 +38,13 @@ test_that("print context around parse errors", {
 
 test_that("Expressions must be calls", {
   expect_error(
-    query_parse(quote(name), emptyenv()),
+    query_parse(quote(name), NULL, emptyenv()),
     "Invalid query 'name'; expected some sort of expression")
   expect_error(
-    query_parse(quote(latest(name)), emptyenv()),
+    query_parse(quote(latest(name)), NULL, emptyenv()),
     "Invalid query 'name'; expected some sort of expression")
   expect_error(
-    query_parse(quote(latest(parameter:x == 1 && name)), emptyenv()),
+    query_parse(quote(latest(parameter:x == 1 && name)), NULL, emptyenv()),
     "Invalid query 'name'; expected some sort of expression")
 })
 
@@ -53,15 +54,15 @@ test_that("validate argument numbers", {
   ## message is a bit weird too, but it will be reasonable for
   ## anything else that has a fixed number of args.
   expect_error(
-    query_parse(quote(`==`(a, b, c)), emptyenv()),
+    query_parse(quote(`==`(a, b, c)), NULL, emptyenv()),
     "Invalid call to ==(); expected 2 args but received 3",
     fixed = TRUE)
   expect_error(
-    query_parse(quote(latest(a, b)), emptyenv()),
+    query_parse(quote(latest(a, b)), NULL, emptyenv()),
     "Invalid call to latest(); expected at most 1 args but received 2",
     fixed = TRUE)
   expect_error(
-    query_parse(quote(latest(at_location())), emptyenv()),
+    query_parse(quote(latest(at_location())), NULL, emptyenv()),
     "Invalid call to at_location(); expected at least 1 args but received 0",
     fixed = TRUE)
 })
@@ -69,15 +70,15 @@ test_that("validate argument numbers", {
 
 test_that("at_location requires string literal arguments", {
   expect_error(
-    query_parse(quote(latest(at_location(1, 2))), emptyenv()),
+    query_parse(quote(latest(at_location(1, 2))), NULL, emptyenv()),
     "All arguments to at_location() must be string literals",
     fixed = TRUE)
   expect_error(
-    query_parse(quote(latest(at_location("a", 2))), emptyenv()),
+    query_parse(quote(latest(at_location("a", 2))), NULL, emptyenv()),
     "All arguments to at_location() must be string literals",
     fixed = TRUE)
 
-  res <- query_parse(quote(at_location("a", "b")), emptyenv())
+  res <- query_parse(quote(at_location("a", "b")), NULL, emptyenv())
   expect_equal(res$type, "at_location")
   expect_equal(res$args, list(list(type = "literal", value = "a"),
                               list(type = "literal", value = "b")))
@@ -85,14 +86,14 @@ test_that("at_location requires string literal arguments", {
 
 
 test_that("Queries can only be name and parameter", {
-  res <- query_parse(quote(name == "data"), emptyenv())
+  res <- query_parse(quote(name == "data"), NULL, emptyenv())
   expect_equal(res$type, "test")
   expect_equal(res$name, "==")
   expect_equal(res$args,
                list(list(type = "lookup", name = "name"),
                     list(type = "literal", value = "data")))
 
-  res <- query_parse(quote(parameter:x == 1))
+  res <- query_parse(quote(parameter:x == 1), NULL, emptyenv())
   expect_equal(res$type, "test")
   expect_equal(res$name, "==")
   expect_equal(res$args,
@@ -101,10 +102,11 @@ test_that("Queries can only be name and parameter", {
                          context = quote(parameter:x == 1)),
                     list(type = "literal", value = 1)))
   expect_error(
-    query_parse(quote(date >= "2022-02-04")),
+    query_parse(quote(date >= "2022-02-04"), NULL, emptyenv()),
     "Unhandled query expression value 'date'")
   expect_error(
-    query_parse(quote(custom:orderly:displayname >= "my name")),
+    query_parse(quote(custom:orderly:displayname >= "my name"), NULL,
+                emptyenv()),
     "Invalid lookup 'custom:orderly'")
 })
 
@@ -361,8 +363,9 @@ test_that("scope and require_unpacked can be used together to filter query", {
 
 test_that("Parse literal id query", {
   id <- "20220722-085951-148b7686"
-  res <- query_parse(id)
-  expect_identical(query_parse(bquote(single(id == .(id)))), res)
+  res <- query_parse(id, NULL, emptyenv())
+  expect_identical(query_parse(bquote(single(id == .(id))), NULL, emptyenv()),
+                   res)
   expect_equal(res$type, "single")
   expect_length(res$args, 1)
   expect_equal(res$args[[1]]$type, "test")
