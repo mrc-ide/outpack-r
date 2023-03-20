@@ -27,6 +27,7 @@ query_index <- R6::R6Class(
   )
 )
 
+
 new_query_index <- function(root, require_unpacked) {
   root <- outpack_root_open(root, locate = TRUE)
   idx <- root$index()

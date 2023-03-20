@@ -172,6 +172,7 @@ is_named_subquery <- function(subquery) {
   length(subquery) == 1 && length(sub) == 1 && is.name(sub)
 }
 
+
 query_parse_subquery <- function(expr, context, subquery_env) {
   subquery <- expr[-1]
   if (is_named_subquery(subquery)) {
@@ -199,6 +200,7 @@ query_parse_subquery <- function(expr, context, subquery_env) {
                   args = list(name = query_name,
                               subquery = parsed_query))
 }
+
 
 deparse_query <- function(x) {
   ## Remove new lines created by deparse_str on encountering `{`
@@ -375,6 +377,7 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
   }
   subquery$result
 }
+
 
 query_eval_lookup <- function(query, index, pars) {
   switch(query$name,
