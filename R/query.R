@@ -102,7 +102,8 @@ query_functions <- list(
   group = list("(" = 1, "!" = 1, "&&" = 2, "||" = 2),
   test = list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2),
   subquery = list("{" = 1),
-  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf)))
+  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf),
+               usedby = c(1, 2)))
 
 
 query_component <- function(type, expr, context, args, ...) {
@@ -119,6 +120,7 @@ query_parse_expr <- function(expr, context, subquery_env) {
          single = query_parse_single(expr, context, subquery_env),
          at_location = query_parse_at_location(expr, context, subquery_env),
          subquery = query_parse_subquery(expr, context, subquery_env),
+         usedby = query_parse_usedby(expr, context, subquery_env),
          ## normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -202,6 +204,31 @@ query_parse_subquery <- function(expr, context, subquery_env) {
 }
 
 
+query_parse_usedby <- function(expr, context, subquery_env) {
+  args <- as.list(expr[-1])
+  if (length(args) == 2) {
+    if (is.logical(args[[2]])) {
+      args[[2]] <- query_parse_value(args[[2]], context, subquery_env)
+    } else {
+      query_parse_error(
+        paste0("Second argument to usedby() must be boolean, ",
+               "set TRUE to only search immediate dependencies. ",
+               "Otherwise search will recurse the dependency tree."),
+        expr, context)
+    }
+  } else {
+    args[[2]] <- query_parse_value(FALSE, context, subquery_env)
+  }
+  args[[2]]$name <- "immediate"
+  if (is.call(args[[1]])) {
+    args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
+  } else {
+    args[[1]] <- query_parse_value(args[[1]], context, subquery_env)
+  }
+  query_component("usedby", expr, context, args)
+}
+
+
 deparse_query <- function(x) {
   ## Remove new lines created by deparse_str on encountering `{`
   gsub("\\n\\s*", "", deparse_str(x))
@@ -231,7 +258,6 @@ query_parse_error <- function(msg, expr, context) {
 query_eval_error <- function(msg, expr, context) {
   query_error(msg, expr, context, "while evaluating")
 }
-
 
 
 query_parse_check_call <- function(expr, context) {
@@ -329,6 +355,7 @@ query_eval <- function(query, index, pars, subquery_env) {
          single = query_eval_single(query, index, pars, subquery_env),
          at_location = query_eval_at_location(query, index, pars),
          subquery = query_eval_subquery(query, index, pars, subquery_env),
+         usedby = query_eval_usedby(query, index, pars, subquery_env),
          ## Normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -376,6 +403,20 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
                                   subquery_env)
   }
   subquery$result
+}
+
+
+query_eval_usedby <- function(query, index, pars, subquery_env) {
+  id <- query_eval(query$args[[1]], index, pars, subquery_env)
+  len <- length(id)
+  if (len > 1) {
+    query_eval_error(
+      sprintf(paste0("Found %s ids from expr, usedby can only work with 1 id. ",
+                     "Try wrapping enclosed query in 'latest' or 'single' ",
+                     "to ensure only one id returned."), len),
+      query$expr, query$context)
+  }
+  index$get_packet_depends(id, query$args[[2]]$value)
 }
 
 

@@ -85,6 +85,53 @@ test_that("at_location requires string literal arguments", {
 })
 
 
+test_that("usedby can take literal or expression", {
+  res <- query_parse(quote(usedby(id == "123")), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[1]]$type, "test")
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, FALSE)
+  expect_equal(res$args[[2]]$name, "immediate")
+
+  res <- query_parse(quote(usedby("123")), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[1]], list(type = "literal", value = "123"))
+
+  res <- query_parse(quote(usedby(latest(name == "x"))),
+                     NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[1]]$type, "latest")
+})
+
+
+test_that("usedby requires 2nd arg boolean", {
+  expect_error(
+    query_parse(quote(usedby(id == "123", "123")), NULL, emptyenv()),
+    paste0("Second argument to usedby() must be boolean, ",
+           "set TRUE to only search immediate dependencies. ",
+           "Otherwise search will recurse the dependency tree.\n",
+           '  - in usedby(id == "123", "123")'),
+    fixed = TRUE)
+
+  res <- query_parse(quote(usedby(id == "123", TRUE)), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, TRUE)
+  expect_equal(res$args[[2]]$name, "immediate")
+
+  res <- query_parse(quote(usedby(id == "123", FALSE)), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, FALSE)
+  expect_equal(res$args[[2]]$name, "immediate")
+})
+
+
 test_that("Queries can only be name and parameter", {
   res <- query_parse(quote(name == "data"), NULL, emptyenv())
   expect_equal(res$type, "test")
@@ -602,7 +649,7 @@ test_that("outpack_query can include anonymous subqueries", {
 
 test_that("anonymous subquery is printed nicely when it errors", {
   tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- outpack_init(tmp)
 
   x1 <- create_random_packet(tmp, "x", list(a = 1))
 
@@ -614,4 +661,90 @@ test_that("anonymous subquery is printed nicely when it errors", {
            "  - in     at_location()\n",
            "  - within latest({at_location()})"),
     fixed = TRUE)
+})
+
+
+describe("outpack_query can search for packets usedby another", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+  ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
+
+  it("works for simple case", {
+    expect_setequal(
+      outpack_query(bquote(usedby(.(ids["b"]))),
+                    scope = quote(name == "a"),
+                    root = root),
+      ids["a"])
+  })
+
+  it("works with subqueries", {
+    expect_setequal(
+      outpack_query(quote(usedby({report_b})),
+                    scope = quote(name == "a"),
+                    subquery = list(report_b = quote(latest(name == "b"))),
+                    root = root),
+      ids["a"])
+  })
+
+  it("can return only immediate dependencies", {
+    expect_setequal(
+      outpack_query(quote(usedby({report_d}, TRUE)),
+                    subquery = list(report_d = quote(latest(name == "d"))),
+                    root = root),
+      ids[c("b", "c")])
+  })
+
+  it("can recurse full tree", {
+    res <- outpack_query(quote(usedby({report_d})),
+                         subquery = list(report_d = quote(latest(name == "d"))),
+                         root = root)
+    expect_setequal(res, ids[c("a", "b", "c")])
+    expect_length(res, 3) ## Packets are not counted twice
+  })
+
+  it("returns empty vector when id has no dependencies", {
+    expect_equal(
+      outpack_query(bquote(usedby(.(ids["a"]))),
+                    root = root),
+      character(0))
+  })
+
+  it("returns empty vector when id unknown", {
+    expect_equal(
+      outpack_query(quote(usedby("123")),
+                    scope = quote(name == "a"),
+                    root = root),
+      character(0))
+  })
+})
+
+
+test_that("usedby returns multiple ids when parent used twice", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  id_a1 <- create_random_packet(root, "a", list(x = 1))
+  id_a2 <- create_random_packet(root, "a", list(x = 1))
+  id_b <- create_random_dependent_packet(root, "b", c(id_a1, id_a2))
+
+  expect_setequal(
+    outpack_query(quote(usedby({report_b})),
+                  scope = quote(name == "a"),
+                  subquery = list(report_b = quote(latest(name == "b"))),
+                  root = root),
+    c(id_a1, id_a2))
+})
+
+
+test_that("usedby output can be used in groupings", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 2)
+  ids["c"] <- create_random_dependent_packet(root, "c", ids[c("a", "b")])
+
+  expect_setequal(
+    outpack_query(quote(usedby({report_c}) && name == "b"),
+                  subquery = list(report_c = quote(latest(name == "c"))),
+                  root = root),
+    ids["b"])
 })

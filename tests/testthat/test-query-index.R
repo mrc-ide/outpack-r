@@ -42,3 +42,40 @@ test_that("index can include only unpacked packets", {
   expect_setequal(index$index$id, c(x1, x2))
   expect_setequal(index_unpacked$index$id, c(x1, x2))
 })
+
+
+test_that("index includes depends info", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+  ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
+
+  index <- new_query_index(root, FALSE)
+  expect_setequal(index$index$id, ids)
+
+  expect_equal(index$get_packet_depends(ids["a"], TRUE),     character(0))
+  expect_equal(index$get_packet_depends(ids["a"], FALSE),    character(0))
+  expect_setequal(index$get_packet_depends(ids["b"], TRUE),  ids["a"])
+  expect_setequal(index$get_packet_depends(ids["b"], FALSE), ids["a"])
+  expect_setequal(index$get_packet_depends(ids["c"], TRUE),  ids["b"])
+  expect_setequal(index$get_packet_depends(ids["c"], FALSE), ids[c("a", "b")])
+  expect_setequal(index$get_packet_depends(ids["d"], TRUE),  ids[c("b", "c")])
+  expect_setequal(index$get_packet_depends(ids["d"], FALSE),
+                  ids[c("a", "b", "c")])
+  ## There is no double counting of dependencies
+  expect_length(index$get_packet_depends(ids["d"], FALSE), 3)
+
+  ## when we filter index
+  index$filter(ids[c("b", "c")])
+
+  ## then results from get_packet_depends are filtered too
+  expect_equal(index$get_packet_depends(ids["a"], TRUE),     character(0))
+  expect_equal(index$get_packet_depends(ids["a"], FALSE),    character(0))
+  expect_setequal(index$get_packet_depends(ids["b"], TRUE),  character(0))
+  expect_setequal(index$get_packet_depends(ids["b"], FALSE), character(0))
+  expect_setequal(index$get_packet_depends(ids["c"], TRUE),  ids["b"])
+  expect_setequal(index$get_packet_depends(ids["c"], FALSE), ids["b"])
+  expect_setequal(index$get_packet_depends(ids["d"], TRUE),  ids[c("b", "c")])
+  expect_setequal(index$get_packet_depends(ids["d"], FALSE), ids[c("b", "c")])
+})
+

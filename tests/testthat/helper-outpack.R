@@ -35,7 +35,7 @@ mock_metadata_depends <- function(id, depends = character(0)) {
 ## other.
 create_random_packet_chain <- function(root, length) {
   src <- fs::dir_create(tempfile())
-  on.exit(unlink(src, recursive = TRUE))
+  on.exit(unlink(src, recursive = TRUE), add = TRUE)
 
   id <- character()
   for (i in seq_len(length)) {
@@ -55,6 +55,33 @@ create_random_packet_chain <- function(root, length) {
     }
     outpack_packet_end()
   }
+
+  id
+}
+
+
+create_random_dependent_packet <- function(root, name, dependency_ids) {
+  src <- fs::dir_create(tempfile())
+  on.exit(unlink(src, recursive = TRUE), add = TRUE)
+
+  id <- outpack_packet_start(src, name, root = root)$id
+
+  len <- length(dependency_ids)
+  if (len == 0) {
+    saveRDS(runif(10), file.path(p, "data.rds"))
+  } else {
+    inputs <- paste0(sprintf("readRDS('input%s.rds')", seq_len(len)),
+                     collapse = " * ")
+    code <- sprintf("saveRDS(%s , 'data.rds')", inputs)
+    writeLines(code, file.path(src, "script.R"))
+    for (num in seq_len(len)) {
+      input_name <- sprintf("input%s.rds", num)
+      outpack_packet_use_dependency(dependency_ids[[num]],
+                                    stats::setNames("data.rds", input_name))
+    }
+    outpack_packet_run("script.R")
+  }
+  outpack_packet_end()
 
   id
 }
