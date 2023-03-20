@@ -120,8 +120,8 @@ squote <- function(x) {
 
 
 with_dir <- function(path, code) {
-  owd <- setwd(path)
-  on.exit(setwd(owd))
+  owd <- setwd(path) # nolint
+  on.exit(setwd(owd)) # nolint
   force(code)
 }
 
