@@ -78,4 +78,3 @@ test_that("index includes depends info", {
   expect_setequal(index$get_packet_depends(ids["d"], TRUE),  ids[c("b", "c")])
   expect_setequal(index$get_packet_depends(ids["d"], FALSE), ids[c("b", "c")])
 })
-

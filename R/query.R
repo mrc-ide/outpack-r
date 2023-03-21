@@ -409,11 +409,14 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
 query_eval_usedby <- function(query, index, pars, subquery_env) {
   id <- query_eval(query$args[[1]], index, pars, subquery_env)
   len <- length(id)
+  if (len == 0) {
+    return(character(0))
+  }
   if (len > 1) {
     query_eval_error(
-      sprintf(paste0("Found %s ids from expr, usedby can only work with 1 id. ",
-                     "Try wrapping enclosed query in 'latest' or 'single' ",
-                     "to ensure only one id returned."), len),
+      sprintf(paste0("Found %s ids in call to usedby, usedby can only work ",
+                     "with 1 id. Try wrapping enclosed query in 'latest' ",
+                     "to ensure only one id is returned."), len),
       query$expr, query$context)
   }
   index$get_packet_depends(id, query$args[[2]]$value)

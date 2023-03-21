@@ -748,3 +748,43 @@ test_that("usedby output can be used in groupings", {
                   root = root),
     ids["b"])
 })
+
+
+test_that("usedby errors if given 2 ids", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 2)
+  ids["b"] <- create_random_dependent_packet(root, "b", ids["a"])
+
+  expect_error(
+    outpack_query(quote(usedby({report_b})),
+                  subquery = list(report_b = quote(name == "b")),
+                  root = root),
+    paste0("Found 2 ids in call to usedby, usedby can only work with 1 id. ",
+           "Try wrapping enclosed query in 'latest' to ensure only one id ",
+           "is returned.\n  - while evaluating usedby({report_b})"),
+    fixed = TRUE)
+
+  ## Suggested fix works
+  expect_equal(
+    outpack_query(quote(usedby(latest({report_b}))),
+                  subquery = list(report_b = quote(name == "b")),
+                  root = root),
+    ids["a"], ignore_attr = "names")
+
+
+  expect_setequal(
+    outpack_query(quote(usedby({report_b})),
+                  subquery = list(report_b = quote(name == "c")),
+                  root = root),
+    ids["b"])
+})
+
+test_that("usedby returns empty vector if usedby called with 0 ids", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  expect_equal(
+    outpack_query(quote(usedby({name == "b"})), root = root),
+    character(0))
+})
