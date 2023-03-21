@@ -49,11 +49,12 @@ Tests can be grouped together `(`, `!`, `&&`, and `||` as you might expect:
 * `name == "data" && parameter:x > 3` finds packets called "data" where parameter `x` is greater than 3
 * `(parameter:y == 2) && !(parameter:x == 1 || parameter:x == 2)` finds where parameter `y` is 2 and parameter `x` is anything other than 1 or 2 (could also be written `(parameter:y == 2) && (parameter:x != 1 && parameter:x != 2)`)
 
-There are three other functions
+There are four other functions
 
 * `latest(expr)` finds the latest packet satifying `expr` - it always returns a length 1 character, but this is `NA_character_` if no suitable packet is found. If no `expr` is given then the latest of all packets is returned.
 * `single(expr)` is like `latest(expr)` except that it is an error if `expr` does not evaluate to exactly one packet id
 * `at_location("loc1", "loc2")` finds packets that are available at any of the locations provided (here, `"loc1"` or `"loc2"`; any number of locations can be provided, these must be string literals).
+* `usedby(expr, FALSE)` where `expr` is either a literal `id` or an expression which returns 1 `id`. This finds all packets which were used in generation of packet with `id` returned from `expr` (see dependencies section for more details).
 
 ## Special simple queries
 
@@ -96,6 +97,71 @@ Which is the equivalent of
 outpack_query(quote(parameter:x == 1), scope = quote(name == "data"))
 ```
 
+## Subqueries
+
+An `outpack_query` can include subqueries denoted by curly braces `{}`
+
+```r
+outpack_query(quote({name == "A"} || parameter:x == 2))
+```
+
+Subqueries can be anonymous like above or they can also be named
+
+```r
+outpack_query(quote({report_a}),
+              subquery = list(report_a = quote(name == "A")))
+```
+
+In the above examples you could replace the subquery `{expr}` with `(expr)` and it would have the same result. The difference with subqueries is how they interact with `scope` and `name`.
+
+```r
+outpack_query(quote({report_a} || parameter:x == 2),
+              subquery = list(report_a = quote(name == "A")),
+              scope = quote(name == "B"))
+```
+
+The subquery is evaluated without a scope. So in the above the packets returned will be all packets named `A` and any packets named `B` where parameter `x` is `2`. Note that `name` arg to `outpack_query` gets combined with the `scope` so subqueries also are evaluated without a `name`. This behaviour is relied upon by dependency evaluation functions detailed below.
+
+## Dependencies
+
+If we have 2 packets, where B depends on output from A (i.e. we call `outpack_packet_use_dependency(id_a, ...)` when running packet B) we can draw this as.
+
+```{r, echo = FALSE, fig.align = 'center'}
+knitr::include_graphics("images/dependency_terminology.png")
+```
+
+We could equivalently say
+
+* A is a dependency of B, B depends on A
+* A is used by B , B uses A
+* A is a parent of B, B is a child of A
+
+With the tree of dependencies built by outpack we might want to search for packets which have been used by another packet. We can use the query function `usedby(id)` to list all packets which are used by `id`. This will search recursively through all packets used by `id` and its parents and its parents parents and so on.
+
+The optional second arg `immedate` is `FALSE` by default, if set to `TRUE` then we search only for immediate (e.g. level 1) dependencies.
+
+Being able to search through dependencies like this means if we have some packet structure like
+
+```{r, echo = FALSE, fig.align = 'center'}
+knitr::include_graphics("images/dependency_recursive.png")
+```
+
+and we want to know the `id` of A which was used by `C` we can find this using `outpack_search`
+
+```r
+outpack_search(quote(usedby(latest(name == "C"))), name = "A")
+```
+
+`usedby` can be combined with groups and subqueries and scope:
+
+```r
+outpack_search(quote(usedby(C) && parameter:year == 2022),
+               scope = quote(name == "A")
+               subquery = list(C = quote(latest(name == "C"))))
+```
+
+the example above is why subqueries are not evaluated with the scope. We want `usedby` to find all packets which are used by `latest` `C`. If the subquery `C` was scoped this would return no results.
+
 ## Possible future queries and interface improvements
 
 ### Simple things
@@ -108,27 +174,23 @@ parameter:x == NULL
 
 However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
 
-### More complex
+### More complex subqueries
 
-It might be useful to do a lookup against a subquery
-
-```r
-latest(name == (latest(subquery)):name)
-```
-
-Similarily, we might want to look up parameter values
+We might want to look up parameter values from a subquery
 
 ```r
-latest(parameter:x == (latest(subquery)):parameter:x)
+latest(parameter:x == (latest({subquery})):parameter:x)
 ```
 
-But it might be better to disambiguate this, perhaps wrapping subqueries in `{`
+or use the name
 
 ```r
-latest(name == {latest(subquery)}:name)
+latest(name == latest({subquery}):name)
 ```
 
-It's not that clear, really.
+### More complex dependency resolution
+
+At the moment we can use `usedby` to search up the dependency tree. We could add a `uses` function to search the other way through the tree.
 
 ### Explain the query
 

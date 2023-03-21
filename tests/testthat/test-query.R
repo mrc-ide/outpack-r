@@ -664,6 +664,23 @@ test_that("anonymous subquery is printed nicely when it errors", {
 })
 
 
+test_that("scope and subquery interaction", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  id_a1 <- create_random_packet(root, "a", list(x = 1))
+  id_a2 <- create_random_packet(root, "a", list(x = 2))
+  id_b1 <- create_random_packet(root, "b", list(x = 1))
+  id_b2 <- create_random_packet(root, "b", list(x = 2))
+
+  expect_setequal(
+    outpack_query(quote({report_b} || parameter:x == 1),
+                  scope = quote(name == "a"),
+                  subquery = list(report_b = quote(latest(name == "b"))),
+                  root = root),
+    c(id_b2, id_a1))
+})
+
+
 describe("outpack_query can search for packets usedby another", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
