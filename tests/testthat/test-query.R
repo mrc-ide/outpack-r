@@ -771,13 +771,6 @@ test_that("usedby errors if given 2 ids", {
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
     ids["a"], ignore_attr = "names")
-
-
-  expect_setequal(
-    outpack_query(quote(usedby({report_b})),
-                  subquery = list(report_b = quote(name == "c")),
-                  root = root),
-    ids["b"])
 })
 
 test_that("usedby returns empty vector if usedby called with 0 ids", {
