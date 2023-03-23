@@ -425,13 +425,13 @@ test_that("outpack_query can include subqueries", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote(latest({sub})),
+    outpack_query(quote(latest({sub})), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     x2)
   expect_equal(
     outpack_query(
-      quote({sub}),
+      quote({sub}), # nolint
       subquery = list(sub = quote(latest(name == "x"))),
       root = root),
     x2)
@@ -443,14 +443,14 @@ test_that("outpack_query returns useful error when subquery name unknown", {
   root <- outpack_init(tmp)
 
   expect_error(
-    outpack_query(quote(latest({sub})),
+    outpack_query(quote(latest({sub})), # nolint
                   root = root),
     paste0("Cannot locate subquery named 'sub'. No subqueries provided.\n",
            "  - in     {sub}\n",
            "  - within latest({sub})"),
     fixed = TRUE)
   expect_error(
-    outpack_query(quote(latest({subq})),
+    outpack_query(quote(latest({subq})), # nolint
                   subquery = list(sub = quote(name == "x"),
                                   foo = quote(name == "y")),
                   root = root),
@@ -473,7 +473,7 @@ test_that("outpack_query returns no results when subquery has no results", {
                NA_character_)
 
   expect_equal(
-    outpack_query(quote(latest({sub})),
+    outpack_query(quote(latest({sub})), # nolint
                   subquery = list(sub = quote(name == "y")),
                   root = root),
     NA_character_)
@@ -485,7 +485,7 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_error(
-    outpack_query(quote({sub} > 2),
+    outpack_query(quote({sub} > 2), # nolint
                   subquery = list(sub = quote(parameter:a == 2)),
                   root = root),
     paste0("Unhandled query expression value '{sub}'\n",
@@ -494,7 +494,7 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
     fixed = TRUE)
 
   expect_error(
-    outpack_query(quote(latest({sub}) > 2),
+    outpack_query(quote(latest({sub}) > 2), # nolint
                   subquery = list(sub = quote(parameter:a == 2)),
                   root = root),
     paste0("Unhandled query expression value 'latest({sub})'\n",
@@ -503,7 +503,7 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
     fixed = TRUE)
 
   expect_error(
-    outpack_query(quote(latest({sub} == "hello")),
+    outpack_query(quote(latest({sub} == "hello")), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     paste0("Unhandled query expression value '{sub}'\n",
@@ -522,24 +522,24 @@ test_that("subqueries can be used in groups e.g. &&, ||, (), etc.", {
   y1 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_setequal(
-    outpack_query(quote({sub} || parameter:a == 2),
+    outpack_query(quote({sub} || parameter:a == 2), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     c(x1, x2, y1))
 
   expect_setequal(
-    outpack_query(quote(!{sub}),
+    outpack_query(quote(!{sub}), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     y1)
 
   expect_setequal(
-    outpack_query(quote(parameter:a == 1 && {sub} || name == "y"),
+    outpack_query(quote(parameter:a == 1 && {sub} || name == "y"), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     c(x1, y1))
   expect_setequal(
-    outpack_query(quote(parameter:a == 1 && ({sub} || name == "y")),
+    outpack_query(quote(parameter:a == 1 && ({sub} || name == "y")), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     x1)
@@ -555,7 +555,7 @@ test_that("subqueries can be used within single", {
   y1 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_error(
-    outpack_query(quote(single({sub})),
+    outpack_query(quote(single({sub})), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     paste0("Query found 2 packets, but expected exactly one\n",
@@ -563,7 +563,7 @@ test_that("subqueries can be used within single", {
     fixed = TRUE)
 
   expect_equal(
-    outpack_query(quote(single({sub})),
+    outpack_query(quote(single({sub})), # nolint
                   subquery = list(sub = quote(name == "y")),
                   root = root),
     y1)
@@ -575,7 +575,7 @@ test_that("subqueries cannot be used within at_location", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_error(
-    outpack_query(quote(at_location({sub})),
+    outpack_query(quote(at_location({sub})), # nolint
                   subquery = list(sub = quote("x")),
                   root = root),
     paste0("All arguments to at_location() must be string literals\n",
@@ -594,7 +594,7 @@ test_that("outpack_query can include anonymous subqueries", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote(latest({name == "x"})),
+    outpack_query(quote(latest({name == "x"})), # nolint
                   root = root),
     x2)
 })
@@ -607,7 +607,7 @@ test_that("anonymous subquery is printed nicely when it errors", {
   x1 <- create_random_packet(tmp, "x", list(a = 1))
 
   expect_error(
-    outpack_query(quote(latest({ at_location() })),
+    outpack_query(quote(latest({ at_location() })), # nolint
                   root = root),
     paste0("Invalid call to at_location(); ",
            "expected at least 1 args but received 0\n",
