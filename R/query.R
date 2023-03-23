@@ -62,7 +62,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
     ids <- outpack_query(scope, pars, scope = NULL,
                          require_unpacked = require_unpacked,
                          root = root)
-    index$filter(ids)
+    index$scope(ids)
   }
 
   query_eval(expr_parsed, index, pars, subquery_env)
@@ -371,7 +371,7 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
   subquery <- get(name, envir = subquery_env)
   if (is.null(subquery$result)) {
     subquery$result <- query_eval(query$args$subquery,
-                                  index$get_index_unfiltered(),
+                                  index$get_index_scoped(),
                                   pars = NULL,
                                   subquery_env)
   }

@@ -615,3 +615,21 @@ test_that("anonymous subquery is printed nicely when it errors", {
            "  - within latest({at_location()})"),
     fixed = TRUE)
 })
+
+
+test_that("subqueries respect scope", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 1))
+  y2 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_equal(
+    outpack_query(quote({report_x} || parameter:a == 2),
+                  subquery = list(report_x = quote(name == "x")),
+                  scope = quote(name == "y"),
+                  root = root),
+    y2)
+})
