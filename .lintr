@@ -1,7 +1,6 @@
 linters: linters_with_defaults(
     object_length_linter = NULL,
     object_usage_linter = NULL,
-    cyclocomp_linter = NULL,
-    brace_linter(TRUE) ## Allow open and close curlies on single line for subqueries
+    cyclocomp_linter = NULL
     )
 exclusions: list("tests/testthat.R", "R/cpp11.R")
