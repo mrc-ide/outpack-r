@@ -202,12 +202,6 @@ query_parse_subquery <- function(expr, context, subquery_env) {
 }
 
 
-deparse_query <- function(x) {
-  ## Remove new lines created by deparse_str on encountering `{`
-  gsub("\\n\\s*", "", deparse_str(x))
-}
-
-
 query_error <- function(msg, expr, context, prefix) {
   if (identical(expr, context)) {
     stop(sprintf("%s\n  - %s %s", msg, prefix, deparse_query(expr)),

@@ -627,7 +627,7 @@ test_that("subqueries respect scope", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote({report_x} || parameter:a == 2),
+    outpack_query(quote({report_x} || parameter:a == 2), # nolint
                   subquery = list(report_x = quote(name == "x")),
                   scope = quote(name == "y"),
                   root = root),
