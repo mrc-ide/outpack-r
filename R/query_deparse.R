@@ -42,10 +42,7 @@ deparse_prefix <- function(fn, args) {
 }
 
 deparse_infix <- function(fn, args) {
-  sep <- " "
-  if (fn == ":") {
-    sep <- ""
-  }
+  sep <- if (fn == ":") "" else " "
   paste(deparse_query(args[[1]]), fn, deparse_query(args[[2]]), sep = sep)
 }
 
