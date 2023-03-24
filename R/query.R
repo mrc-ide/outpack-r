@@ -192,7 +192,7 @@ query_parse_subquery <- function(expr, context, subquery_env) {
         expr, context)
     }
   } else {
-    query_name <- ids::adjective_animal()
+    query_name <- openssl::md5(deparse_query(subquery[[1]]))
     subquery_env[[query_name]] <- subquery[[1]]
   }
   parsed_query <- query_parse(subquery_env[[query_name]], context, subquery_env)
