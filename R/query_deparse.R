@@ -8,14 +8,17 @@ deparse_query <- function(x) {
 
   ## Note this includes invalid operators, even if they are invalid we
   ## still want to return formatted nicely
+  prefix_operators <- list("!")
   infix_operators <- list("!", "&&", "||", "==", "!=", "<", "<=", ">", ">=",
-                          ":", "<-", "%in%", "+", "-", "*", "/", "&", "|")
-  brackets <- list("(" = ")", "{" = "}", "[" = "]")
+                            ":", "<-", "%in%", "+", "-", "*", "/", "&", "|")
+  bracket_operators <- list("(" = ")", "{" = "}", "[" = "]")
 
-  if (fn %in% infix_operators) {
+  if (fn %in% infix_operators && length(args) == 2) {
     query_str <- deparse_infix(fn, args)
-  } else if (fn %in% names(brackets)) {
-    closing <- brackets[[fn]]
+  } else if (fn %in% prefix_operators) {
+    query_str <- deparse_prefix(fn, args)
+  } else if (fn %in% names(bracket_operators)) {
+    closing <- bracket_operators[[fn]]
     query_str <- deparse_brackets(fn, args, closing)
   } else {
     query_str <- deparse_regular_function(fn, args)
@@ -33,20 +36,17 @@ deparse_single <- function(x) {
   str
 }
 
+deparse_prefix <- function(fn, args) {
+  deparse_regular_function(fn, args,
+                           opening_bracket = "", closing_bracket = "")
+}
+
 deparse_infix <- function(fn, args) {
-  if (length(args) == 1) {
-    query_str <- paste0(fn, deparse_query(args[[1]]))
-  } else if (length(args) == 2) {
-    sep <- " "
-    if (fn == ":") {
-      sep <- ""
-    }
-    query_str <- paste(deparse_query(args[[1]]), fn, deparse_query(args[[2]]),
-                       sep = sep)
-  } else {
-    query_str <- deparse_regular_function(fn, args)
+  sep <- " "
+  if (fn == ":") {
+    sep <- ""
   }
-  query_str
+  paste(deparse_query(args[[1]]), fn, deparse_query(args[[2]]), sep = sep)
 }
 
 deparse_brackets <- function(fn, args, closing) {

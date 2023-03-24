@@ -24,4 +24,7 @@ test_that("queries can be deparsed", {
   expect_equal(deparse_query(quote(x <- 23)), "x <- 23")
   expect_equal(deparse_query(quote(x[2])), "x[2]")
   expect_equal(deparse_query(quote(x[2, 3])), "x[2, 3]")
+  expect_equal(deparse_query(quote(!x)), "!x")
+  expect_equal(deparse_query(quote(!(x))), "!(x)")
+  expect_equal(deparse_query(quote(!(x || y))), "!(x || y)")
 })
