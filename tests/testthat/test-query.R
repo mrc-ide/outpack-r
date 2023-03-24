@@ -706,7 +706,7 @@ describe("outpack_query can search for packets usedby another", {
 
   it("works with subqueries", {
     expect_setequal(
-      outpack_query(quote(usedby({report_b})),
+      outpack_query(quote(usedby({report_b})), # nolint
                     scope = quote(name == "a"),
                     subquery = list(report_b = quote(latest(name == "b"))),
                     root = root),
@@ -715,14 +715,14 @@ describe("outpack_query can search for packets usedby another", {
 
   it("can return only immediate dependencies", {
     expect_setequal(
-      outpack_query(quote(usedby({report_d}, TRUE)),
+      outpack_query(quote(usedby({report_d}, TRUE)), # nolint
                     subquery = list(report_d = quote(latest(name == "d"))),
                     root = root),
       ids[c("b", "c")])
   })
 
   it("can recurse full tree", {
-    res <- outpack_query(quote(usedby({report_d})),
+    res <- outpack_query(quote(usedby({report_d})), # nolint
                          subquery = list(report_d = quote(latest(name == "d"))),
                          root = root)
     expect_setequal(res, ids[c("a", "b", "c")])
@@ -754,7 +754,7 @@ test_that("usedby returns multiple ids when parent used twice", {
   id_b <- create_random_dependent_packet(root, "b", c(id_a1, id_a2))
 
   expect_setequal(
-    outpack_query(quote(usedby({report_b})),
+    outpack_query(quote(usedby({report_b})), # nolint
                   scope = quote(name == "a"),
                   subquery = list(report_b = quote(latest(name == "b"))),
                   root = root),
@@ -769,7 +769,7 @@ test_that("usedby output can be used in groupings", {
   ids["c"] <- create_random_dependent_packet(root, "c", ids[c("a", "b")])
 
   expect_setequal(
-    outpack_query(quote(usedby({report_c}) && name == "b"),
+    outpack_query(quote(usedby({report_c}) && name == "b"), # nolint
                   subquery = list(report_c = quote(latest(name == "c"))),
                   root = root),
     ids["b"])
@@ -783,7 +783,7 @@ test_that("usedby errors if given 2 ids", {
   ids["b"] <- create_random_dependent_packet(root, "b", ids["a"])
 
   expect_error(
-    outpack_query(quote(usedby({report_b})),
+    outpack_query(quote(usedby({report_b})), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
     paste0("Found 2 ids in call to usedby, usedby can only work with 1 id. ",
@@ -793,7 +793,7 @@ test_that("usedby errors if given 2 ids", {
 
   ## Suggested fix works
   expect_equal(
-    outpack_query(quote(usedby(latest({report_b}))),
+    outpack_query(quote(usedby(latest({report_b}))), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
     ids["a"], ignore_attr = "names")
@@ -804,6 +804,6 @@ test_that("usedby returns empty vector if usedby called with 0 ids", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_equal(
-    outpack_query(quote(usedby({name == "b"})), root = root),
+    outpack_query(quote(usedby({name == "b"})), root = root), # nolint
     character(0))
 })
