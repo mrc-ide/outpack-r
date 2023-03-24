@@ -39,7 +39,7 @@ deparse_infix <- function(fn, args) {
   } else if (length(args) == 2) {
     sep <- " "
     if (fn == ":") {
-      sep = ""
+      sep <- ""
     }
     query_str <- paste(deparse_query(args[[1]]), fn, deparse_query(args[[2]]),
                        sep = sep)
