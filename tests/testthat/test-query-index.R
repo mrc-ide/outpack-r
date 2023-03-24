@@ -44,6 +44,21 @@ test_that("index can include only unpacked packets", {
 })
 
 
+test_that("index can be scoped", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- vcapply(1:3, function(i) create_random_packet(tmp))
+
+  index <- new_query_index(root, FALSE)
+  expect_setequal(index$index$id, ids)
+  expect_equal(index$index, index$get_index_scoped()$index)
+
+  index$scope(ids[[1]])
+  expect_equal(index$index$id, ids[[1]])
+  expect_setequal(index$get_index_scoped()$index$id, ids[[1]])
+})
+
+
 test_that("index includes depends info", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
