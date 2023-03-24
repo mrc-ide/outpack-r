@@ -445,10 +445,12 @@ test_that("outpack_query returns useful error when subquery name unknown", {
   expect_error(
     outpack_query(quote(latest({sub})), # nolint
                   root = root),
-    paste0("Cannot locate subquery named 'sub'. No subqueries provided.\n",
+    paste0("Cannot locate subquery named 'sub'. No named subqueries ",
+           "provided.\n",
            "  - in     {sub}\n",
            "  - within latest({sub})"),
     fixed = TRUE)
+
   expect_error(
     outpack_query(quote(latest({subq})), # nolint
                   subquery = list(sub = quote(name == "x"),
@@ -459,6 +461,12 @@ test_that("outpack_query returns useful error when subquery name unknown", {
            "  - in     {subq}\n",
            "  - within latest({subq})"),
     fixed = TRUE)
+
+  ## Anonymous subqueries are not included in list
+  expect_error(
+    outpack_query(quote(latest({name == "x"} && {sub})), # nolint
+                  root = root),
+    "Cannot locate subquery named 'sub'. No named subqueries provided.")
 })
 
 
