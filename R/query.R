@@ -415,7 +415,11 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
 
 
 query_eval_usedby <- function(query, index, pars, subquery_env) {
-  id <- query_eval(query$args[[1]], index, pars, subquery_env)
+  ## Eval usedby arg without scope, we need to find all packets which
+  ## were usedby this one, so find parents without scope and apply scope
+  ## later when finding the results of the main query.
+  id <- query_eval(query$args[[1]], index$get_index_unfiltered(),
+                   pars, subquery_env)
   len <- length(id)
   if (len == 0) {
     return(character(0))
