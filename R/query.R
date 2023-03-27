@@ -228,10 +228,35 @@ query_parse_usedby <- function(expr, context, subquery_env) {
   args[[2]]$name <- name
   if (is.call(args[[1]])) {
     args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
+    if (!is_expr_single_value(args[[1]])) {
+      query_parse_error(
+        paste0("usedby() must be called on an expression guaranteed to return ",
+               "a single ID. Try wrapping expression in `latest` or `single`."),
+        expr, context)
+    }
   } else {
     args[[1]] <- query_parse_value(args[[1]], context, subquery_env)
   }
   query_component("usedby", expr, context, args)
+}
+
+## Check if a query component returns a single value
+## Guaranteed single valued if one of the following is true
+##   * it is function call to latest
+##   * it is a function call to single
+##   * it is an ID lookup
+##   * it is a subquery whose expression is validates one of these conditions
+is_expr_single_value <- function(parsed_expr) {
+  if (parsed_expr$type == "subquery") {
+    return(is_expr_single_value(parsed_expr$args$subquery))
+  }
+  parsed_expr$type %in% c("latest", "single") ||
+    (parsed_expr$type == "test" && (is_id_lookup(parsed_expr$args[[1]]) ||
+                                      is_id_lookup(parsed_expr$args[[2]])))
+}
+
+is_id_lookup <- function(expr) {
+  expr$type == "lookup" && expr$name == "id"
 }
 
 
@@ -425,13 +450,6 @@ query_eval_usedby <- function(query, index, pars, subquery_env) {
   len <- length(id)
   if (len == 0) {
     return(character(0))
-  }
-  if (len > 1) {
-    query_eval_error(
-      sprintf(paste0("Found %s ids in call to usedby, usedby can only work ",
-                     "with a single id. Try wrapping enclosed query in 'latest' ",
-                     "to ensure only one id is returned."), len),
-      query$expr, query$context)
   }
   index$get_packet_depends(id, query$args[[2]]$value)
 }

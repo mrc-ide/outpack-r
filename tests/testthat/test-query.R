@@ -808,7 +808,7 @@ test_that("usedby output can be used in groupings", {
 })
 
 
-test_that("usedby errors if given 2 ids", {
+test_that("usedby errors if given expression which could return multiple ids", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 2)
@@ -818,9 +818,9 @@ test_that("usedby errors if given 2 ids", {
     outpack_query(quote(usedby({report_b})), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
-    paste0("Found 2 ids in call to usedby, usedby can only work with a single ",
-           "id. Try wrapping enclosed query in 'latest' to ensure only one id ",
-           "is returned.\n  - while evaluating usedby({report_b})"),
+    paste0("usedby() must be called on an expression guaranteed to return a ",
+           "single ID. Try wrapping expression in `latest` or `single`.\n",
+           "  - in usedby({report_b})"),
     fixed = TRUE)
 
   ## Suggested fix works
@@ -836,6 +836,6 @@ test_that("usedby returns empty vector if usedby called with 0 ids", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_equal(
-    outpack_query(quote(usedby({name == "b"})), root = root), # nolint
+    outpack_query(quote(usedby({latest(name == "b")})), root = root), # nolint
     character(0))
 })
