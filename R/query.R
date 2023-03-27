@@ -427,7 +427,7 @@ query_eval_usedby <- function(query, index, pars, subquery_env) {
   if (len > 1) {
     query_eval_error(
       sprintf(paste0("Found %s ids in call to usedby, usedby can only work ",
-                     "with 1 id. Try wrapping enclosed query in 'latest' ",
+                     "with a single id. Try wrapping enclosed query in 'latest' ",
                      "to ensure only one id is returned."), len),
       query$expr, query$context)
   }
