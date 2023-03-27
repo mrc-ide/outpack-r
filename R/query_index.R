@@ -86,8 +86,7 @@ query_index <- R6::R6Class(
       } else {
         deps <- unique(private$get_all_packet_depends(id))
       }
-      deps <- deps[deps %in% self$index$id] ## filter on current index
-      deps %||% character(0)
+      intersect(deps, self$index$id) %||% character(0)
     }
   ),
 
