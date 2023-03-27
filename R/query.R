@@ -224,7 +224,8 @@ query_parse_usedby <- function(expr, context, subquery_env) {
   } else {
     args[[2]] <- query_parse_value(Inf, context, subquery_env)
   }
-  args[[2]]$name <- "depth"
+  name <- names(args[2]) %||% "depth"
+  args[[2]]$name <- name
   if (is.call(args[[1]])) {
     args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
   } else {

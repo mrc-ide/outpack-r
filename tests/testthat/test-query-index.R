@@ -68,28 +68,28 @@ test_that("index includes depends info", {
   index <- new_query_index(root, FALSE)
   expect_setequal(index$index$id, ids)
 
-  expect_equal(index$get_packet_depends(ids["a"], TRUE),     character(0))
-  expect_equal(index$get_packet_depends(ids["a"], FALSE),    character(0))
-  expect_setequal(index$get_packet_depends(ids["b"], TRUE),  ids["a"])
-  expect_setequal(index$get_packet_depends(ids["b"], FALSE), ids["a"])
-  expect_setequal(index$get_packet_depends(ids["c"], TRUE),  ids["b"])
-  expect_setequal(index$get_packet_depends(ids["c"], FALSE), ids[c("a", "b")])
-  expect_setequal(index$get_packet_depends(ids["d"], TRUE),  ids[c("b", "c")])
-  expect_setequal(index$get_packet_depends(ids["d"], FALSE),
+  expect_equal(index$get_packet_depends(ids["a"], 1),     character(0))
+  expect_equal(index$get_packet_depends(ids["a"], Inf),    character(0))
+  expect_setequal(index$get_packet_depends(ids["b"], 1),  ids["a"])
+  expect_setequal(index$get_packet_depends(ids["b"], Inf), ids["a"])
+  expect_setequal(index$get_packet_depends(ids["c"], 1),  ids["b"])
+  expect_setequal(index$get_packet_depends(ids["c"], Inf), ids[c("a", "b")])
+  expect_setequal(index$get_packet_depends(ids["d"], 1),  ids[c("b", "c")])
+  expect_setequal(index$get_packet_depends(ids["d"], Inf),
                   ids[c("a", "b", "c")])
   ## There is no double counting of dependencies
-  expect_length(index$get_packet_depends(ids["d"], FALSE), 3)
+  expect_length(index$get_packet_depends(ids["d"], Inf), 3)
 
   ## when we filter index
   index$filter(ids[c("b", "c")])
 
   ## then results from get_packet_depends are filtered too
-  expect_equal(index$get_packet_depends(ids["a"], TRUE),     character(0))
-  expect_equal(index$get_packet_depends(ids["a"], FALSE),    character(0))
-  expect_setequal(index$get_packet_depends(ids["b"], TRUE),  character(0))
-  expect_setequal(index$get_packet_depends(ids["b"], FALSE), character(0))
-  expect_setequal(index$get_packet_depends(ids["c"], TRUE),  ids["b"])
-  expect_setequal(index$get_packet_depends(ids["c"], FALSE), ids["b"])
-  expect_setequal(index$get_packet_depends(ids["d"], TRUE),  ids[c("b", "c")])
-  expect_setequal(index$get_packet_depends(ids["d"], FALSE), ids[c("b", "c")])
+  expect_equal(index$get_packet_depends(ids["a"], 1),     character(0))
+  expect_equal(index$get_packet_depends(ids["a"], Inf),    character(0))
+  expect_setequal(index$get_packet_depends(ids["b"], 1),  character(0))
+  expect_setequal(index$get_packet_depends(ids["b"], Inf), character(0))
+  expect_setequal(index$get_packet_depends(ids["c"], 1),  ids["b"])
+  expect_setequal(index$get_packet_depends(ids["c"], Inf), ids["b"])
+  expect_setequal(index$get_packet_depends(ids["d"], 1),  ids[c("b", "c")])
+  expect_setequal(index$get_packet_depends(ids["d"], Inf), ids[c("b", "c")])
 })

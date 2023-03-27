@@ -91,7 +91,7 @@ test_that("usedby can take literal or expression", {
   expect_length(res$args, 2)
   expect_equal(res$args[[1]]$type, "test")
   expect_equal(res$args[[2]]$type, "literal")
-  expect_equal(res$args[[2]]$value, FALSE)
+  expect_equal(res$args[[2]]$value, Inf)
   expect_equal(res$args[[2]]$name, "depth")
 
   res <- query_parse(quote(usedby("123")), NULL, emptyenv())
@@ -133,6 +133,7 @@ test_that("usedby requires 2nd arg boolean", {
   expect_equal(res$args[[2]]$value, 2)
   expect_equal(res$args[[2]]$name, "depth")
 
+  ## Depth can be infinite
   res <- query_parse(quote(usedby(id == "123", Inf)), NULL, emptyenv())
   expect_equal(res$type, "usedby")
   expect_length(res$args, 2)
@@ -140,8 +141,18 @@ test_that("usedby requires 2nd arg boolean", {
   expect_equal(res$args[[2]]$value, Inf)
   expect_equal(res$args[[2]]$name, "depth")
 
+  ## Depth arg returns Inf by default
   res_default <- query_parse(quote(usedby(id == "123")), NULL, emptyenv())
   expect_equal(res_default$args[[2]], res$args[[2]])
+
+  ## Depth arg can be named
+  res <- query_parse(quote(usedby(id == "123", depth = 3)), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[1]]$type, "test")
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, 3)
+  expect_equal(res$args[[2]]$name, "depth")
 })
 
 
@@ -734,6 +745,14 @@ describe("outpack_query can search for packets usedby another", {
       ids[c("b", "c")])
   })
 
+  it("can use named arg", {
+    expect_setequal(
+      outpack_query(quote(usedby({report_d}, depth = 1)), # nolint
+                    subquery = list(report_d = quote(latest(name == "d"))),
+                    root = root),
+      ids[c("b", "c")])
+  })
+
   it("can recurse full tree", {
     res <- outpack_query(quote(usedby({report_d})), # nolint
                          subquery = list(report_d = quote(latest(name == "d"))),
@@ -799,8 +818,8 @@ test_that("usedby errors if given 2 ids", {
     outpack_query(quote(usedby({report_b})), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
-    paste0("Found 2 ids in call to usedby, usedby can only work with 1 id. ",
-           "Try wrapping enclosed query in 'latest' to ensure only one id ",
+    paste0("Found 2 ids in call to usedby, usedby can only work with a single ",
+           "id. Try wrapping enclosed query in 'latest' to ensure only one id ",
            "is returned.\n  - while evaluating usedby({report_b})"),
     fixed = TRUE)
 
