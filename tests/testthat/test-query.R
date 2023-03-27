@@ -92,7 +92,7 @@ test_that("usedby can take literal or expression", {
   expect_equal(res$args[[1]]$type, "test")
   expect_equal(res$args[[2]]$type, "literal")
   expect_equal(res$args[[2]]$value, FALSE)
-  expect_equal(res$args[[2]]$name, "immediate")
+  expect_equal(res$args[[2]]$name, "depth")
 
   res <- query_parse(quote(usedby("123")), NULL, emptyenv())
   expect_equal(res$type, "usedby")
@@ -110,25 +110,38 @@ test_that("usedby can take literal or expression", {
 test_that("usedby requires 2nd arg boolean", {
   expect_error(
     query_parse(quote(usedby(id == "123", "123")), NULL, emptyenv()),
-    paste0("Second argument to usedby() must be boolean, ",
-           "set TRUE to only search immediate dependencies. ",
-           "Otherwise search will recurse the dependency tree.\n",
+    paste0("`depth` argument in usedby() must be a positive numeric, set to ",
+           "control the number of layers of parents to recurse through when ",
+           "listing dependencies. Use `depth = Inf` to search entire ",
+           "dependency tree.\n",
            '  - in usedby(id == "123", "123")'),
     fixed = TRUE)
 
-  res <- query_parse(quote(usedby(id == "123", TRUE)), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
-  expect_length(res$args, 2)
-  expect_equal(res$args[[2]]$type, "literal")
-  expect_equal(res$args[[2]]$value, TRUE)
-  expect_equal(res$args[[2]]$name, "immediate")
+  expect_error(
+    query_parse(quote(usedby(id == "123", -2)), NULL, emptyenv()),
+    paste0("`depth` argument in usedby() must be a positive numeric, set to ",
+           "control the number of layers of parents to recurse through when ",
+           "listing dependencies. Use `depth = Inf` to search entire ",
+           "dependency tree.\n",
+           '  - in usedby(id == "123", -2'),
+    fixed = TRUE)
 
-  res <- query_parse(quote(usedby(id == "123", FALSE)), NULL, emptyenv())
+  res <- query_parse(quote(usedby(id == "123", 2)), NULL, emptyenv())
   expect_equal(res$type, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[2]]$type, "literal")
-  expect_equal(res$args[[2]]$value, FALSE)
-  expect_equal(res$args[[2]]$name, "immediate")
+  expect_equal(res$args[[2]]$value, 2)
+  expect_equal(res$args[[2]]$name, "depth")
+
+  res <- query_parse(quote(usedby(id == "123", Inf)), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, Inf)
+  expect_equal(res$args[[2]]$name, "depth")
+
+  res_default <- query_parse(quote(usedby(id == "123")), NULL, emptyenv())
+  expect_equal(res_default$args[[2]], res$args[[2]])
 })
 
 
@@ -715,7 +728,7 @@ describe("outpack_query can search for packets usedby another", {
 
   it("can return only immediate dependencies", {
     expect_setequal(
-      outpack_query(quote(usedby({report_d}, TRUE)), # nolint
+      outpack_query(quote(usedby({report_d}, 1)), # nolint
                     subquery = list(report_d = quote(latest(name == "d"))),
                     root = root),
       ids[c("b", "c")])

@@ -211,19 +211,20 @@ query_parse_subquery <- function(expr, context, subquery_env) {
 query_parse_usedby <- function(expr, context, subquery_env) {
   args <- as.list(expr[-1])
   if (length(args) == 2) {
-    if (is.logical(args[[2]])) {
+    if (is.numeric(args[[2]]) && args[[2]] > 0) {
       args[[2]] <- query_parse_value(args[[2]], context, subquery_env)
     } else {
       query_parse_error(
-        paste0("Second argument to usedby() must be boolean, ",
-               "set TRUE to only search immediate dependencies. ",
-               "Otherwise search will recurse the dependency tree."),
+        paste0("`depth` argument in usedby() must be a positive numeric, set ",
+               "to control the number of layers of parents to recurse through ",
+               "when listing dependencies. Use `depth = Inf` to search entire ",
+               "dependency tree."),
         expr, context)
     }
   } else {
-    args[[2]] <- query_parse_value(FALSE, context, subquery_env)
+    args[[2]] <- query_parse_value(Inf, context, subquery_env)
   }
-  args[[2]]$name <- "immediate"
+  args[[2]]$name <- "depth"
   if (is.call(args[[1]])) {
     args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
   } else {

@@ -74,37 +74,31 @@ query_index <- R6::R6Class(
     },
 
     #' @description
-    #' Get the ids of packets which this packet depends on i.e. its parents
-    #' this can get immediate parents or recurse to build whole tree
+    #' Get the ids of packets which this packet depends to a specified level
     #'
     #' @param id The id of the packet to get parents of
-    #' @param immediate If TRUE get just immediate (level 1) parents
+    #' @param depth Depth of parents to get, `depth` 1 gets immediate parents
+    #' `depth` 2 gets parents and parents of parents, `depth` Inf will
+    #' recurse the whole tree to get all parents
     #' @return The ids of the parents of this packet
-    get_packet_depends = function(id, immediate) {
-      if (immediate) {
-        deps <- self$depends[[id]]$packet
-      } else {
-        deps <- unique(private$get_all_packet_depends(id))
-      }
+    get_packet_depends = function(id, depth) {
+      deps <- unique(private$get_all_packet_depends(id, depth))
       intersect(deps, self$index$id) %||% character(0)
     }
   ),
 
   private = list(
-    #' @field index_unfiltered The unfiltered unscoped index of all packets
+    # The unfiltered unscoped index of all packets
     index_unfiltered = NULL,
-    #' @field index_unfiltered The unfiltered index but scoped index of packets
+    # The unfiltered index but scoped index of packets
     index_scoped = NULL,
 
-    #' @description
-    #' Get the ids of all packets which this packet depends on
-    #' (i.e. its parents) this will recurse up tree to get all parents
-    #'
-    #' @param id The id of the packet to get parents of
-    #' @return The ids of the parents of this packet
-    get_all_packet_depends = function(id) {
+    get_all_packet_depends = function(id, depth) {
+      if (depth == 0) {
+        return(character(0))
+      }
       deps <- self$depends[[id]]$packet
-      c(deps, unlist(lapply(deps, private$get_all_packet_depends)))
+      c(deps, unlist(lapply(deps, private$get_all_packet_depends, depth - 1)))
     }
   )
 )
