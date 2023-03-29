@@ -211,7 +211,7 @@ query_parse_subquery <- function(expr, context, subquery_env) {
 query_parse_usedby <- function(expr, context, subquery_env) {
   args <- as.list(expr[-1])
   if (length(args) == 2) {
-    if (is.numeric(args[[2]]) && args[[2]] >= 0) {
+    if (is.numeric(args[[2]]) && args[[2]] > 0) {
       args[[2]] <- query_parse_value(args[[2]], context, subquery_env)
     } else {
       query_parse_error(

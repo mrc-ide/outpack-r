@@ -845,11 +845,6 @@ test_that("usedby depth works as expected", {
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 3)
 
-  expect_equal(
-    outpack_query(quote(
-      usedby({latest(name == "c")}, depth = 0)), root = root), # nolint
-    character(0))
-
   expect_setequal(
     outpack_query(quote(
       usedby({latest(name == "c")}, depth = 1)), root = root), # nolint
