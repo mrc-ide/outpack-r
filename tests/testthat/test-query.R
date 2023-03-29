@@ -839,3 +839,29 @@ test_that("usedby returns empty vector if usedby called with 0 ids", {
     outpack_query(quote(usedby({latest(name == "b")})), root = root), # nolint
     character(0))
 })
+
+test_that("usedby depth works as expected", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+
+  expect_equal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = 0)), root = root), # nolint
+    character(0))
+
+  expect_setequal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = 1)), root = root), # nolint
+    ids["b"])
+
+  expect_setequal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = 2)), root = root), # nolint
+    ids[c("a", "b")])
+
+  expect_setequal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = Inf)), root = root), # nolint
+    ids[c("a", "b")])
+})
