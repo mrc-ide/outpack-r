@@ -215,10 +215,10 @@ query_parse_usedby <- function(expr, context, subquery_env) {
       args[[2]] <- query_parse_value(args[[2]], context, subquery_env)
     } else {
       query_parse_error(
-        paste0("`depth` argument in usedby() must be a positive numeric, set ",
-               "to control the number of layers of parents to recurse through ",
-               "when listing dependencies. Use `depth = Inf` to search entire ",
-               "dependency tree."),
+        paste("`depth` argument in usedby() must be a positive numeric, set",
+              "to control the number of layers of parents to recurse through",
+              "when listing dependencies. Use `depth = Inf` to search entire",
+              "dependency tree."),
         expr, context)
     }
   } else {
@@ -230,8 +230,8 @@ query_parse_usedby <- function(expr, context, subquery_env) {
     args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
     if (!is_expr_single_value(args[[1]])) {
       query_parse_error(
-        paste0("usedby() must be called on an expression guaranteed to return ",
-               "a single ID. Try wrapping expression in `latest` or `single`."),
+        paste("usedby() must be called on an expression guaranteed to return",
+              "a single ID. Try wrapping expression in `latest` or `single`."),
         expr, context)
     }
   } else {
