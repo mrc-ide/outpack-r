@@ -94,7 +94,7 @@ query_index <- R6::R6Class(
     index_scoped = NULL,
 
     get_all_packet_depends = function(id, depth) {
-      if (depth == 0) {
+      if (depth <= 0) {
         return(character(0))
       }
       deps <- self$depends[[id]]$packet
