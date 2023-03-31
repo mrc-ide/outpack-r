@@ -97,31 +97,6 @@ Which is the equivalent of
 outpack_query(quote(parameter:x == 1), scope = quote(name == "data"))
 ```
 
-## Subqueries
-
-An `outpack_query` can include subqueries denoted by curly braces `{}`
-
-```r
-outpack_query(quote({name == "A"} || parameter:x == 2))
-```
-
-Subqueries can be anonymous like above or they can also be named
-
-```r
-outpack_query(quote({report_a}),
-              subquery = list(report_a = quote(name == "A")))
-```
-
-In the above examples you could replace the subquery `{expr}` with `(expr)` and it would have the same result. The difference with subqueries is how they interact with `scope` and `name`.
-
-```r
-outpack_query(quote({report_a} || parameter:x == 2),
-              subquery = list(report_a = quote(name == "A")),
-              scope = quote(name == "B"))
-```
-
-The subquery is evaluated without a scope. So in the above the packets returned will be all packets named `A` and any packets named `B` where parameter `x` is `2`. Note that `name` arg to `outpack_query` gets combined with the `scope` so subqueries also are evaluated without a `name`. This behaviour is relied upon by dependency evaluation functions detailed below.
-
 ## Dependencies
 
 If we have 2 packets, where B depends on output from A (i.e. we call `outpack_packet_use_dependency(id_a, ...)` when running packet B) we can draw this as.
@@ -152,15 +127,24 @@ and we want to know the `id` of A which was used by `C` we can find this using `
 outpack_search(quote(usedby(latest(name == "C"))), name = "A")
 ```
 
-`usedby` can be combined with groups and subqueries and scope:
+`usedby` can be combined with groupings and scope:
 
 ```r
-outpack_search(quote(usedby(C) && parameter:year == 2022),
+outpack_search(quote(usedby(latest(name == "C")) && parameter:year == 2022),
+               scope = quote(name == "A"))
+```
+
+`usedby` can be simplified by using subqueries. Subqueries are denoted by curly braces `{}` and can either be named and passed in `subquery` arg or can be anonymous. The query below is equivalent to the above but uses a subquery for `C`.
+
+```r
+outpack_search(quote(usedby({C}) && parameter:year == 2022),
                scope = quote(name == "A")
                subquery = list(C = quote(latest(name == "C"))))
 ```
 
-the example above is why subqueries are not evaluated with the scope. We want `usedby` to find all packets which are used by `latest` `C`. If the subquery `C` was scoped this would return no results.
+There are two important things to note about `usedby`:
+* The query inside `usedby` will search the entire index, ignoring any `scope` or `name` parameters. This is because we want to find all packets which are used by `latest` `C`. If the subquery `C` was scoped this would return no results.
+* The query inside `usedby` must return a single result. To ensure this it must either be a literal `id`, a call to `latest` or a call to `single`
 
 ## Possible future queries and interface improvements
 
