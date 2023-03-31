@@ -933,3 +933,22 @@ describe("outpack_query can search for packets which use another", {
       character(0))
   })
 })
+
+test_that("uses and usedby can be used together", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+  ids["d"] <- create_random_dependent_packet(root, "d", ids["a"])
+
+  expect_setequal(
+    outpack_query(quote(usedby(single(uses(latest(name == "d"))))),
+                  scope = quote(name == "c"),
+                  root = root),
+    ids["c"])
+
+  expect_setequal(
+    outpack_query(quote(uses(single(usedby(latest(name == "c")) && name == "A"))),
+                  scope = quote(name == "d"),
+                  root = root),
+    ids["d"])
+})
