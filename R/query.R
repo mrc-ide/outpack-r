@@ -16,8 +16,7 @@
 ##'   `scope = list(name = "name")`
 ##'
 ##' @param subquery Optionally, named list of subqueries which can be
-##'   referenced by name from the `expr`. Each subquery must be a list
-##'   with at least an `expr` and optionally a `scope`.
+##'   referenced by name from the `expr`.
 ##'
 ##' @param require_unpacked Logical, indicating if we should require
 ##'   that the packets are unpacked. If `FALSE` (the default) we
@@ -41,14 +40,9 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   } else {
     subquery_env <- new.env(parent = emptyenv())
   }
-  expr_parsed <- query_parse(expr, expr, subquery_env)
-  validate_parameters(pars)
 
-  ## We will want to do this processing more generally later (in the
-  ## root object, saved as part of the index), because it will be a
-  ## waste to do this every time. Ideally it can be done incrementally
-  ## too.
-  index <- new_query_index(root, require_unpacked)
+  expr_parsed <- query_parse(expr, expr, subquery_env)
+
   if (!is.null(name)) {
     name_call <- call("==", quote(name), name)
     if (is.null(scope)) {
@@ -59,11 +53,11 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   }
 
   if (!is.null(scope)) {
-    ids <- outpack_query(scope, pars, scope = NULL,
-                         require_unpacked = require_unpacked,
-                         root = root)
-    index$scope(ids)
+    expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
+
+  validate_parameters(pars)
+  index <- new_query_index(root, require_unpacked)
 
   query_eval(expr_parsed, index, pars, subquery_env)
 }
@@ -118,7 +112,8 @@ query_parse_expr <- function(expr, context, subquery_env) {
          group = query_parse_group(expr, context, subquery_env),
          latest = query_parse_latest(expr, context, subquery_env),
          single = query_parse_single(expr, context, subquery_env),
-         at_location = query_parse_at_location(expr, context, subquery_env),
+         at_location = query_parse_at_location(expr, context,
+                                               subquery_env),
          subquery = query_parse_subquery(expr, context, subquery_env),
          usedby = query_parse_usedby(expr, context, subquery_env),
          ## normally unreachable
@@ -161,6 +156,36 @@ query_parse_at_location <- function(expr, context, subquery_env) {
   }
   args <- lapply(args, query_parse_value, context, subquery_env)
   query_component("at_location", expr, context, args)
+}
+
+
+query_parse_add_scope <- function(expr_parsed, scope) {
+  if (!is.language(scope)) {
+    stop("Invalid input for `scope`, it must be a language expression.")
+  }
+
+  parsed_scope <- query_parse(scope, scope, emptyenv())
+  scoped_functions <- list("latest", "single")
+  if (expr_parsed$type %in% scoped_functions) {
+    ## Include scope inside the top level function call
+    if (length(expr) == 1) {
+      ## e.g. latest()
+      expr_parsed$args <-  list(parsed_scope)
+    } else {
+      ## e.g. latest(name == "x")
+      scoped_expr <- call(deparse(expr[[1]]), call("&&", expr[[-1]], scope))
+      expr_parsed$args[[1]] <- query_component(
+        "group", scoped_expr, scoped_expr,
+        list(expr_parsed$args[[1]], parsed_scope), name = "&&")
+    }
+  } else {
+    ## Include scope at end of expression
+    scoped_expr <- call("&&", expr, scope)
+    expr_parsed <- query_component("group", scoped_expr, scoped_expr,
+                                   list(expr_parsed, parsed_scope),
+                                   name = "&&")
+  }
+  expr_parsed
 }
 
 
@@ -433,7 +458,7 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
   subquery <- get(name, envir = subquery_env)
   if (is.null(subquery$result)) {
     subquery$result <- query_eval(query$args$subquery,
-                                  index$get_index_scoped(),
+                                  index,
                                   pars = NULL,
                                   subquery_env)
   }
@@ -442,11 +467,7 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
 
 
 query_eval_usedby <- function(query, index, pars, subquery_env) {
-  ## Eval usedby arg without scope, we need to find all packets which
-  ## were usedby this one, so find parents without scope and apply scope
-  ## later when finding the results of the main query.
-  id <- query_eval(query$args[[1]], index$get_index_unfiltered(),
-                   pars, subquery_env)
+  id <- query_eval(query$args[[1]], index, pars, subquery_env)
   len <- length(id)
   if (len == 0) {
     return(character(0))
