@@ -93,3 +93,38 @@ test_that("index includes depends info", {
   expect_setequal(index$get_packet_depends(ids["d"], 1),  ids[c("b", "c")])
   expect_setequal(index$get_packet_depends(ids["d"], Inf), ids[c("b", "c")])
 })
+
+
+test_that("index includes uses info", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+  ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
+
+  index <- new_query_index(root, FALSE)
+  expect_setequal(index$index$id, ids)
+
+  expect_setequal(index$get_packet_uses(ids["a"], 1),    ids["b"])
+  expect_setequal(index$get_packet_uses(ids["a"], Inf),  ids[c("b", "c", "d")])
+  expect_setequal(index$get_packet_uses(ids["b"], 1),    ids[c("c", "d")])
+  expect_setequal(index$get_packet_uses(ids["b"], Inf),  ids[c("c", "d")])
+  expect_setequal(index$get_packet_uses(ids["c"], 1),    ids["d"])
+  expect_setequal(index$get_packet_uses(ids["c"], Inf),  ids["d"])
+  expect_equal(index$get_packet_uses(ids["d"], 1),       character(0))
+  expect_equal(index$get_packet_uses(ids["d"], Inf),     character(0))
+  ## There is no double counting of dependencies
+  expect_length(index$get_packet_uses(ids["a"], Inf), 3)
+
+  ## when we filter index
+  index$filter(ids[c("b", "c")])
+
+  ## then results from get_packet_depends are filtered too
+  expect_setequal(index$get_packet_uses(ids["a"], 1),    ids["b"])
+  expect_setequal(index$get_packet_uses(ids["a"], Inf),  ids[c("b", "c")])
+  expect_setequal(index$get_packet_uses(ids["b"], 1),    ids[c("c")])
+  expect_setequal(index$get_packet_uses(ids["b"], Inf),  ids[c("c")])
+  expect_equal(index$get_packet_uses(ids["c"], 1),       character(0))
+  expect_equal(index$get_packet_uses(ids["c"], Inf),     character(0))
+  expect_equal(index$get_packet_uses(ids["d"], 1),       character(0))
+  expect_equal(index$get_packet_uses(ids["d"], Inf),     character(0))
+})

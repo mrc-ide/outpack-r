@@ -85,9 +85,10 @@ test_that("at_location requires string literal arguments", {
 })
 
 
-test_that("usedby can take literal or expression", {
+test_that("dependency can take literal or expression", {
   res <- query_parse(quote(usedby(id == "123")), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[1]]$type, "test")
   expect_equal(res$args[[2]]$type, "literal")
@@ -95,13 +96,15 @@ test_that("usedby can take literal or expression", {
   expect_equal(res$args[[2]]$name, "depth")
 
   res <- query_parse(quote(usedby("123")), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[1]], list(type = "literal", value = "123"))
 
   res <- query_parse(quote(usedby(latest(name == "x"))),
                      NULL, emptyenv())
-  expect_equal(res$type, "usedby")
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[1]]$type, "latest")
 })
@@ -110,7 +113,7 @@ test_that("usedby can take literal or expression", {
 test_that("usedby requires 2nd arg boolean", {
   expect_error(
     query_parse(quote(usedby(id == "123", "123")), NULL, emptyenv()),
-    paste0("`depth` argument in usedby() must be a positive numeric, set to ",
+    paste0("`depth` argument in usedby must be a positive numeric, set to ",
            "control the number of layers of parents to recurse through when ",
            "listing dependencies. Use `depth = Inf` to search entire ",
            "dependency tree.\n",
@@ -119,7 +122,7 @@ test_that("usedby requires 2nd arg boolean", {
 
   expect_error(
     query_parse(quote(usedby(id == "123", -2)), NULL, emptyenv()),
-    paste0("`depth` argument in usedby() must be a positive numeric, set to ",
+    paste0("`depth` argument in usedby must be a positive numeric, set to ",
            "control the number of layers of parents to recurse through when ",
            "listing dependencies. Use `depth = Inf` to search entire ",
            "dependency tree.\n",
@@ -127,7 +130,8 @@ test_that("usedby requires 2nd arg boolean", {
     fixed = TRUE)
 
   res <- query_parse(quote(usedby(id == "123", 2)), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[2]]$type, "literal")
   expect_equal(res$args[[2]]$value, 2)
@@ -135,7 +139,8 @@ test_that("usedby requires 2nd arg boolean", {
 
   ## Depth can be infinite
   res <- query_parse(quote(usedby(id == "123", Inf)), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[2]]$type, "literal")
   expect_equal(res$args[[2]]$value, Inf)
@@ -147,11 +152,24 @@ test_that("usedby requires 2nd arg boolean", {
 
   ## Depth arg can be named
   res <- query_parse(quote(usedby(id == "123", depth = 3)), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[1]]$type, "test")
   expect_equal(res$args[[2]]$type, "literal")
   expect_equal(res$args[[2]]$value, 3)
+  expect_equal(res$args[[2]]$name, "depth")
+})
+
+
+test_that("dependency can be uses type", {
+  res <- query_parse(quote(uses(id == "123")), NULL, emptyenv())
+  expect_equal(res$type, "dependency")
+  expect_equal(res$name, "uses")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[1]]$type, "test")
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, Inf)
   expect_equal(res$args[[2]]$name, "depth")
 })
 
@@ -818,7 +836,7 @@ test_that("usedby errors if given expression which could return multiple ids", {
     outpack_query(quote(usedby({report_b})), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
-    paste0("usedby() must be called on an expression guaranteed to return a ",
+    paste0("usedby must be called on an expression guaranteed to return a ",
            "single ID. Try wrapping expression in `latest` or `single`.\n",
            "  - in usedby({report_b})"),
     fixed = TRUE)
@@ -859,4 +877,59 @@ test_that("usedby depth works as expected", {
     outpack_query(quote(
       usedby({latest(name == "c")}, depth = Inf)), root = root), # nolint
     ids[c("a", "b")])
+})
+
+
+describe("outpack_query can search for packets which use another", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+  ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
+
+  it("works for simple case", {
+    expect_setequal(
+      outpack_query(bquote(uses(.(ids["b"]))),
+                    scope = quote(name == "c"),
+                    root = root),
+      ids["c"])
+  })
+
+  it("can return only immediate dependencies", {
+    expect_setequal(
+      outpack_query(quote(uses({report_a}, 1)), # nolint
+                    subquery = list(report_a = quote(latest(name == "a"))),
+                    root = root),
+      ids["b"])
+  })
+
+  it("can use named arg", {
+    expect_setequal(
+      outpack_query(quote(uses({report_a}, depth = 2)), # nolint
+                    subquery = list(report_a = quote(latest(name == "a"))),
+                    root = root),
+      ids[c("b", "c", "d")])
+  })
+
+  it("can recurse full tree", {
+    res <- outpack_query(quote(uses({report_a})), # nolint
+                         subquery = list(report_a = quote(latest(name == "a"))),
+                         root = root)
+    expect_setequal(res, ids[c("b", "c", "d")])
+    expect_length(res, 3) ## Packets are not counted twice
+  })
+
+  it("returns empty vector when id has no dependencies", {
+    expect_equal(
+      outpack_query(bquote(uses(.(ids["d"]))),
+                    root = root),
+      character(0))
+  })
+
+  it("returns empty vector when id unknown", {
+    expect_equal(
+      outpack_query(quote(uses("123")),
+                    scope = quote(name == "b"),
+                    root = root),
+      character(0))
+  })
 })

@@ -13,6 +13,9 @@ query_index <- R6::R6Class(
     #' @field depends Named list of data frames. Names are packet ids, values
     #'   are packets dependend on by this packet id (i.e. its parents).
     depends = NULL,
+    #' @field uses Named list of data frames. Names are packet ids, values
+    #'   are packets which are used by this packet id (i.e. its children).
+    uses = NULL,
     #' @field root The outpack root object
     root = NULL,
 
@@ -23,14 +26,20 @@ query_index <- R6::R6Class(
     #' @param index The packet index as a data frame
     #' @param depends Named list of data frames. Names are packet ids, values
     #'   are packets dependend on by this packet id (i.e. its parents).
-    initialize = function(root, index, depends) {
+    #' @param uses Named list of data frames. Names are packet ids, values
+    #'   are packets used by on by this packet id (i.e. its children). This is
+    #'   the same data as `depends` but relationships flow in the other
+    #'   direction.
+    initialize = function(root, index, depends, uses) {
       self$root <- root
       self$index <- index
       private$index_unfiltered <- self$index
       private$index_scoped <- self$index
       self$depends <- depends
+      self$uses <- uses
       lockBinding("root", self)
       lockBinding("depends", self)
+      lockBinding("uses", self)
     },
 
     #' @description
@@ -61,7 +70,8 @@ query_index <- R6::R6Class(
     #'
     #' @return A new query_index object with the unfiltered index
     get_index_unfiltered = function() {
-      query_index$new(self$root, private$index_unfiltered, private$depends)
+      query_index$new(self$root, private$index_unfiltered, private$depends,
+                      private$uses)
     },
 
     #' @description
@@ -70,7 +80,8 @@ query_index <- R6::R6Class(
     #'
     #' @return A new query_index object with the scoped index
     get_index_scoped = function() {
-      query_index$new(self$root, private$index_scoped, private$depends)
+      query_index$new(self$root, private$index_scoped, private$depends,
+                      private$uses)
     },
 
     #' @description
@@ -82,7 +93,20 @@ query_index <- R6::R6Class(
     #' recurse the whole tree to get all parents
     #' @return The ids of the parents of this packet
     get_packet_depends = function(id, depth) {
-      deps <- unique(private$get_all_packet_depends(id, depth))
+      deps <- private$get_dependencies(id, depth, self$depends)
+      intersect(deps, self$index$id) %||% character(0)
+    },
+
+    #' @description
+    #' Get the ids of packets which are used by this packet
+    #'
+    #' @param id The id of the packet to get children of
+    #' @param depth Depth of children to get, `depth` 1 gets immediate children
+    #' `depth` 2 gets children and children of children, `depth` Inf will
+    #' recurse the whole tree to get all children
+    #' @return The ids of the children of this packet
+    get_packet_uses = function(id, depth) {
+      deps <- private$get_dependencies(id, depth, self$uses)
       intersect(deps, self$index$id) %||% character(0)
     }
   ),
@@ -93,12 +117,13 @@ query_index <- R6::R6Class(
     # The unfiltered index but scoped index of packets
     index_scoped = NULL,
 
-    get_all_packet_depends = function(id, depth) {
+    get_dependencies = function(id, depth, dependency_data) {
       if (depth <= 0) {
         return(character(0))
       }
-      deps <- self$depends[[id]]$packet
-      c(deps, unlist(lapply(deps, private$get_all_packet_depends, depth - 1)))
+      deps <- dependency_data[[id]]$packet
+      unique(c(deps, unlist(lapply(deps, private$get_dependencies,
+                                   depth - 1, dependency_data))))
     }
   )
 )
@@ -116,9 +141,26 @@ new_query_index <- function(root, require_unpacked) {
     parameters = I(lapply(idx$metadata, "[[", "parameters")),
     location = I(location))
   depends <- lapply(idx$metadata, "[[", "depends")
+  uses <- build_packet_uses(depends)
   if (require_unpacked) {
     index <- index[index$id %in% idx$unpacked$packet, ]
     depends <- depends[names(depends) %in% index$id]
+    uses <- uses[names(uses) %in% index$id]
   }
-  query_index$new(root, index, depends)
+  query_index$new(root, index, depends, uses)
+}
+
+build_packet_uses <- function(dependencies) {
+  ids <- names(dependencies)
+  uses <- list()
+  for (id in ids) {
+    for (packet in dependencies[[id]]$packet) {
+      if (is.null(uses[[packet]])) {
+        uses[[packet]] <- list(packet = id)
+      } else {
+        uses[[packet]]$packet <- unique(c(uses[[packet]]$packet, id))
+      }
+    }
+  }
+  uses
 }
