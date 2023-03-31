@@ -53,7 +53,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   }
 
   if (!is.null(scope)) {
-    expr_parsed <- query_parse_add_scope(expr_parsed, scope)
+    expr_parsed <- query_parse_add_scope(expr, expr_parsed, scope)
   }
 
   validate_parameters(pars)
@@ -159,7 +159,7 @@ query_parse_at_location <- function(expr, context, subquery_env) {
 }
 
 
-query_parse_add_scope <- function(expr_parsed, scope) {
+query_parse_add_scope <- function(expr, expr_parsed, scope) {
   if (!is.language(scope)) {
     stop("Invalid input for `scope`, it must be a language expression.")
   }
