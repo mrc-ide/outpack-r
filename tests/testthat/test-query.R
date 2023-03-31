@@ -91,8 +91,8 @@ test_that("usedby can take literal or expression", {
   expect_length(res$args, 2)
   expect_equal(res$args[[1]]$type, "test")
   expect_equal(res$args[[2]]$type, "literal")
-  expect_equal(res$args[[2]]$value, FALSE)
-  expect_equal(res$args[[2]]$name, "immediate")
+  expect_equal(res$args[[2]]$value, Inf)
+  expect_equal(res$args[[2]]$name, "depth")
 
   res <- query_parse(quote(usedby("123")), NULL, emptyenv())
   expect_equal(res$type, "usedby")
@@ -110,25 +110,49 @@ test_that("usedby can take literal or expression", {
 test_that("usedby requires 2nd arg boolean", {
   expect_error(
     query_parse(quote(usedby(id == "123", "123")), NULL, emptyenv()),
-    paste0("Second argument to usedby() must be boolean, ",
-           "set TRUE to only search immediate dependencies. ",
-           "Otherwise search will recurse the dependency tree.\n",
+    paste0("`depth` argument in usedby() must be a positive numeric, set to ",
+           "control the number of layers of parents to recurse through when ",
+           "listing dependencies. Use `depth = Inf` to search entire ",
+           "dependency tree.\n",
            '  - in usedby(id == "123", "123")'),
     fixed = TRUE)
 
-  res <- query_parse(quote(usedby(id == "123", TRUE)), NULL, emptyenv())
-  expect_equal(res$type, "usedby")
-  expect_length(res$args, 2)
-  expect_equal(res$args[[2]]$type, "literal")
-  expect_equal(res$args[[2]]$value, TRUE)
-  expect_equal(res$args[[2]]$name, "immediate")
+  expect_error(
+    query_parse(quote(usedby(id == "123", -2)), NULL, emptyenv()),
+    paste0("`depth` argument in usedby() must be a positive numeric, set to ",
+           "control the number of layers of parents to recurse through when ",
+           "listing dependencies. Use `depth = Inf` to search entire ",
+           "dependency tree.\n",
+           '  - in usedby(id == "123", -2'),
+    fixed = TRUE)
 
-  res <- query_parse(quote(usedby(id == "123", FALSE)), NULL, emptyenv())
+  res <- query_parse(quote(usedby(id == "123", 2)), NULL, emptyenv())
   expect_equal(res$type, "usedby")
   expect_length(res$args, 2)
   expect_equal(res$args[[2]]$type, "literal")
-  expect_equal(res$args[[2]]$value, FALSE)
-  expect_equal(res$args[[2]]$name, "immediate")
+  expect_equal(res$args[[2]]$value, 2)
+  expect_equal(res$args[[2]]$name, "depth")
+
+  ## Depth can be infinite
+  res <- query_parse(quote(usedby(id == "123", Inf)), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, Inf)
+  expect_equal(res$args[[2]]$name, "depth")
+
+  ## Depth arg returns Inf by default
+  res_default <- query_parse(quote(usedby(id == "123")), NULL, emptyenv())
+  expect_equal(res_default$args[[2]], res$args[[2]])
+
+  ## Depth arg can be named
+  res <- query_parse(quote(usedby(id == "123", depth = 3)), NULL, emptyenv())
+  expect_equal(res$type, "usedby")
+  expect_length(res$args, 2)
+  expect_equal(res$args[[1]]$type, "test")
+  expect_equal(res$args[[2]]$type, "literal")
+  expect_equal(res$args[[2]]$value, 3)
+  expect_equal(res$args[[2]]$name, "depth")
 })
 
 
@@ -472,13 +496,13 @@ test_that("outpack_query can include subqueries", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote(latest({sub})),
+    outpack_query(quote(latest({sub})), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     x2)
   expect_equal(
     outpack_query(
-      quote({sub}),
+      quote({sub}), # nolint
       subquery = list(sub = quote(latest(name == "x"))),
       root = root),
     x2)
@@ -490,14 +514,16 @@ test_that("outpack_query returns useful error when subquery name unknown", {
   root <- outpack_init(tmp)
 
   expect_error(
-    outpack_query(quote(latest({sub})),
+    outpack_query(quote(latest({sub})), # nolint
                   root = root),
-    paste0("Cannot locate subquery named 'sub'. No subqueries provided.\n",
+    paste0("Cannot locate subquery named 'sub'. No named subqueries ",
+           "provided.\n",
            "  - in     {sub}\n",
            "  - within latest({sub})"),
     fixed = TRUE)
+
   expect_error(
-    outpack_query(quote(latest({subq})),
+    outpack_query(quote(latest({subq})), # nolint
                   subquery = list(sub = quote(name == "x"),
                                   foo = quote(name == "y")),
                   root = root),
@@ -506,6 +532,12 @@ test_that("outpack_query returns useful error when subquery name unknown", {
            "  - in     {subq}\n",
            "  - within latest({subq})"),
     fixed = TRUE)
+
+  ## Anonymous subqueries are not included in list
+  expect_error(
+    outpack_query(quote(latest({name == "x"} && {sub})), # nolint
+                  root = root),
+    "Cannot locate subquery named 'sub'. No named subqueries provided.")
 })
 
 
@@ -520,7 +552,7 @@ test_that("outpack_query returns no results when subquery has no results", {
                NA_character_)
 
   expect_equal(
-    outpack_query(quote(latest({sub})),
+    outpack_query(quote(latest({sub})), # nolint
                   subquery = list(sub = quote(name == "y")),
                   root = root),
     NA_character_)
@@ -532,7 +564,7 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_error(
-    outpack_query(quote({sub} > 2),
+    outpack_query(quote({sub} > 2), # nolint
                   subquery = list(sub = quote(parameter:a == 2)),
                   root = root),
     paste0("Unhandled query expression value '{sub}'\n",
@@ -541,7 +573,7 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
     fixed = TRUE)
 
   expect_error(
-    outpack_query(quote(latest({sub}) > 2),
+    outpack_query(quote(latest({sub}) > 2), # nolint
                   subquery = list(sub = quote(parameter:a == 2)),
                   root = root),
     paste0("Unhandled query expression value 'latest({sub})'\n",
@@ -550,7 +582,7 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
     fixed = TRUE)
 
   expect_error(
-    outpack_query(quote(latest({sub} == "hello")),
+    outpack_query(quote(latest({sub} == "hello")), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     paste0("Unhandled query expression value '{sub}'\n",
@@ -569,24 +601,24 @@ test_that("subqueries can be used in groups e.g. &&, ||, (), etc.", {
   y1 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_setequal(
-    outpack_query(quote({sub} || parameter:a == 2),
+    outpack_query(quote({sub} || parameter:a == 2), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     c(x1, x2, y1))
 
   expect_setequal(
-    outpack_query(quote(!{sub}),
+    outpack_query(quote(!{sub}), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     y1)
 
   expect_setequal(
-    outpack_query(quote(parameter:a == 1 && {sub} || name == "y"),
+    outpack_query(quote(parameter:a == 1 && {sub} || name == "y"), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     c(x1, y1))
   expect_setequal(
-    outpack_query(quote(parameter:a == 1 && ({sub} || name == "y")),
+    outpack_query(quote(parameter:a == 1 && ({sub} || name == "y")), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     x1)
@@ -602,7 +634,7 @@ test_that("subqueries can be used within single", {
   y1 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_error(
-    outpack_query(quote(single({sub})),
+    outpack_query(quote(single({sub})), # nolint
                   subquery = list(sub = quote(name == "x")),
                   root = root),
     paste0("Query found 2 packets, but expected exactly one\n",
@@ -610,7 +642,7 @@ test_that("subqueries can be used within single", {
     fixed = TRUE)
 
   expect_equal(
-    outpack_query(quote(single({sub})),
+    outpack_query(quote(single({sub})), # nolint
                   subquery = list(sub = quote(name == "y")),
                   root = root),
     y1)
@@ -622,7 +654,7 @@ test_that("subqueries cannot be used within at_location", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_error(
-    outpack_query(quote(at_location({sub})),
+    outpack_query(quote(at_location({sub})), # nolint
                   subquery = list(sub = quote("x")),
                   root = root),
     paste0("All arguments to at_location() must be string literals\n",
@@ -641,7 +673,7 @@ test_that("outpack_query can include anonymous subqueries", {
   y2 <- create_random_packet(tmp, "y", list(a = 2))
 
   expect_equal(
-    outpack_query(quote(latest({name == "x"})),
+    outpack_query(quote(latest({name == "x"})), # nolint
                   root = root),
     x2)
 })
@@ -654,7 +686,7 @@ test_that("anonymous subquery is printed nicely when it errors", {
   x1 <- create_random_packet(tmp, "x", list(a = 1))
 
   expect_error(
-    outpack_query(quote(latest({ at_location() })),
+    outpack_query(quote(latest({ at_location() })), # nolint
                   root = root),
     paste0("Invalid call to at_location(); ",
            "expected at least 1 args but received 0\n",
@@ -664,20 +696,21 @@ test_that("anonymous subquery is printed nicely when it errors", {
 })
 
 
-test_that("scope and subquery interaction", {
+test_that("subqueries respect scope", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
-  id_a1 <- create_random_packet(root, "a", list(x = 1))
-  id_a2 <- create_random_packet(root, "a", list(x = 2))
-  id_b1 <- create_random_packet(root, "b", list(x = 1))
-  id_b2 <- create_random_packet(root, "b", list(x = 2))
 
-  expect_setequal(
-    outpack_query(quote({report_b} || parameter:x == 1),
-                  scope = quote(name == "a"),
-                  subquery = list(report_b = quote(latest(name == "b"))),
+  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x2 <- create_random_packet(tmp, "x", list(a = 2))
+  y1 <- create_random_packet(tmp, "y", list(a = 1))
+  y2 <- create_random_packet(tmp, "y", list(a = 2))
+
+  expect_equal(
+    outpack_query(quote({report_x} || parameter:a == 2), # nolint
+                  subquery = list(report_x = quote(name == "x")),
+                  scope = quote(name == "y"),
                   root = root),
-    c(id_b2, id_a1))
+    y2)
 })
 
 
@@ -697,7 +730,7 @@ describe("outpack_query can search for packets usedby another", {
 
   it("works with subqueries", {
     expect_setequal(
-      outpack_query(quote(usedby({report_b})),
+      outpack_query(quote(usedby({report_b})), # nolint
                     scope = quote(name == "a"),
                     subquery = list(report_b = quote(latest(name == "b"))),
                     root = root),
@@ -706,14 +739,22 @@ describe("outpack_query can search for packets usedby another", {
 
   it("can return only immediate dependencies", {
     expect_setequal(
-      outpack_query(quote(usedby({report_d}, TRUE)),
+      outpack_query(quote(usedby({report_d}, 1)), # nolint
+                    subquery = list(report_d = quote(latest(name == "d"))),
+                    root = root),
+      ids[c("b", "c")])
+  })
+
+  it("can use named arg", {
+    expect_setequal(
+      outpack_query(quote(usedby({report_d}, depth = 1)), # nolint
                     subquery = list(report_d = quote(latest(name == "d"))),
                     root = root),
       ids[c("b", "c")])
   })
 
   it("can recurse full tree", {
-    res <- outpack_query(quote(usedby({report_d})),
+    res <- outpack_query(quote(usedby({report_d})), # nolint
                          subquery = list(report_d = quote(latest(name == "d"))),
                          root = root)
     expect_setequal(res, ids[c("a", "b", "c")])
@@ -745,7 +786,7 @@ test_that("usedby returns multiple ids when parent used twice", {
   id_b <- create_random_dependent_packet(root, "b", c(id_a1, id_a2))
 
   expect_setequal(
-    outpack_query(quote(usedby({report_b})),
+    outpack_query(quote(usedby({report_b})), # nolint
                   scope = quote(name == "a"),
                   subquery = list(report_b = quote(latest(name == "b"))),
                   root = root),
@@ -760,31 +801,31 @@ test_that("usedby output can be used in groupings", {
   ids["c"] <- create_random_dependent_packet(root, "c", ids[c("a", "b")])
 
   expect_setequal(
-    outpack_query(quote(usedby({report_c}) && name == "b"),
+    outpack_query(quote(usedby({report_c}) && name == "b"), # nolint
                   subquery = list(report_c = quote(latest(name == "c"))),
                   root = root),
     ids["b"])
 })
 
 
-test_that("usedby errors if given 2 ids", {
+test_that("usedby errors if given expression which could return multiple ids", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 2)
   ids["b"] <- create_random_dependent_packet(root, "b", ids["a"])
 
   expect_error(
-    outpack_query(quote(usedby({report_b})),
+    outpack_query(quote(usedby({report_b})), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
-    paste0("Found 2 ids in call to usedby, usedby can only work with 1 id. ",
-           "Try wrapping enclosed query in 'latest' to ensure only one id ",
-           "is returned.\n  - while evaluating usedby({report_b})"),
+    paste0("usedby() must be called on an expression guaranteed to return a ",
+           "single ID. Try wrapping expression in `latest` or `single`.\n",
+           "  - in usedby({report_b})"),
     fixed = TRUE)
 
   ## Suggested fix works
   expect_equal(
-    outpack_query(quote(usedby(latest({report_b}))),
+    outpack_query(quote(usedby(latest({report_b}))), # nolint
                   subquery = list(report_b = quote(name == "b")),
                   root = root),
     ids["a"], ignore_attr = "names")
@@ -795,6 +836,27 @@ test_that("usedby returns empty vector if usedby called with 0 ids", {
   root <- outpack_init(tmp, use_file_store = TRUE)
 
   expect_equal(
-    outpack_query(quote(usedby({name == "b"})), root = root),
+    outpack_query(quote(usedby({latest(name == "b")})), root = root), # nolint
     character(0))
+})
+
+test_that("usedby depth works as expected", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+
+  expect_setequal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = 1)), root = root), # nolint
+    ids["b"])
+
+  expect_setequal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = 2)), root = root), # nolint
+    ids[c("a", "b")])
+
+  expect_setequal(
+    outpack_query(quote(
+      usedby({latest(name == "c")}, depth = Inf)), root = root), # nolint
+    ids[c("a", "b")])
 })

@@ -148,11 +148,6 @@ last <- function(x) {
 }
 
 
-deparse_str <- function(expr) {
-  paste(deparse(expr), collapse = "\n")
-}
-
-
 source_script <- function(path, envir, echo) {
   source(path, local = envir, # nolint
          echo = echo, max.deparse.length = Inf)

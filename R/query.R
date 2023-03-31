@@ -62,7 +62,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
     ids <- outpack_query(scope, pars, scope = NULL,
                          require_unpacked = require_unpacked,
                          root = root)
-    index$filter(ids)
+    index$scope(ids)
   }
 
   query_eval(expr_parsed, index, pars, subquery_env)
@@ -180,13 +180,17 @@ query_parse_subquery <- function(expr, context, subquery_env) {
   if (is_named_subquery(subquery)) {
     query_name <- deparse(subquery[[1]])
     if (!exists(query_name, where = subquery_env)) {
-      if (length(ls(envir = subquery_env)) > 0) {
+      all_subqueries <- mget(ls(envir = subquery_env), subquery_env)
+      named_subqueries <- vlapply(all_subqueries,
+                                  function(x) !is_anonymous_subquery(x))
+      available_subqueries <- all_subqueries[named_subqueries]
+      if (length(available_subqueries) > 0) {
         available_queries <- paste0(
           "Available subqueries are '",
-          paste0(ls(envir = subquery_env), collapse = "', '"),
+          paste0(names(available_subqueries), collapse = "', '"),
           "'.")
       } else {
-        available_queries <- "No subqueries provided."
+        available_queries <- "No named subqueries provided."
       }
       query_parse_error(
         sprintf("Cannot locate subquery named '%s'. %s", query_name,
@@ -194,8 +198,8 @@ query_parse_subquery <- function(expr, context, subquery_env) {
         expr, context)
     }
   } else {
-    query_name <- ids::adjective_animal()
-    subquery_env[[query_name]] <- subquery[[1]]
+    query_name <- openssl::md5(deparse_query(subquery[[1]]))
+    subquery_env[[query_name]] <- as_anonymous_subquery(subquery[[1]])
   }
   parsed_query <- query_parse(subquery_env[[query_name]], context, subquery_env)
   query_component("subquery", expr, context,
@@ -207,31 +211,52 @@ query_parse_subquery <- function(expr, context, subquery_env) {
 query_parse_usedby <- function(expr, context, subquery_env) {
   args <- as.list(expr[-1])
   if (length(args) == 2) {
-    if (is.logical(args[[2]])) {
+    if (is.numeric(args[[2]]) && args[[2]] > 0) {
       args[[2]] <- query_parse_value(args[[2]], context, subquery_env)
     } else {
       query_parse_error(
-        paste0("Second argument to usedby() must be boolean, ",
-               "set TRUE to only search immediate dependencies. ",
-               "Otherwise search will recurse the dependency tree."),
+        paste("`depth` argument in usedby() must be a positive numeric, set",
+              "to control the number of layers of parents to recurse through",
+              "when listing dependencies. Use `depth = Inf` to search entire",
+              "dependency tree."),
         expr, context)
     }
   } else {
-    args[[2]] <- query_parse_value(FALSE, context, subquery_env)
+    args[[2]] <- query_parse_value(Inf, context, subquery_env)
   }
-  args[[2]]$name <- "immediate"
+  name <- names(args[2]) %||% "depth"
+  args[[2]]$name <- name
   if (is.call(args[[1]])) {
     args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
+    if (!is_expr_single_value(args[[1]])) {
+      query_parse_error(
+        paste("usedby() must be called on an expression guaranteed to return",
+              "a single ID. Try wrapping expression in `latest` or `single`."),
+        expr, context)
+    }
   } else {
     args[[1]] <- query_parse_value(args[[1]], context, subquery_env)
   }
   query_component("usedby", expr, context, args)
 }
 
+## Check if a query component returns a single value
+## Guaranteed single valued if one of the following is true
+##   * it is function call to latest
+##   * it is a function call to single
+##   * it is an ID lookup
+##   * it is a subquery whose expression is validates one of these conditions
+is_expr_single_value <- function(parsed_expr) {
+  if (parsed_expr$type == "subquery") {
+    return(is_expr_single_value(parsed_expr$args$subquery))
+  }
+  parsed_expr$type %in% c("latest", "single") ||
+    (parsed_expr$type == "test" && (is_id_lookup(parsed_expr$args[[1]]) ||
+                                      is_id_lookup(parsed_expr$args[[2]])))
+}
 
-deparse_query <- function(x) {
-  ## Remove new lines created by deparse_str on encountering `{`
-  gsub("\\n\\s*", "", deparse_str(x))
+is_id_lookup <- function(expr) {
+  expr$type == "lookup" && expr$name == "id"
 }
 
 
@@ -345,6 +370,16 @@ query_parse_value <- function(expr, context, subquery_env) {
 }
 
 
+as_anonymous_subquery <- function(x) {
+  structure(x, class = c("outpack_anonymous_subquery", class(x)))
+}
+
+
+is_anonymous_subquery <- function(x) {
+  inherits(x, "outpack_anonymous_subquery")
+}
+
+
 query_eval <- function(query, index, pars, subquery_env) {
   switch(query$type,
          literal = query$value,
@@ -398,7 +433,7 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
   subquery <- get(name, envir = subquery_env)
   if (is.null(subquery$result)) {
     subquery$result <- query_eval(query$args$subquery,
-                                  index$get_index_unfiltered(),
+                                  index$get_index_scoped(),
                                   pars = NULL,
                                   subquery_env)
   }
@@ -407,17 +442,14 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
 
 
 query_eval_usedby <- function(query, index, pars, subquery_env) {
-  id <- query_eval(query$args[[1]], index, pars, subquery_env)
+  ## Eval usedby arg without scope, we need to find all packets which
+  ## were usedby this one, so find parents without scope and apply scope
+  ## later when finding the results of the main query.
+  id <- query_eval(query$args[[1]], index$get_index_unfiltered(),
+                   pars, subquery_env)
   len <- length(id)
   if (len == 0) {
     return(character(0))
-  }
-  if (len > 1) {
-    query_eval_error(
-      sprintf(paste0("Found %s ids in call to usedby, usedby can only work ",
-                     "with 1 id. Try wrapping enclosed query in 'latest' ",
-                     "to ensure only one id is returned."), len),
-      query$expr, query$context)
   }
   index$get_packet_depends(id, query$args[[2]]$value)
 }
