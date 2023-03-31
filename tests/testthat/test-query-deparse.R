@@ -27,4 +27,5 @@ test_that("queries can be deparsed", {
   expect_equal(deparse_query(quote(!x)), "!x")
   expect_equal(deparse_query(quote(!(x))), "!(x)")
   expect_equal(deparse_query(quote(!(x || y))), "!(x || y)")
+  expect_equal(deparse_query(quote(usedby("thing", -2))), 'usedby("thing", -2)')
 })

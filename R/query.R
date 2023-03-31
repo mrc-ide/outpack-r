@@ -102,7 +102,8 @@ query_functions <- list(
   group = list("(" = 1, "!" = 1, "&&" = 2, "||" = 2),
   test = list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2),
   subquery = list("{" = 1),
-  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf)))
+  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf),
+               usedby = c(1, 2)))
 
 
 query_component <- function(type, expr, context, args, ...) {
@@ -119,6 +120,7 @@ query_parse_expr <- function(expr, context, subquery_env) {
          single = query_parse_single(expr, context, subquery_env),
          at_location = query_parse_at_location(expr, context, subquery_env),
          subquery = query_parse_subquery(expr, context, subquery_env),
+         usedby = query_parse_usedby(expr, context, subquery_env),
          ## normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -203,6 +205,58 @@ query_parse_subquery <- function(expr, context, subquery_env) {
   query_component("subquery", expr, context,
                   args = list(name = query_name,
                               subquery = parsed_query))
+}
+
+
+query_parse_usedby <- function(expr, context, subquery_env) {
+  args <- as.list(expr[-1])
+  if (length(args) == 2) {
+    if (is.numeric(args[[2]]) && args[[2]] > 0) {
+      args[[2]] <- query_parse_value(args[[2]], context, subquery_env)
+    } else {
+      query_parse_error(
+        paste("`depth` argument in usedby() must be a positive numeric, set",
+              "to control the number of layers of parents to recurse through",
+              "when listing dependencies. Use `depth = Inf` to search entire",
+              "dependency tree."),
+        expr, context)
+    }
+  } else {
+    args[[2]] <- query_parse_value(Inf, context, subquery_env)
+  }
+  name <- names(args[2]) %||% "depth"
+  args[[2]]$name <- name
+  if (is.call(args[[1]])) {
+    args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
+    if (!is_expr_single_value(args[[1]])) {
+      query_parse_error(
+        paste("usedby() must be called on an expression guaranteed to return",
+              "a single ID. Try wrapping expression in `latest` or `single`."),
+        expr, context)
+    }
+  } else {
+    args[[1]] <- query_parse_value(args[[1]], context, subquery_env)
+  }
+  query_component("usedby", expr, context, args)
+}
+
+## Check if a query component returns a single value
+## Guaranteed single valued if one of the following is true
+##   * it is function call to latest
+##   * it is a function call to single
+##   * it is an ID lookup
+##   * it is a subquery whose expression is validates one of these conditions
+is_expr_single_value <- function(parsed_expr) {
+  if (parsed_expr$type == "subquery") {
+    return(is_expr_single_value(parsed_expr$args$subquery))
+  }
+  parsed_expr$type %in% c("latest", "single") ||
+    (parsed_expr$type == "test" && (is_id_lookup(parsed_expr$args[[1]]) ||
+                                      is_id_lookup(parsed_expr$args[[2]])))
+}
+
+is_id_lookup <- function(expr) {
+  expr$type == "lookup" && expr$name == "id"
 }
 
 
@@ -336,6 +390,7 @@ query_eval <- function(query, index, pars, subquery_env) {
          single = query_eval_single(query, index, pars, subquery_env),
          at_location = query_eval_at_location(query, index, pars),
          subquery = query_eval_subquery(query, index, pars, subquery_env),
+         usedby = query_eval_usedby(query, index, pars, subquery_env),
          ## Normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
@@ -383,6 +438,20 @@ query_eval_subquery <- function(query, index, pars, subquery_env) {
                                   subquery_env)
   }
   subquery$result
+}
+
+
+query_eval_usedby <- function(query, index, pars, subquery_env) {
+  ## Eval usedby arg without scope, we need to find all packets which
+  ## were usedby this one, so find parents without scope and apply scope
+  ## later when finding the results of the main query.
+  id <- query_eval(query$args[[1]], index$get_index_unfiltered(),
+                   pars, subquery_env)
+  len <- length(id)
+  if (len == 0) {
+    return(character(0))
+  }
+  index$get_packet_depends(id, query$args[[2]]$value)
 }
 
 

@@ -8,7 +8,7 @@ deparse_query <- function(x) {
 
   ## Note this includes invalid operators, even if they are invalid we
   ## still want to return formatted nicely
-  prefix_operators <- list("!")
+  prefix_operators <- list("!", "-")
   infix_operators <- list("!", "&&", "||", "==", "!=", "<", "<=", ">", ">=",
                             ":", "<-", "%in%", "+", "-", "*", "/", "&", "|")
   bracket_operators <- list("(" = ")", "{" = "}", "[" = "]")
