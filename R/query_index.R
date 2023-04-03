@@ -8,7 +8,7 @@ query_index <- R6::R6Class(
   cloneable = FALSE,
 
   public = list(
-    #' @field index The active index
+    #' @field index The packet index
     index = NULL,
     #' @field depends Named list of data frames. Names are packet ids, values
     #'   are packets dependend on by this packet id (i.e. its parents).
@@ -26,8 +26,6 @@ query_index <- R6::R6Class(
     initialize = function(root, index, depends) {
       self$root <- root
       self$index <- index
-      private$index_unfiltered <- self$index
-      private$index_scoped <- self$index
       self$depends <- depends
       lockBinding("root", self)
       lockBinding("depends", self)
@@ -46,34 +44,6 @@ query_index <- R6::R6Class(
     },
 
     #' @description
-    #' Filter the index. This will filter the active index on the ids
-    #'
-    #' @param ids The ids to filter the index on
-    #' @return Nothing, called for side effect
-    filter = function(ids) {
-      self$index <- self$index[self$index$id %in% ids, ]
-      invisible(TRUE)
-    },
-
-    #' @description
-    #' Get the unfiltered & unscoped index, this is the index as it was
-    #' when this object was created, before any filtering on scoping.
-    #'
-    #' @return A new query_index object with the unfiltered index
-    get_index_unfiltered = function() {
-      query_index$new(self$root, private$index_unfiltered, private$depends)
-    },
-
-    #' @description
-    #' Get the scoped index, this is the index without any filtering but
-    #' with scope rules applied.
-    #'
-    #' @return A new query_index object with the scoped index
-    get_index_scoped = function() {
-      query_index$new(self$root, private$index_scoped, private$depends)
-    },
-
-    #' @description
     #' Get the ids of packets which this packet depends to a specified level
     #'
     #' @param id The id of the packet to get parents of
@@ -88,11 +58,6 @@ query_index <- R6::R6Class(
   ),
 
   private = list(
-    # The unfiltered unscoped index of all packets
-    index_unfiltered = NULL,
-    # The unfiltered index but scoped index of packets
-    index_scoped = NULL,
-
     get_all_packet_depends = function(id, depth) {
       if (depth <= 0) {
         return(character(0))

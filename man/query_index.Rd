@@ -10,7 +10,7 @@ Class for managing the active index whilst evaluating a query
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
-\item{\code{index}}{The active index}
+\item{\code{index}}{The packet index}
 
 \item{\code{depends}}{Named list of data frames. Names are packet ids, values
 are packets dependend on by this packet id (i.e. its parents).}
@@ -24,9 +24,6 @@ are packets dependend on by this packet id (i.e. its parents).}
 \itemize{
 \item \href{#method-query_index-new}{\code{query_index$new()}}
 \item \href{#method-query_index-scope}{\code{query_index$scope()}}
-\item \href{#method-query_index-filter}{\code{query_index$filter()}}
-\item \href{#method-query_index-get_index_unfiltered}{\code{query_index$get_index_unfiltered()}}
-\item \href{#method-query_index-get_index_scoped}{\code{query_index$get_index_scoped()}}
 \item \href{#method-query_index-get_packet_depends}{\code{query_index$get_packet_depends()}}
 }
 }
@@ -71,54 +68,6 @@ and save the scoped index for use later
 }
 \subsection{Returns}{
 Nothing, called for side effect
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-query_index-filter"></a>}}
-\if{latex}{\out{\hypertarget{method-query_index-filter}{}}}
-\subsection{Method \code{filter()}}{
-Filter the index. This will filter the active index on the ids
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{query_index$filter(ids)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ids}}{The ids to filter the index on}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Nothing, called for side effect
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-query_index-get_index_unfiltered"></a>}}
-\if{latex}{\out{\hypertarget{method-query_index-get_index_unfiltered}{}}}
-\subsection{Method \code{get_index_unfiltered()}}{
-Get the unfiltered & unscoped index, this is the index as it was
-when this object was created, before any filtering on scoping.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{query_index$get_index_unfiltered()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A new query_index object with the unfiltered index
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-query_index-get_index_scoped"></a>}}
-\if{latex}{\out{\hypertarget{method-query_index-get_index_scoped}{}}}
-\subsection{Method \code{get_index_scoped()}}{
-Get the scoped index, this is the index without any filtering but
-with scope rules applied.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{query_index$get_index_scoped()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A new query_index object with the scoped index
 }
 }
 \if{html}{\out{<hr>}}
