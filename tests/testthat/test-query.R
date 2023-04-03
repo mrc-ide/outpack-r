@@ -947,18 +947,53 @@ describe("outpack_query can search for packets which use another", {
 test_that("uses and usedby can be used together", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
+  ## Setup like
+  ## A -> B -> C
+  ##   \
+  ##     V
+  ## D -> E
   ids <- create_random_packet_chain(root, 3)
-  ids["d"] <- create_random_dependent_packet(root, "d", ids["a"])
+  ids["d"] <- create_random_packet(root, "d")
+  ids["e"] <- create_random_dependent_packet(root, "e", ids[c("a", "d")])
 
+  ## We can get to C from E (up tree then down)
   expect_setequal(
-    outpack_query(quote(usedby(single(uses(latest(name == "d"))))),
-                  scope = quote(name == "c"),
-                  root = root),
+    outpack_query(
+      quote(uses(single(usedby(latest(name == "e")) && name == "a"))),
+      scope = quote(name == "c"),
+      root = root),
     ids["c"])
 
+  ## We can get to E from C (up tree then down)
   expect_setequal(
-    outpack_query(quote(uses(single(usedby(latest(name == "c")) && name == "A"))),
-                  scope = quote(name == "d"),
+    outpack_query(
+      quote(uses(single(usedby(latest(name == "c")) && name == "a"))),
+      scope = quote(name == "e"),
+      root = root),
+    ids["e"])
+
+  ## We can get to A from D (down tree then up)
+  expect_setequal(
+    outpack_query(quote(usedby(single(uses(latest(name == "d"))))),
+                  scope = quote(name == "a"),
                   root = root),
+    ids["a"])
+
+  ## We can get to D from A (down tree then up)
+  expect_setequal(
+    outpack_query(
+      quote(usedby(single(uses(latest(name == "a")) && name == "e"))),
+      scope = quote(name == "d"),
+      root = root),
+    ids["d"])
+
+  ## We can get to D from C (up tree, then down, then up again)
+  expect_setequal(
+    outpack_query(
+      quote(usedby(single(uses({a}) && name == "e"))),
+            scope = quote(name == "d"),
+            subquery = list(
+              a = quote(single(usedby(latest(name == "c")) && name == "a"))),
+            root = root),
     ids["d"])
 })
