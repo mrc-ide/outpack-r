@@ -880,6 +880,15 @@ test_that("usedby depth works as expected", {
 })
 
 
+test_that("useful errors returned when scope is invalid type", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+
+  expect_error(outpack_query(quote(latest()), scope = "the scope", root = root),
+               "Invalid input for `scope`, it must be a language expression.")
+})
+
+
 describe("outpack_query can search for packets which use another", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
@@ -933,6 +942,7 @@ describe("outpack_query can search for packets which use another", {
       character(0))
   })
 })
+
 
 test_that("uses and usedby can be used together", {
   tmp <- temp_file()
