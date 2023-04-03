@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.3</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.4</span>
       </span>
     </div>
 
@@ -63,7 +63,7 @@
     <div id="public-fields">
     <h2>Public fields</h2>
     <p></p><div class="r6-fields"><dl><dt><code>index</code></dt>
-<dd><p>The active index</p></dd>
+<dd><p>The packet index</p></dd>
 
 
 <dt><code>depends</code></dt>
@@ -85,9 +85,6 @@ are packets dependend on by this packet id (i.e. its parents).</p></dd>
 
 <ul><li><p><a href="#method-query_index-new"><code>query_index$new()</code></a></p></li>
 <li><p><a href="#method-query_index-scope"><code>query_index$scope()</code></a></p></li>
-<li><p><a href="#method-query_index-filter"><code>query_index$filter()</code></a></p></li>
-<li><p><a href="#method-query_index-get_index_unfiltered"><code>query_index$get_index_unfiltered()</code></a></p></li>
-<li><p><a href="#method-query_index-get_index_scoped"><code>query_index$get_index_scoped()</code></a></p></li>
 <li><p><a href="#method-query_index-get_packet_depends"><code>query_index$get_packet_depends()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-query_index-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
@@ -135,61 +132,15 @@ and save the scoped index for use later</p><div class="section">
 <p>Nothing, called for side effect</p>
 </div>
 
-</div><p></p><hr><a id="method-query_index-filter"></a><div class="section">
-<h3 id="method-filter-">Method <code><a href="https://rdrr.io/r/stats/filter.html" class="external-link">filter()</a></code><a class="anchor" aria-label="anchor" href="#method-filter-"></a></h3>
-<p>Filter the index. This will filter the active index on the ids</p><div class="section">
-<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">query_index</span><span class="op">$</span><span class="fu">filter</span><span class="op">(</span><span class="va">ids</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
-<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>ids</code></dt>
-<dd><p>The ids to filter the index on</p></dd>
-
-
-</dl><p></p></div>
-</div>
-<div class="section">
-<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
-<p>Nothing, called for side effect</p>
-</div>
-
-</div><p></p><hr><a id="method-query_index-get_index_unfiltered"></a><div class="section">
-<h3 id="method-get-index-unfiltered-">Method <code>get_index_unfiltered()</code><a class="anchor" aria-label="anchor" href="#method-get-index-unfiltered-"></a></h3>
-<p>Get the unfiltered &amp; unscoped index, this is the index as it was
-when this object was created, before any filtering on scoping.</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">query_index</span><span class="op">$</span><span class="fu">get_index_unfiltered</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
-<h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
-<p>A new query_index object with the unfiltered index</p>
-</div>
-
-</div><p></p><hr><a id="method-query_index-get_index_scoped"></a><div class="section">
-<h3 id="method-get-index-scoped-">Method <code>get_index_scoped()</code><a class="anchor" aria-label="anchor" href="#method-get-index-scoped-"></a></h3>
-<p>Get the scoped index, this is the index without any filtering but
-with scope rules applied.</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">query_index</span><span class="op">$</span><span class="fu">get_index_scoped</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
-<h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
-<p>A new query_index object with the scoped index</p>
-</div>
-
 </div><p></p><hr><a id="method-query_index-get_packet_depends"></a><div class="section">
 <h3 id="method-get-packet-depends-">Method <code>get_packet_depends()</code><a class="anchor" aria-label="anchor" href="#method-get-packet-depends-"></a></h3>
 <p>Get the ids of packets which this packet depends to a specified level</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">query_index</span><span class="op">$</span><span class="fu">get_packet_depends</span><span class="op">(</span><span class="va">id</span>, <span class="va">depth</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>id</code></dt>
 <dd><p>The id of the packet to get parents of</p></dd>
 
@@ -203,7 +154,7 @@ recurse the whole tree to get all parents</p></dd>
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
+<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
 <p>The ids of the parents of this packet</p>
 </div>
 
