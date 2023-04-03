@@ -159,11 +159,34 @@ outpack_search(quote(uses(latest(name == "A"))),
 knitr::include_graphics("images/dependency_multiple.png")
 ```
 
-If we want to search for the version of `D` which depends on the version of `A` which was used in the latest `C` we can do this via
+If we want to search for the version of `E` which depends on the version of `A` which was used in the latest `C` we can do this via
 
 ```
-outpack_search(quote(latest(uses(single(usedby(latest(name == "C")))))),
-               scope = quote(name == "D"))
+outpack_search(
+  quote(latest(uses(single(usedby(latest(name == "C")) && name == "A")))),
+  scope = quote(name == "E"))
+```
+
+This searches up the tree from `C` to `A` and then down the tree to find the version of `E`. Note that is is important we added the `name == "A"` condition here, if that was missing `usedby(latest(name == "C"))` would also return `B` and `single` would throw an error because we have multiple packets.
+
+We can also search up the tree and then down to find `A` from `D` e.g.
+
+```
+outpack_query(
+  quote(usedby(single(uses(name == "D")))),
+  scope = quote(name == "A"),
+  root = root)
+```
+
+note as `E` is the only packet which uses `D` we do not need to add a `name == "E"` clause.
+
+We can combine `usedby` and `uses` in more complex searches, such as to find `D` from `C` we could run
+
+```
+outpack_query(
+  quote(usedby(single(uses(single(usedby(latest(name == "C")) && name == "A"))) && name == "E"))),
+  scope = quote(name == "D"),
+  root = root)
 ```
 
 ## Possible future queries and interface improvements

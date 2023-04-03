@@ -991,9 +991,9 @@ test_that("uses and usedby can be used together", {
   expect_setequal(
     outpack_query(
       quote(usedby(single(uses({a}) && name == "e"))),
-            scope = quote(name == "d"),
-            subquery = list(
-              a = quote(single(usedby(latest(name == "c")) && name == "a"))),
-            root = root),
+      scope = quote(name == "d"),
+      subquery = list(
+        a = quote(single(usedby(latest(name == "c")) && name == "a"))),
+      root = root),
     ids["d"])
 })
