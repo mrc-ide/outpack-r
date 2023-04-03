@@ -28,8 +28,7 @@ will be intersected with \code{scope} arg and is a shorthand way of running
 \code{scope = list(name = "name")}}
 
 \item{subquery}{Optionally, named list of subqueries which can be
-referenced by name from the \code{expr}. Each subquery must be a list
-with at least an \code{expr} and optionally a \code{scope}.}
+referenced by name from the \code{expr}.}
 
 \item{require_unpacked}{Logical, indicating if we should require
 that the packets are unpacked. If \code{FALSE} (the default) we
