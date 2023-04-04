@@ -164,19 +164,6 @@ parameter:x == NULL
 
 However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
 
-### More complex subqueries
-
-We might want to look up parameter values from a subquery. We might want to use this in orderly for example if we have reports `A`, `B` and `C` where `B` uses `A` and `C` uses `B` all of which have a `year` parameter. Where we have concrete runs `A` for year 2021, `B` for year 2021 and `B` for year 2022. If we pull in `latest` of `A` and `B` they will not agree on the year. If we wanted to ensure `year` parameter is consistent we could do this by using `latest` of `A` and searching for `B` with the query.
-
-```r
-latest(parameter:year == (latest({name == "A"})):parameter:year)
-```
-
-We could also get the name from a subquery via
-
-```r
-latest(name == latest({subquery}):name)
-```
 
 ### More complex dependency resolution
 
