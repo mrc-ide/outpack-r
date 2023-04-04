@@ -2,6 +2,7 @@
 
 export(outpack_checksum)
 export(outpack_config_set)
+export(outpack_copy_files)
 export(outpack_id)
 export(outpack_init)
 export(outpack_location_add)
