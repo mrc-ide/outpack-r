@@ -207,11 +207,6 @@ parameter:x == NULL
 
 However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
 
-
-### More complex dependency resolution
-
-At the moment we can use `usedby` to search up the dependency tree. We could add a `uses` function to search the other way through the tree.
-
 ### Explain the query
 
 Often, people want to know "why does this packet not match"?  It would be good to show where in the query some set of packets fail the query and are excluded. This would definitely be its own bit of work.
