@@ -49,11 +49,12 @@ Tests can be grouped together `(`, `!`, `&&`, and `||` as you might expect:
 * `name == "data" && parameter:x > 3` finds packets called "data" where parameter `x` is greater than 3
 * `(parameter:y == 2) && !(parameter:x == 1 || parameter:x == 2)` finds where parameter `y` is 2 and parameter `x` is anything other than 1 or 2 (could also be written `(parameter:y == 2) && (parameter:x != 1 && parameter:x != 2)`)
 
-There are three other functions
+There are four other functions
 
 * `latest(expr)` finds the latest packet satifying `expr` - it always returns a length 1 character, but this is `NA_character_` if no suitable packet is found. If no `expr` is given then the latest of all packets is returned.
 * `single(expr)` is like `latest(expr)` except that it is an error if `expr` does not evaluate to exactly one packet id
 * `at_location("loc1", "loc2")` finds packets that are available at any of the locations provided (here, `"loc1"` or `"loc2"`; any number of locations can be provided, these must be string literals).
+* `usedby(expr, FALSE)` where `expr` is either a literal `id` or an expression which returns 1 `id`. This finds all packets which were used in generation of packet with `id` returned from `expr` (see dependencies section for more details).
 
 ## Special simple queries
 
@@ -64,7 +65,7 @@ There are two shorthand queries:
 
 ## Scoping queries
 
-Scoping queries can be used to reduce the set of packets that are searched over. They essentially join together with the main query as `(scope) && (expr)`, except that we only look values up in `expr` if the query `scope` is satisfied. This is useful if you want to limit the search to a particular name or location but perform some more detailed search.
+Scoping queries can be used as a shorthand for filtering the returned packets. In the future they could be used to reduce the set of packets that are searched over to speed up query evaluation. They join together with the main query as `(scope) && (expr)`, except when the `expr` is a call to `latest` or `single`. In this case they combine as `latest((scope) && (expr))` or `single((scope) && (expr))`. This is useful if you want to limit the search to a particular name or location but perform some more detailed search.
 
 For example, the query
 
@@ -77,8 +78,6 @@ is equivalent to
 ```r
 outpack_query(quote(parameter:x == 1 && name == "data"))
 ```
-
-except that in the former we only check the parameter values of packets called "data".
 
 Orderly will use this functionality when resolving dependencies.
 
@@ -96,6 +95,63 @@ Which is the equivalent of
 outpack_query(quote(parameter:x == 1), scope = quote(name == "data"))
 ```
 
+## Dependencies
+
+If we have 2 packets, where B depends on output from A (i.e. we call `outpack_packet_use_dependency(id_a, ...)` when running packet B) we can draw this as.
+
+```{r, echo = FALSE, fig.align = 'center'}
+knitr::include_graphics("images/dependency_terminology.png")
+```
+
+We could equivalently say
+
+* A is a dependency of B, B depends on A
+* A is used by B , B uses A
+* A is a parent of B, B is a child of A
+
+With the tree of dependencies built by outpack we might want to search for packets which have been used by another packet. We can use the query function `usedby(id)` to list all packets which are used by `id`. This will search recursively through all packets used by `id` and its parents and its parents parents and so on.
+
+The optional second arg `immedate` is `FALSE` by default, if set to `TRUE` then we search only for immediate (e.g. level 1) dependencies.
+
+Being able to search through dependencies like this means if we have some packet structure like
+
+```{r, echo = FALSE, fig.align = 'center'}
+knitr::include_graphics("images/dependency_recursive.png")
+```
+
+and we want to know the `id` of A which was used by `C` we can find this using `outpack_search`
+
+```r
+outpack_search(quote(usedby(latest(name == "C"))), name = "A")
+```
+
+`usedby` can be combined with groupings and scope:
+
+```r
+outpack_search(quote(usedby(latest(name == "C")) && parameter:year == 2022),
+               scope = quote(name == "A"))
+```
+
+The depth that `usedby` will recuse can be controlled by setting the `depth` e.g.
+
+```r
+outpack_search(quote(usedby(latest(name == "C"), depth = 1)), name = "A")
+```
+
+will search for just immediate parents of `C`. `depth` can be any positive integer, by default `depth` will recurse until it finds all parents.
+
+`usedby` can be simplified by using subqueries. Subqueries are denoted by curly braces `{}` and can either be named and passed in `subquery` arg or can be anonymous. The query below is equivalent to the above but uses a subquery for `C`.
+
+```r
+outpack_search(quote(usedby({C}) && parameter:year == 2022),
+               scope = quote(name == "A")
+               subquery = list(C = quote(latest(name == "C"))))
+```
+
+There are two important things to note about `usedby`:
+* The query inside `usedby` will search the entire index, ignoring any `scope` or `name` parameters. This is because we want to find all packets which are used by `latest` `C`. If the subquery `C` was scoped this would return no results.
+* The query inside `usedby` must return a single result. To ensure this it must either be a literal `id`, a call to `latest` or a call to `single`
+
 ## Possible future queries and interface improvements
 
 ### Simple things
@@ -108,27 +164,10 @@ parameter:x == NULL
 
 However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
 
-### More complex
 
-It might be useful to do a lookup against a subquery
+### More complex dependency resolution
 
-```r
-latest(name == (latest(subquery)):name)
-```
-
-Similarily, we might want to look up parameter values
-
-```r
-latest(parameter:x == (latest(subquery)):parameter:x)
-```
-
-But it might be better to disambiguate this, perhaps wrapping subqueries in `{`
-
-```r
-latest(name == {latest(subquery)}:name)
-```
-
-It's not that clear, really.
+At the moment we can use `usedby` to search up the dependency tree. We could add a `uses` function to search the other way through the tree.
 
 ### Explain the query
 
