@@ -65,7 +65,7 @@ There are two shorthand queries:
 
 ## Scoping queries
 
-Scoping queries can be used to reduce the set of packets that are searched over. They essentially join together with the main query as `(scope) && (expr)`, except that we only look values up in `expr` if the query `scope` is satisfied. This is useful if you want to limit the search to a particular name or location but perform some more detailed search.
+Scoping queries can be used as a shorthand for filtering the returned packets. In the future they could be used to reduce the set of packets that are searched over to speed up query evaluation. They join together with the main query as `(scope) && (expr)`, except when the `expr` is a call to `latest` or `single`. In this case they combine as `latest((scope) && (expr))` or `single((scope) && (expr))`. This is useful if you want to limit the search to a particular name or location but perform some more detailed search.
 
 For example, the query
 
@@ -78,8 +78,6 @@ is equivalent to
 ```r
 outpack_query(quote(parameter:x == 1 && name == "data"))
 ```
-
-except that in the former we only check the parameter values of packets called "data".
 
 Orderly will use this functionality when resolving dependencies.
 
@@ -133,6 +131,14 @@ outpack_search(quote(usedby(latest(name == "C"))), name = "A")
 outpack_search(quote(usedby(latest(name == "C")) && parameter:year == 2022),
                scope = quote(name == "A"))
 ```
+
+The depth that `usedby` will recuse can be controlled by setting the `depth` e.g.
+
+```r
+outpack_search(quote(usedby(latest(name == "C"), depth = 1)), name = "A")
+```
+
+will search for just immediate parents of `C`. `depth` can be any positive integer, by default `depth` will recurse until it finds all parents.
 
 `usedby` can be simplified by using subqueries. Subqueries are denoted by curly braces `{}` and can either be named and passed in `subquery` arg or can be anonymous. The query below is equivalent to the above but uses a subquery for `C`.
 
@@ -201,19 +207,6 @@ parameter:x == NULL
 
 However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
 
-### More complex subqueries
-
-We might want to look up parameter values from a subquery
-
-```r
-latest(parameter:x == (latest({subquery})):parameter:x)
-```
-
-or use the name
-
-```r
-latest(name == latest({subquery}):name)
-```
 
 ### More complex dependency resolution
 
