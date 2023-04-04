@@ -182,34 +182,19 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
 ##'   value corresponds to the name within the upstream packet
 outpack_packet_use_dependency <- function(id, files, packet = NULL) {
   p <- check_current_packet(packet)
-  root <- p$root
 
   ## TODO: currently no capacity here for *querying* to find the id
   ## (e.g., latest(name) or something more complex).  Any progress on
   ## this will depend on the query interface.  It's probable that we
   ## might want to record the query here alongside the id, if one was
   ## used?  Or should we allow a query here?
-
-  ## TODO: allow pattern to be used in files (but then how do we
-  ## translate to destination?)
-  assert_named(files, unique = TRUE)
-  assert_relative_path(names(files), no_dots = TRUE)
-
-  src <- unname(files)
-  dst <- file.path(p$path, names(files))
-
-  ## Ensures that we can actually find all the files within this
-  ## dependency (and that it exists)
-  validate_packet_has_file(root, id, src)
-
-  ## Actually copy the files into the requested directory
-  file_export(root, id, src, dst)
+  outpack_copy_files(id, files, p$path, p$root)
 
   ## Only update packet information after success, to reflect new
   ## metadata
-
-  depends <- list(packet = id,
-                  files = data_frame(here = names(files), there = src))
+  depends <- list(
+    packet = id,
+    files = data_frame(here = names(files), there = unname(files)))
   p$depends <- c(p$depends, list(depends))
 
   invisible()
