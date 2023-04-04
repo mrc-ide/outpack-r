@@ -947,11 +947,13 @@ describe("outpack_query can search for packets which use another", {
 test_that("uses and usedby can be used together", {
   tmp <- temp_file()
   root <- outpack_init(tmp, use_file_store = TRUE)
+  # nolint start
   ## Setup like
   ## A -> B -> C
   ##   \
   ##     V
   ## D -> E
+  # nolint end
   ids <- create_random_packet_chain(root, 3)
   ids["d"] <- create_random_packet(root, "d")
   ids["e"] <- create_random_dependent_packet(root, "e", ids[c("a", "d")])
@@ -990,7 +992,7 @@ test_that("uses and usedby can be used together", {
   ## We can get to D from C (up tree, then down, then up again)
   expect_setequal(
     outpack_query(
-      quote(usedby(single(uses({a}) && name == "e"))),
+      quote(usedby(single(uses({a}) && name == "e"))), # nolint
       scope = quote(name == "d"),
       subquery = list(
         a = quote(single(usedby(latest(name == "c")) && name == "a"))),
