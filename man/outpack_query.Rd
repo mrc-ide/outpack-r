@@ -11,6 +11,7 @@ outpack_query(
   name = NULL,
   subquery = NULL,
   require_unpacked = FALSE,
+  error_no_packets = FALSE,
   root = NULL
 )
 }
@@ -35,6 +36,9 @@ that the packets are unpacked. If \code{FALSE} (the default) we
 search through all packets known to this outpack root,
 regardless of if they are locally available, but if \code{TRUE}, only
 unpacked packets will be considered.}
+
+\item{error_no_packets}{Logical, if \code{TRUE} then \code{outpack_query} will
+error if no packets are found for this search.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
