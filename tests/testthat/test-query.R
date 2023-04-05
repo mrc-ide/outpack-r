@@ -999,3 +999,28 @@ test_that("uses and usedby can be used together", {
       root = root),
     ids["d"])
 })
+
+
+test_that("can error if no packets found", {
+  tmp <- temp_file()
+  root <- outpack_init(tmp, use_file_store = TRUE)
+  expect_equal(
+    outpack_query(quote(name == "other"), root = root),
+    character(0))
+  expect_equal(
+    outpack_query(quote(latest(name == "other")), root = root),
+    NA_character_)
+
+  expect_error(
+    outpack_query(quote(name == "other"),
+                  error_no_packets = TRUE, root = root),
+    paste0("Found no packets\n",
+           "  - while evaluating name == \"other\""),
+    fixed = TRUE)
+  expect_error(
+    outpack_query(quote(latest(name == "other")),
+                  error_no_packets = TRUE, root = root),
+    paste0("Found no packets\n",
+           "  - while evaluating latest(name == \"other\")"),
+    fixed = TRUE)
+})

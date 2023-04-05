@@ -24,6 +24,9 @@
 ##'   regardless of if they are locally available, but if `TRUE`, only
 ##'   unpacked packets will be considered.
 ##'
+##' @param error_no_packets Logical, if `TRUE` then `outpack_query` will
+##'   error if no packets are found for this search.
+##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
@@ -32,7 +35,9 @@
 outpack_query <- function(expr, pars = NULL, scope = NULL,
                           name = NULL, subquery = NULL,
                           require_unpacked = FALSE,
+                          error_no_packets = FALSE,
                           root = NULL) {
+  assert_logical(error_no_packets)
   root <- outpack_root_open(root, locate = TRUE)
   if (!is.null(subquery)) {
     assert_named(subquery, unique = TRUE)
@@ -59,7 +64,12 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   validate_parameters(pars)
   index <- new_query_index(root, require_unpacked)
 
-  query_eval(expr_parsed, index, pars, subquery_env)
+  ids <- query_eval(expr_parsed, index, pars, subquery_env)
+
+  if (error_no_packets && (is.na(ids) || length(ids) == 0)) {
+    query_eval_error("Found no packets", expr, expr)
+  }
+  ids
 }
 
 
