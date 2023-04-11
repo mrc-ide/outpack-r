@@ -113,7 +113,7 @@ test_that("dependency can take literal or expression", {
 test_that("usedby requires 2nd arg boolean", {
   expect_error(
     query_parse(quote(usedby(id == "123", "123")), NULL, emptyenv()),
-    paste0("`depth` argument in usedby must be a positive numeric, set to ",
+    paste0("`depth` argument in 'usedby()' must be a positive numeric, set to ",
            "control the number of layers of parents to recurse through when ",
            "listing dependencies. Use `depth = Inf` to search entire ",
            "dependency tree.\n",
@@ -122,7 +122,7 @@ test_that("usedby requires 2nd arg boolean", {
 
   expect_error(
     query_parse(quote(usedby(id == "123", -2)), NULL, emptyenv()),
-    paste0("`depth` argument in usedby must be a positive numeric, set to ",
+    paste0("`depth` argument in 'usedby()' must be a positive numeric, set to ",
            "control the number of layers of parents to recurse through when ",
            "listing dependencies. Use `depth = Inf` to search entire ",
            "dependency tree.\n",
