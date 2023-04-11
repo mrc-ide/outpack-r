@@ -119,7 +119,7 @@ Being able to search through dependencies like this means if we have some packet
 knitr::include_graphics("images/dependency_recursive.png")
 ```
 
-and we want to know the `id` of A which was used by `C` we can find this using `outpack_search`
+and we want to know the `id` of `A` which was used by `C` we can find this using `outpack_search`
 
 ```r
 outpack_search(quote(usedby(latest(name == "C"))), name = "A")
@@ -152,6 +152,49 @@ There are two important things to note about `usedby`:
 * The query inside `usedby` will search the entire index, ignoring any `scope` or `name` parameters. This is because we want to find all packets which are used by `latest` `C`. If the subquery `C` was scoped this would return no results.
 * The query inside `usedby` must return a single result. To ensure this it must either be a literal `id`, a call to `latest` or a call to `single`
 
+As well as searching up the dependency tree using `usedby` we can search down with the `uses` function. In the same setup above with reports `A`, `B` and `C` if we want to know the `id` of `C` which uses `A` we can find this by using
+
+```r
+outpack_search(quote(uses(latest(name == "A"))),
+               scope = quote(name == "C"))
+```
+
+`uses` and `useby` can be combined to search more complex arrangements of dependencies. If we have something like
+
+```{r, echo = FALSE, fig.align = 'center'}
+knitr::include_graphics("images/dependency_multiple.png")
+```
+
+If we want to search for the version of `E` which depends on the version of `A` which was used in the latest `C` we can do this via
+
+```
+outpack_search(
+  quote(latest(uses(single(usedby(latest(name == "C")) && name == "A")))),
+  name = "E")
+```
+
+This searches up the tree from `C` to `A` and then down the tree to find the version of `E`. Note that is is important we added the `name == "A"` condition here, if that was missing `usedby(latest(name == "C"))` would also return `B` and `single` would throw an error because we have multiple packets.
+
+We can also search up the tree and then down to find `A` from `D` e.g.
+
+```
+outpack_query(
+  quote(usedby(single(uses(name == "D")))),
+  scope = quote(name == "A"),
+  root = root)
+```
+
+note as `E` is the only packet which uses `D` we do not need to add a `name == "E"` clause.
+
+We can combine `usedby` and `uses` in more complex searches, such as to find `D` from `C` we could run
+
+```
+outpack_query(
+  quote(usedby(single(uses(single(usedby(latest(name == "C")) && name == "A"))) && name == "E"))),
+  scope = quote(name == "D"),
+  root = root)
+```
+
 ## Possible future queries and interface improvements
 
 ### Simple things
@@ -163,11 +206,6 @@ parameter:x == NULL
 ```
 
 However, in Python we have `None` and in Julia `nothing`, so this complicates things. Alternatively we could use `missing(parameter:x)`?
-
-
-### More complex dependency resolution
-
-At the moment we can use `usedby` to search up the dependency tree. We could add a `uses` function to search the other way through the tree.
 
 ### Explain the query
 
