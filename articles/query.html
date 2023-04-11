@@ -239,8 +239,9 @@ immediate (e.g. level 1) dependencies.</p>
 <p>Being able to search through dependencies like this means if we have
 some packet structure like</p>
 <p><img src="images/dependency_recursive.png" style="display: block; margin: auto;"></p>
-<p>and we want to know the <code>id</code> of A which was used by
-<code>C</code> we can find this using <code>outpack_search</code></p>
+<p>and we want to know the <code>id</code> of <code>A</code> which was
+used by <code>C</code> we can find this using
+<code>outpack_search</code></p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">outpack_search</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu">usedby</span><span class="op">(</span><span class="fu">latest</span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, name <span class="op">=</span> <span class="st">"A"</span><span class="op">)</span></span></code></pre></div>
 <p><code>usedby</code> can be combined with groupings and scope:</p>
@@ -270,6 +271,44 @@ scoped this would return no results. * The query inside
 <code>usedby</code> must return a single result. To ensure this it must
 either be a literal <code>id</code>, a call to <code>latest</code> or a
 call to <code>single</code></p>
+<p>As well as searching up the dependency tree using <code>usedby</code>
+we can search down with the <code>uses</code> function. In the same
+setup above with reports <code>A</code>, <code>B</code> and
+<code>C</code> if we want to know the <code>id</code> of <code>C</code>
+which uses <code>A</code> we can find this by using</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">outpack_search</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu">uses</span><span class="op">(</span><span class="fu">latest</span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"A"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>               scope <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><code>uses</code> and <code>useby</code> can be combined to search
+more complex arrangements of dependencies. If we have something like</p>
+<p><img src="images/dependency_multiple.png" style="display: block; margin: auto;"></p>
+<p>If we want to search for the version of <code>E</code> which depends
+on the version of <code>A</code> which was used in the latest
+<code>C</code> we can do this via</p>
+<pre><code><span><span class="fu">outpack_search</span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu">latest</span><span class="op">(</span><span class="fu">uses</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/double.html" class="external-link">single</a></span><span class="op">(</span><span class="fu">usedby</span><span class="op">(</span><span class="fu">latest</span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"C"</span><span class="op">)</span><span class="op">)</span> <span class="op">&amp;&amp;</span> <span class="va">name</span> <span class="op">==</span> <span class="st">"A"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  name <span class="op">=</span> <span class="st">"E"</span><span class="op">)</span></span></code></pre>
+<p>This searches up the tree from <code>C</code> to <code>A</code> and
+then down the tree to find the version of <code>E</code>. Note that is
+is important we added the <code>name == "A"</code> condition here, if
+that was missing <code>usedby(latest(name == "C"))</code> would also
+return <code>B</code> and <code>single</code> would throw an error
+because we have multiple packets.</p>
+<p>We can also search up the tree and then down to find <code>A</code>
+from <code>D</code> e.g.</p>
+<pre><code><span><span class="fu"><a href="../reference/outpack_query.html">outpack_query</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="fu">usedby</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/double.html" class="external-link">single</a></span><span class="op">(</span><span class="fu">uses</span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"D"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  scope <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/substitute.html" class="external-link">quote</a></span><span class="op">(</span><span class="va">name</span> <span class="op">==</span> <span class="st">"A"</span><span class="op">)</span>,</span>
+<span>  root <span class="op">=</span> <span class="va">root</span><span class="op">)</span></span></code></pre>
+<p>note as <code>E</code> is the only packet which uses <code>D</code>
+we do not need to add a <code>name == "E"</code> clause.</p>
+<p>We can combine <code>usedby</code> and <code>uses</code> in more
+complex searches, such as to find <code>D</code> from <code>C</code> we
+could run</p>
+<pre><code>outpack_query(
+  quote(usedby(single(uses(single(usedby(latest(name == "C")) &amp;&amp; name == "A"))) &amp;&amp; name == "E"))),
+  scope = quote(name == "D"),
+  root = root)</code></pre>
 </div>
 <div class="section level2">
 <h2 id="possible-future-queries-and-interface-improvements">Possible future queries and interface improvements<a class="anchor" aria-label="anchor" href="#possible-future-queries-and-interface-improvements"></a>
@@ -279,18 +318,11 @@ call to <code>single</code></p>
 </h3>
 <p>orderly supports <code>is.null(parameter:x)</code> but we might
 generalise this and support</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">parameter</span><span class="op">:</span><span class="va">x</span> <span class="op">==</span> <span class="cn">NULL</span></span></code></pre></div>
 <p>However, in Python we have <code>None</code> and in Julia
 <code>nothing</code>, so this complicates things. Alternatively we could
 use <code>missing(parameter:x)</code>?</p>
-</div>
-<div class="section level3">
-<h3 id="more-complex-dependency-resolution">More complex dependency resolution<a class="anchor" aria-label="anchor" href="#more-complex-dependency-resolution"></a>
-</h3>
-<p>At the moment we can use <code>usedby</code> to search up the
-dependency tree. We could add a <code>uses</code> function to search the
-other way through the tree.</p>
 </div>
 <div class="section level3">
 <h3 id="explain-the-query">Explain the query<a class="anchor" aria-label="anchor" href="#explain-the-query"></a>
