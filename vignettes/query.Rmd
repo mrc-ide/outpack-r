@@ -170,7 +170,7 @@ If we want to search for the version of `E` which depends on the version of `A` 
 ```
 outpack_search(
   quote(latest(uses(single(usedby(latest(name == "C")) && name == "A")))),
-  scope = quote(name == "E"))
+  name = "E")
 ```
 
 This searches up the tree from `C` to `A` and then down the tree to find the version of `E`. Note that is is important we added the `name == "A"` condition here, if that was missing `usedby(latest(name == "C"))` would also return `B` and `single` would throw an error because we have multiple packets.
