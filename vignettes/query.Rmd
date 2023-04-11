@@ -152,7 +152,7 @@ There are two important things to note about `usedby`:
 * The query inside `usedby` will search the entire index, ignoring any `scope` or `name` parameters. This is because we want to find all packets which are used by `latest` `C`. If the subquery `C` was scoped this would return no results.
 * The query inside `usedby` must return a single result. To ensure this it must either be a literal `id`, a call to `latest` or a call to `single`
 
-As well as searching up the dependency tree using `usedby` we can search down with the `uses` function. In the same setup above with reports A, B and C if we want to know the `id` of `C` which uses `A` we can find this by using
+As well as searching up the dependency tree using `usedby` we can search down with the `uses` function. In the same setup above with reports `A`, `B` and `C` if we want to know the `id` of `C` which uses `A` we can find this by using
 
 ```r
 outpack_search(quote(uses(latest(name == "A"))),
