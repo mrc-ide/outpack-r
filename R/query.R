@@ -242,7 +242,7 @@ query_parse_dependency <- function(expr, context, subquery_env) {
     } else {
       query_parse_error(
         sprintf(paste(
-          "`depth` argument in %s must be a positive numeric, set",
+          "`depth` argument in '%s()' must be a positive numeric, set",
           "to control the number of layers of parents to recurse through",
           "when listing dependencies. Use `depth = Inf` to search entire",
           "dependency tree."), name),
