@@ -1,6 +1,13 @@
 outpack_insert_packet <- function(path, json, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   meta <- outpack_metadata_load(json)
+  ## It might be worth getting a root-specific logger here, that would
+  ## not be hard to do, and would allow configuring a default log
+  ## level easily. That requires setting up a bit of configuration, so
+  ## will do that in the next PR.
+  outpack_log_debug("insert", meta$id,
+                    caller = "outpack:::outpack_insert_packet")
+
   assert_directory(path)
 
   ## TODO(RFC): Is 'local' really the only valid choice here?  It feels

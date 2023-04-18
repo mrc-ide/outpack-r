@@ -58,11 +58,20 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
     validate_outpack_id(id)
   }
 
+  logger <- new_packet_logger(id, path)
+  caller <- "outpack::outpack_packet_start"
+
   time <- list(start = Sys.time())
 
-  ## LOGGING: name / id / path, start time, parameters
-  ##
-  ## We log these all in orderly and that's super useful
+  outpack_log_info("name", name, logger, caller)
+  outpack_log_info("id", id, logger, caller)
+  if (length(parameters) > 0) {
+    outpack_log_info("parameter",
+                     sprintf("%s: %s", names(parameters), unname(parameters)),
+                     logger, caller)
+  }
+  outpack_log_info("start", format(time$start), logger, caller)
+
   packet <- structure(
     list2env(
       list(
@@ -72,6 +81,7 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
         parameters = parameters,
         files = list(),
         time = time,
+        logger = logger,
         root = root),
       parent = emptyenv()),
     class = "outpack_packet")
@@ -89,6 +99,7 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
 ##' @param packet Optionally, an explicitly-passed packet; see Details
 outpack_packet_cancel <- function(packet = NULL) {
   p <- check_current_packet(packet)
+  outpack_log_info("cancel", p$id, p, "outpack::outpack_packet_cancel")
   outpack_packet_finish(p)
 }
 
@@ -106,6 +117,12 @@ outpack_packet_end <- function(packet = NULL) {
   p <- check_current_packet(packet)
   p$time$end <- Sys.time()
   hash_algorithm <- p$root$config$core$hash_algorithm
+  caller <- "outpack::outpack_packet_end"
+  outpack_log_info("end", format(p$time$end), p, caller)
+  outpack_log_info("elapsed", format(p$time$end - p$time$start), p, caller)
+  fs::file_copy(p$logger$appenders$json$destination,
+                file.path(p$path, "log.json"),
+                overwrite = TRUE)
   json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
                                   files = NULL,
                                   depends = p$depends,
@@ -138,6 +155,8 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
   p <- check_current_packet(packet)
   assert_relative_path(script, no_dots = TRUE)
   assert_file_exists(script, p$path, "Script")
+
+  outpack_log_info("script", script, p, "outpack::outpack_packet_run")
 
   ## TODO: not sure that this is the correct environment; should it be
   ## parent.frame() perhaps (see default args to new.env)
@@ -391,6 +410,7 @@ outpack_packet_clear <- function() {
 
 outpack_packet_finish <- function(packet) {
   packet$complete <- TRUE
+  unlink(packet$logger$appenders$json$destination)
   if (identical(packet, current$packet)) {
     current$packet <- NULL
   }

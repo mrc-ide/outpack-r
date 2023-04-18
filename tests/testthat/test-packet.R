@@ -66,7 +66,8 @@ test_that("Can run a basic packet", {
   expect_null(meta$parameters)
   expect_equal(meta$depends, data_frame(packet = character(),
                                         files = I(list())))
-  expect_setequal(meta$files$path, c("data.csv", "myplot.png", "script.R"))
+  expect_setequal(meta$files$path,
+                  c("data.csv", "myplot.png", "script.R", "log.json"))
   expect_equal(meta$files$size,
                file.size(file.path(path_src, meta$files$path)))
   expect_equal(meta$files$hash,
@@ -563,12 +564,12 @@ test_that("Can ignore files from the final packet", {
   outpack_packet_end()
 
   meta <- root$metadata(p$id)
-  expect_equal(meta$files$path, c("script.R", "zzz.png"))
-  expect_length(root$files$list(), 2)
+  expect_equal(meta$files$path, c("log.json", "script.R", "zzz.png"))
+  expect_length(root$files$list(), 3)
   expect_setequal(dir(file.path(root$path, "archive", "example", p$id)),
-                  c("script.R", "zzz.png"))
+                  c("log.json", "script.R", "zzz.png"))
   expect_setequal(dir(path_src),
-                  c("data.csv", "script.R", "zzz.png"))
+                  c("data.csv", "log.json", "script.R", "zzz.png"))
 })
 
 

@@ -29,7 +29,7 @@
 outpack_init <- function(root, path_archive = "archive",
                          use_file_store = FALSE,
                          require_complete_tree = FALSE) {
-  ## Logging: print information about what we're doing here.
+  outpack_log_info("init", root, caller = "outpack::outpack_init")
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
     stop(sprintf("outpack already initialised at '%s'", path_outpack))
@@ -118,10 +118,11 @@ outpack_root <- R6::R6Class(
       self$files <- file_store$new(file.path(self$path, ".outpack", "files"))
       invisible(lapply(self$index()$unpacked$packet, function(id) {
         meta <- self$metadata(id)
-        path <- unlist(lapply(meta$files$hash,
-                       function(hash) find_file_by_hash(self, hash)))
-        if (any(is.null(path))) {
-          missing <- meta$files$path[is.null(path)]
+        path <- lapply(meta$files$hash,
+                       function(hash) find_file_by_hash(self, hash))
+        failed <- vlapply(path, is.null)
+        if (any(failed)) {
+          missing <- meta$files$path[failed]
           message <- sprintf(
             "the following files were missing or corrupted: '%s'",
             paste(missing, collapse = ", ")
@@ -129,6 +130,7 @@ outpack_root <- R6::R6Class(
           stop(sprintf("Failed to import packet '%s': %s",
                        id, message))
         }
+        path <- vcapply(path, identity)
         file_import_store(self, NULL, path, meta$files$hash)
       }))
     },
