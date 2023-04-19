@@ -201,9 +201,8 @@ test_that("Queries can only be name and parameter", {
 
 
 test_that("Can run very basic queries", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
-  ids <- vcapply(1:3, function(i) create_random_packet(tmp))
+  root <- create_temporary_root(use_file_store = TRUE)
+  ids <- vcapply(1:3, function(i) create_random_packet(root))
   expect_equal(
     outpack_query(quote(latest), root = root),
     last(ids))
@@ -242,13 +241,12 @@ test_that("Can run very basic queries", {
 
 
 test_that("Scope queries", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 1)))
-  x2 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 2)))
-  y1 <- vcapply(1:3, function(i) create_random_packet(tmp, "y", list(a = 1)))
-  y2 <- vcapply(1:3, function(i) create_random_packet(tmp, "y", list(a = 2)))
+  x1 <- vcapply(1:3, function(i) create_random_packet(root, "x", list(a = 1)))
+  x2 <- vcapply(1:3, function(i) create_random_packet(root, "x", list(a = 2)))
+  y1 <- vcapply(1:3, function(i) create_random_packet(root, "y", list(a = 1)))
+  y2 <- vcapply(1:3, function(i) create_random_packet(root, "y", list(a = 2)))
 
   expect_equal(
     outpack_query(quote(parameter:a == 1), root = root),
@@ -261,15 +259,12 @@ test_that("Scope queries", {
 
 
 test_that("location based queries", {
-  tmp <- temp_file()
-  path <- root <- list()
-  path$a <- file.path(tmp, "a")
-  outpack_init(path$a, use_file_store = TRUE)
+  root <- list()
+  root$a <- create_temporary_root(use_file_store = TRUE)
   for (name in c("x", "y", "z")) {
-    path[[name]] <- file.path(tmp, name)
-    root[[name]] <- outpack_init(path[[name]], use_file_store = TRUE)
-    outpack_location_add(name, "path", list(path = path[[name]]),
-                         root = path$a)
+    root[[name]] <- create_temporary_root(use_file_store = TRUE)
+    outpack_location_add(name, "path", list(path = root[[name]]$path),
+                         root = root$a)
   }
 
   ids <- list()
@@ -278,10 +273,10 @@ test_that("location based queries", {
       create_random_packet(root[[name]], "data", list(p = i))
     })
   }
-  outpack_location_pull_metadata(root = path$a)
+  outpack_location_pull_metadata(root = root$a)
 
   expect_equal(
-    outpack_query(quote(at_location("x", "y")), root = path$a),
+    outpack_query(quote(at_location("x", "y")), root = root$a),
     c(ids$x, ids$y))
 
   ## This is most similar to the functionality of orderly's
@@ -290,17 +285,16 @@ test_that("location based queries", {
   expect_equal(
     outpack_query(quote(parameter:p == 2),
                   scope = quote(at_location("x", "y")),
-                  root = path$a),
+                  root = root$a),
     c(ids$x[2], ids$y[2]))
 })
 
 
 test_that("Can filter based on given values", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 1)))
-  x2 <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = 2)))
+  x1 <- vcapply(1:3, function(i) create_random_packet(root, "x", list(a = 1)))
+  x2 <- vcapply(1:3, function(i) create_random_packet(root, "x", list(a = 2)))
 
   expect_equal(
     outpack_query(quote(latest(parameter:a == this:a)),
@@ -325,10 +319,9 @@ test_that("Can filter based on given values", {
 
 
 test_that("single requires exactly one packet", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  ids <- vcapply(1:3, function(i) create_random_packet(tmp, "x", list(a = i)))
+  ids <- vcapply(1:3, function(i) create_random_packet(root, "x", list(a = i)))
   expect_equal(outpack_query(quote(single(parameter:a == 2)), root = root),
                ids[[2]])
   expect_error(outpack_query(quote(single(parameter:a >= 2)), root = root),
@@ -364,15 +357,12 @@ test_that("switch statements will prevent regressions", {
 
 
 test_that("Can filter query to packets that are locally available (unpacked)", {
-  tmp <- temp_file()
-  path <- root <- list()
-  path$a <- file.path(tmp, "a")
-  outpack_init(path$a, use_file_store = TRUE)
+  root <- list()
+  root$a <- create_temporary_root(use_file_store = TRUE)
   for (name in c("x", "y", "z")) {
-    path[[name]] <- file.path(tmp, name)
-    root[[name]] <- outpack_init(path[[name]], use_file_store = TRUE)
-    outpack_location_add(name, "path", list(path = path[[name]]),
-                         root = path$a)
+    root[[name]] <- create_temporary_root(use_file_store = TRUE)
+    outpack_location_add(name, "path", list(path = root[[name]]$path),
+                         root = root$a)
   }
 
   ids <- list()
@@ -381,71 +371,68 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
       create_random_packet(root[[name]], "data", list(p = i))
     })
   }
-  outpack_location_pull_metadata(root = path$a)
+  outpack_location_pull_metadata(root = root$a)
 
   expect_equal(
-    outpack_query(quote(at_location("x", "y")), root = path$a),
+    outpack_query(quote(at_location("x", "y")), root = root$a),
     c(ids$x, ids$y))
   expect_equal(
     outpack_query(quote(at_location("x", "y")), require_unpacked = TRUE,
-                  root = path$a),
+                  root = root$a),
     character())
 
   for (i in ids$x) {
-    outpack_location_pull_packet(i, root = path$a)
+    outpack_location_pull_packet(i, root = root$a)
   }
 
   expect_equal(
-    outpack_query(quote(at_location("x", "y")), root = path$a),
+    outpack_query(quote(at_location("x", "y")), root = root$a),
     c(ids$x, ids$y))
   expect_equal(
     outpack_query(quote(at_location("x", "y")), require_unpacked = TRUE,
-                  root = path$a),
+                  root = root$a),
     ids$x)
 })
 
 
 test_that("scope and require_unpacked can be used together to filter query", {
-  t <- temp_file()
-  path <- list()
-  path$src <- file.path(t, "src")
-  path$dst <- file.path(t, "dst")
   root <- list()
-  root$src <- outpack_init(path$src)
-  root$dst <- outpack_init(path$dst)
-  outpack_location_add("src", "path", list(path = path$src),
-                       root = path$dst)
+  for (name in c("src", "dst")) {
+    root[[name]] <- create_temporary_root(use_file_store = TRUE)
+  }
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
 
-  x1 <- create_random_packet(path$src, "x", list(p = 1))
-  x2 <- create_random_packet(path$src, "x", list(p = 1))
-  y1 <- create_random_packet(path$src, "y", list(p = 1))
-  y2 <- create_random_packet(path$src, "y", list(p = 1))
-  outpack_location_pull_metadata(root = path$dst)
+  x1 <- create_random_packet(root$src, "x", list(p = 1))
+  x2 <- create_random_packet(root$src, "x", list(p = 1))
+  y1 <- create_random_packet(root$src, "y", list(p = 1))
+  y2 <- create_random_packet(root$src, "y", list(p = 1))
+  outpack_location_pull_metadata(root = root$dst)
 
   expect_equal(
     outpack_query(quote(latest(parameter:p == 1)), require_unpacked = FALSE,
                   scope = quote(name == "x"),
-                  root = path$dst),
+                  root = root$dst),
     x2)
   expect_equal(
     outpack_query(quote(latest(parameter:p == 1)), require_unpacked = TRUE,
                   scope = quote(name == "x"),
-                  root = path$dst),
+                  root = root$dst),
     NA_character_)
 
   for (i in c(x1, y1)) {
-    outpack_location_pull_packet(i, location = "src", root = path$dst)
+    outpack_location_pull_packet(i, location = "src", root = root$dst)
   }
 
   expect_equal(
     outpack_query(quote(latest(parameter:p == 1)), require_unpacked = FALSE,
                   scope = quote(name == "x"),
-                  root = path$dst),
+                  root = root$dst),
     x2)
   expect_equal(
     outpack_query(quote(latest(parameter:p == 1)), require_unpacked = TRUE,
                   scope = quote(name == "x"),
-                  root = path$dst),
+                  root = root$dst),
     x1)
 })
 
@@ -466,9 +453,8 @@ test_that("Parse literal id query", {
 
 
 test_that("outpack_query allows ids", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
-  ids <- vcapply(1:3, function(i) create_random_packet(tmp))
+  root <- create_temporary_root(use_file_store = TRUE)
+  ids <- vcapply(1:3, function(i) create_random_packet(root))
   expect_identical(outpack_query(ids[[1]], root = root), ids[[1]])
   expect_identical(outpack_query(ids[[2]], root = root), ids[[2]])
   expect_error(
@@ -478,21 +464,19 @@ test_that("outpack_query allows ids", {
 
 
 test_that("correct behaviour with empty queries", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   expect_equal(outpack_query("latest", root = root), NA_character_)
   expect_equal(outpack_query(quote(name == "data"), root = root),
                character(0))
 })
 
 test_that("named queries", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
-  x2 <- create_random_packet(tmp, "x", list(a = 2))
-  y1 <- create_random_packet(tmp, "y", list(a = 1))
-  y2 <- create_random_packet(tmp, "y", list(a = 2))
+  x1 <- create_random_packet(root, "x", list(a = 1))
+  x2 <- create_random_packet(root, "x", list(a = 2))
+  y1 <- create_random_packet(root, "y", list(a = 1))
+  y2 <- create_random_packet(root, "y", list(a = 2))
 
   expect_equal(
     outpack_query(quote(latest()), name = "x", root = root),
@@ -505,13 +489,12 @@ test_that("named queries", {
 
 
 test_that("outpack_query can include subqueries", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
-  x2 <- create_random_packet(tmp, "x", list(a = 2))
-  y1 <- create_random_packet(tmp, "y", list(a = 1))
-  y2 <- create_random_packet(tmp, "y", list(a = 2))
+  x1 <- create_random_packet(root, "x", list(a = 1))
+  x2 <- create_random_packet(root, "x", list(a = 2))
+  y1 <- create_random_packet(root, "y", list(a = 1))
+  y2 <- create_random_packet(root, "y", list(a = 2))
 
   expect_equal(
     outpack_query(quote(latest({sub})), # nolint
@@ -528,8 +511,7 @@ test_that("outpack_query can include subqueries", {
 
 
 test_that("outpack_query returns useful error when subquery name unknown", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp)
+  root <- create_temporary_root()
 
   expect_error(
     outpack_query(quote(latest({sub})), # nolint
@@ -560,10 +542,9 @@ test_that("outpack_query returns useful error when subquery name unknown", {
 
 
 test_that("outpack_query returns no results when subquery has no results", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x1 <- create_random_packet(root, "x", list(a = 1))
 
   ## subquery itself has no results
   expect_equal(outpack_query(quote(latest(name == "y")), root = root),
@@ -578,8 +559,7 @@ test_that("outpack_query returns no results when subquery has no results", {
 
 
 test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
   expect_error(
     outpack_query(quote({sub} > 2), # nolint
@@ -611,12 +591,11 @@ test_that("subqueries cannot be used in tests e.g. ==, <, >= etc.", {
 
 
 test_that("subqueries can be used in groups e.g. &&, ||, (), etc.", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
-  x2 <- create_random_packet(tmp, "x", list(a = 2))
-  y1 <- create_random_packet(tmp, "y", list(a = 2))
+  x1 <- create_random_packet(root, "x", list(a = 1))
+  x2 <- create_random_packet(root, "x", list(a = 2))
+  y1 <- create_random_packet(root, "y", list(a = 2))
 
   expect_setequal(
     outpack_query(quote({sub} || parameter:a == 2), # nolint
@@ -644,12 +623,11 @@ test_that("subqueries can be used in groups e.g. &&, ||, (), etc.", {
 
 
 test_that("subqueries can be used within single", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
-  x2 <- create_random_packet(tmp, "x", list(a = 2))
-  y1 <- create_random_packet(tmp, "y", list(a = 2))
+  x1 <- create_random_packet(root, "x", list(a = 1))
+  x2 <- create_random_packet(root, "x", list(a = 2))
+  y1 <- create_random_packet(root, "y", list(a = 2))
 
   expect_error(
     outpack_query(quote(single({sub})), # nolint
@@ -668,8 +646,7 @@ test_that("subqueries can be used within single", {
 
 
 test_that("subqueries cannot be used within at_location", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
   expect_error(
     outpack_query(quote(at_location({sub})), # nolint
@@ -682,13 +659,12 @@ test_that("subqueries cannot be used within at_location", {
 
 
 test_that("outpack_query can include anonymous subqueries", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
-  x2 <- create_random_packet(tmp, "x", list(a = 2))
-  y1 <- create_random_packet(tmp, "y", list(a = 1))
-  y2 <- create_random_packet(tmp, "y", list(a = 2))
+  x1 <- create_random_packet(root, "x", list(a = 1))
+  x2 <- create_random_packet(root, "x", list(a = 2))
+  y1 <- create_random_packet(root, "y", list(a = 1))
+  y2 <- create_random_packet(root, "y", list(a = 2))
 
   expect_equal(
     outpack_query(quote(latest({name == "x"})), # nolint
@@ -698,10 +674,9 @@ test_that("outpack_query can include anonymous subqueries", {
 
 
 test_that("anonymous subquery is printed nicely when it errors", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp)
+  root <- create_temporary_root()
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
+  x1 <- create_random_packet(root, "x", list(a = 1))
 
   expect_error(
     outpack_query(quote(latest({ at_location() })), # nolint
@@ -715,13 +690,12 @@ test_that("anonymous subquery is printed nicely when it errors", {
 
 
 test_that("subqueries respect scope", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
-  x1 <- create_random_packet(tmp, "x", list(a = 1))
-  x2 <- create_random_packet(tmp, "x", list(a = 2))
-  y1 <- create_random_packet(tmp, "y", list(a = 1))
-  y2 <- create_random_packet(tmp, "y", list(a = 2))
+  x1 <- create_random_packet(root, "x", list(a = 1))
+  x2 <- create_random_packet(root, "x", list(a = 2))
+  y1 <- create_random_packet(root, "y", list(a = 1))
+  y2 <- create_random_packet(root, "y", list(a = 2))
 
   expect_equal(
     outpack_query(quote({report_x} || parameter:a == 2), # nolint
@@ -733,8 +707,7 @@ test_that("subqueries respect scope", {
 
 
 describe("outpack_query can search for packets usedby another", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 3)
   ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
 
@@ -797,8 +770,7 @@ describe("outpack_query can search for packets usedby another", {
 
 
 test_that("usedby returns multiple ids when parent used twice", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   id_a1 <- create_random_packet(root, "a", list(x = 1))
   id_a2 <- create_random_packet(root, "a", list(x = 1))
   id_b <- create_random_dependent_packet(root, "b", c(id_a1, id_a2))
@@ -813,8 +785,7 @@ test_that("usedby returns multiple ids when parent used twice", {
 
 
 test_that("usedby output can be used in groupings", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 2)
   ids["c"] <- create_random_dependent_packet(root, "c", ids[c("a", "b")])
 
@@ -827,8 +798,7 @@ test_that("usedby output can be used in groupings", {
 
 
 test_that("usedby errors if given expression which could return multiple ids", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 2)
   ids["b"] <- create_random_dependent_packet(root, "b", ids["a"])
 
@@ -850,8 +820,7 @@ test_that("usedby errors if given expression which could return multiple ids", {
 })
 
 test_that("usedby returns empty vector if usedby called with 0 ids", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
   expect_equal(
     outpack_query(quote(usedby({latest(name == "b")})), root = root), # nolint
@@ -859,8 +828,7 @@ test_that("usedby returns empty vector if usedby called with 0 ids", {
 })
 
 test_that("usedby depth works as expected", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 3)
 
   expect_setequal(
@@ -881,8 +849,7 @@ test_that("usedby depth works as expected", {
 
 
 test_that("useful errors returned when scope is invalid type", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
 
   expect_error(outpack_query(quote(latest()), scope = "the scope", root = root),
                "Invalid input for `scope`, it must be a language expression.")
@@ -890,8 +857,7 @@ test_that("useful errors returned when scope is invalid type", {
 
 
 describe("outpack_query can search for packets which use another", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 3)
   ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
 
@@ -945,8 +911,7 @@ describe("outpack_query can search for packets which use another", {
 
 
 test_that("uses and usedby can be used together", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   # nolint start
   ## Setup like
   ## A -> B -> C
