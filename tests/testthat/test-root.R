@@ -1,40 +1,36 @@
 test_that("can create new root", {
-  path <- temp_file()
-  r <- outpack_init(path)
-  expect_s3_class(r, "outpack_root")
+  root <- create_temporary_root()
+  path <- root$path
+  expect_s3_class(root, "outpack_root")
 
   expect_true(file.exists(file.path(path, ".outpack", "metadata")))
   expect_true(file.exists(file.path(path, ".outpack", "location")))
-  expect_mapequal(r$config$core,
+  expect_mapequal(root$config$core,
                   list(path_archive = "archive",
                        use_file_store = FALSE,
                        require_complete_tree = FALSE,
                        hash_algorithm = "sha256"))
   expect_false(file.exists(file.path(path, ".outpack", "files")))
-  expect_equal(outpack_location_list(r), "local")
+  expect_equal(outpack_location_list(root), "local")
 })
 
 
 test_that("Re-initialising root errors", {
-  path <- temp_file()
-
-  expect_silent(outpack_init(path))
-  expect_error(r <- outpack_init(path),
-                 "outpack already initialised at")
+  root <- create_temporary_root()
+  expect_error(outpack_init(root$path),
+               "outpack already initialised at")
 })
 
 
 test_that("Can control root config on initialisation", {
-  path <- temp_file()
-
-  r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE,
-                    require_complete_tree = TRUE)
-  expect_mapequal(r$config$core,
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE,
+                                require_complete_tree = TRUE)
+  expect_mapequal(root$config$core,
                   list(path_archive = NULL,
                        use_file_store = TRUE,
                        require_complete_tree = TRUE,
                        hash_algorithm = "sha256"))
-  expect_true(file.exists(file.path(path, ".outpack", "files")))
+  expect_true(file.exists(file.path(root$path, ".outpack", "files")))
 })
 
 
@@ -48,8 +44,8 @@ test_that("Must include some packet storage", {
 
 
 test_that("Can locate an outpack root", {
-  path <- temp_file()
-  r <- outpack_init(path)
+  root <- create_temporary_root()
+  path <- root$path
   p <- file.path(path, "a", "b", "c")
   fs::dir_create(p)
   expect_equal(
@@ -59,7 +55,7 @@ test_that("Can locate an outpack root", {
     with_dir(p, outpack_root_open(".")$path),
     outpack_root_open(path)$path)
   expect_identical(
-    outpack_root_open(r), r)
+    outpack_root_open(root), root)
 })
 
 
@@ -73,9 +69,9 @@ test_that("outpack_root_open errors if it reaches toplevel", {
 
 
 test_that("outpack_root_open does not recurse if locate = FALSE", {
-  path <- temp_file()
-  r <- outpack_init(path)
-  expect_identical(outpack_root_open(r, locate = FALSE), r)
+  root <- create_temporary_root()
+  path <- root$path
+  expect_identical(outpack_root_open(root, locate = FALSE), root)
   expect_equal(outpack_root_open(path, locate = FALSE)$path, path)
 
   p <- file.path(path, "a", "b", "c")
@@ -88,32 +84,27 @@ test_that("outpack_root_open does not recurse if locate = FALSE", {
 
 test_that("root configuration matches schema", {
   skip_if_not_installed("jsonvalidate")
-  path <- temp_file()
-  r <- outpack_init(path)
-  path_config <- file.path(path, ".outpack", "config.json")
+  root <- create_temporary_root()
+  path_config <- file.path(root$path, ".outpack", "config.json")
   expect_true(outpack_schema("config")$validate(path_config))
 })
 
 
 test_that("Can't get nonexistant metadata", {
-  path <- temp_file()
-
-  r <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
   id <- outpack_id()
   expect_error(
-    r$metadata(id),
+    root$metadata(id),
     sprintf("id '%s' not found in index", id))
   expect_error(
-    r$metadata(id, full = TRUE),
+    root$metadata(id, full = TRUE),
     sprintf("id '%s' not found in index", id))
 })
 
 
 test_that("empty root has nothing unpacked", {
-  path <- temp_file()
-
-  r <- outpack_init(path)
-  index <- r$index()
+  root <- create_temporary_root()
+  index <- root$index()
   expect_equal(index$unpacked,
                data_frame(packet = character(),
                           time = empty_time(),
@@ -122,13 +113,12 @@ test_that("empty root has nothing unpacked", {
 
 
 test_that("Can read full metadata via root", {
-  path <- temp_file()
-  r <- outpack_init(path)
-  id1 <- create_random_packet(path)
-  id2 <- create_random_packet(path)
+  root <- create_temporary_root()
+  id1 <- create_random_packet(root)
+  id2 <- create_random_packet(root)
 
-  d1 <- r$metadata(id1, TRUE)
-  d2 <- r$metadata(id1, FALSE)
+  d1 <- root$metadata(id1, TRUE)
+  d2 <- root$metadata(id1, FALSE)
 
   expect_identical(d1[names(d2)], d2)
   extra <- setdiff(names(d1), names(d2))

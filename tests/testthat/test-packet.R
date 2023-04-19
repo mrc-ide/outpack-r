@@ -19,8 +19,8 @@ test_that("Can run a basic packet", {
             file.path(path_src, "data.csv"),
             row.names = FALSE)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
 
   p <- outpack_packet_start(path_src, "example", root = root)
   expect_s3_class(p, "outpack_packet")
@@ -118,8 +118,8 @@ test_that("Can handle dependencies", {
     "dev.off()"),
     file.path(path_src2, "script.R"))
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
   id1 <- p1$id
@@ -152,8 +152,8 @@ test_that("Can't start a packet twice", {
   path_src <- temp_file()
   fs::dir_create(path_src)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
 
   p1 <- outpack_packet_start(path_src, "example", root = root)
   ## TODO: We might expand this to indicate where the packet is
@@ -183,8 +183,8 @@ test_that("Can't add a packet twice", {
   path_src <- temp_file()
   fs::dir_create(path_src)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
 
   p <- outpack_packet_start(path_src, "example", root = root)
   outpack_packet_end()
@@ -205,8 +205,8 @@ test_that("Can't use nonexistant id as dependency", {
   path_src <- temp_file()
   fs::dir_create(path_src)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
 
   p1 <- outpack_packet_start(path_src, "example", root = root)
   outpack_packet_end()
@@ -227,8 +227,8 @@ test_that("Can't use file that does not exist from dependency", {
   path_src2 <- temp_file()
   fs::dir_create(path_src2)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
   outpack_packet_end()
@@ -264,8 +264,9 @@ test_that("Can use dependency from outpack without file store", {
     "dev.off()"),
     file.path(path_src2, "script.R"))
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = FALSE)
+  root <- create_temporary_root(path_archive = "archive",
+                                use_file_store = FALSE)
+  path <- root$path
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
   id1 <- p1$id
@@ -311,8 +312,9 @@ test_that("validate dependencies from archive", {
     "dev.off()"),
     file.path(path_src2, "script.R"))
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = FALSE)
+  root <- create_temporary_root(path_archive = "archive",
+                                use_file_store = FALSE)
+  path <- root$path
 
   p1 <- outpack_packet_start(path_src1, "a", root = root)
   id1 <- p1$id
@@ -336,8 +338,7 @@ test_that("Can add additional data", {
   on.exit(outpack_packet_clear(), add = TRUE)
   tmp <- temp_file()
 
-  path_root <- file.path(tmp, "root")
-  root <- outpack_init(path_root)
+  root <- create_temporary_root()
 
   src <- fs::dir_create(file.path(tmp, "src"))
   saveRDS(runif(10), file.path(src, "data.rds"))
@@ -347,7 +348,7 @@ test_that("Can add additional data", {
   outpack_packet_end()
 
   ## See mrc-3091 - this should be made easier
-  path_metadata <- file.path(path_root, ".outpack", "metadata", id)
+  path_metadata <- file.path(root$path, ".outpack", "metadata", id)
   meta <- outpack_metadata_load(path_metadata)
   expect_equal(meta$custom, list(potato = list(a = 1, b = 2)))
 })
@@ -357,8 +358,7 @@ test_that("Can add multiple copies of extra data", {
   on.exit(outpack_packet_clear(), add = TRUE)
   tmp <- temp_file()
 
-  path_root <- file.path(tmp, "root")
-  root <- outpack_init(path_root)
+  root <- create_temporary_root()
 
   src <- fs::dir_create(file.path(tmp, "src"))
   saveRDS(runif(10), file.path(src, "data.rds"))
@@ -367,7 +367,7 @@ test_that("Can add multiple copies of extra data", {
   outpack_packet_add_custom("app2", '{"c": [1, 2, 3]}')
   outpack_packet_end()
 
-  path_metadata <- file.path(path_root, ".outpack", "metadata", id)
+  path_metadata <- file.path(root$path, ".outpack", "metadata", id)
   meta <- outpack_metadata_load(path_metadata)
   expect_equal(meta$custom,
                list(app1 = list(a = 1, b = 2),
@@ -379,8 +379,7 @@ test_that("Can't add custom data for same app twice", {
   on.exit(outpack_packet_clear(), add = TRUE)
   tmp <- temp_file()
 
-  path_root <- file.path(tmp, "root")
-  root <- outpack_init(path_root)
+  root <- create_temporary_root()
 
   src <- fs::dir_create(file.path(tmp, "src"))
   saveRDS(runif(10), file.path(src, "data.rds"))
@@ -404,8 +403,7 @@ test_that("Can validate custom metadata against schema", {
 
   tmp <- temp_file()
 
-  path_root <- file.path(tmp, "root")
-  root <- outpack_init(path_root)
+  root <- create_temporary_root()
 
   src <- fs::dir_create(file.path(tmp, "src"))
   saveRDS(runif(10), file.path(src, "data.rds"))
@@ -417,7 +415,7 @@ test_that("Can validate custom metadata against schema", {
   outpack_packet_add_custom("app1", '{"a": "str", "b": 2}', schema)
   outpack_packet_end()
 
-  path_metadata <- file.path(path_root, ".outpack", "metadata", id)
+  path_metadata <- file.path(root$path, ".outpack", "metadata", id)
   meta <- outpack_metadata_load(path_metadata)
   expect_equal(meta$custom,
                list(app1 = list(a = "str", b = 2)))
@@ -428,8 +426,7 @@ test_that("Can report nicely about json syntax errors", {
   on.exit(outpack_packet_clear(), add = TRUE)
   tmp <- temp_file()
 
-  path_root <- file.path(tmp, "root")
-  root <- outpack_init(path_root)
+  root <- create_temporary_root()
 
   src <- fs::dir_create(file.path(tmp, "src"))
   saveRDS(runif(10), file.path(src, "data.rds"))
@@ -443,8 +440,7 @@ test_that("Can report nicely about json syntax errors", {
 test_that("pre-prepared id can be used to start packet", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   id <- outpack_id()
   path_src <- temp_file()
@@ -462,8 +458,7 @@ test_that("pre-prepared id can be used to start packet", {
 test_that("Can hash files on startup", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   path_src <- temp_file()
   fs::dir_create(path_src)
@@ -502,8 +497,7 @@ test_that("Can hash files on startup", {
 test_that("Can detect changes to hashed files", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   path_src <- temp_file()
   fs::dir_create(path_src)
@@ -533,8 +527,7 @@ test_that("Can detect changes to hashed files", {
 test_that("Re-adding files triggers hash", {
   on.exit(outpack_packet_clear(), add = TRUE)
 
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   path_src <- temp_file()
   fs::dir_create(path_src)

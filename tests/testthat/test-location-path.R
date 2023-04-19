@@ -1,8 +1,6 @@
 test_that("can construct a outpack_location_path object", {
-  path <- temp_file()
-
-  outpack_init(path)
-  loc <- outpack_location_path$new(path)
+  root <- create_temporary_root()
+  loc <- outpack_location_path$new(root$path)
   expect_s3_class(loc, "outpack_location_path")
   dat <- loc$list()
   expect_equal(nrow(dat), 0)
@@ -11,31 +9,32 @@ test_that("can construct a outpack_location_path object", {
 })
 
 
-test_that("outpack_location_path requires exact root", {
+test_that("outpack_location_path requires existing directory", {
   path <- temp_file()
-
   expect_error(
     outpack_location_path$new(path),
     "Directory does not exist:")
+})
 
-  outpack_init(path)
-  subdir <- file.path(path, "subdir")
+
+test_that("outpack_location_path requires exact root", {
+  root <- create_temporary_root()
+  subdir <- file.path(root$path, "subdir")
   dir.create(subdir)
   expect_error(
     outpack_location_path$new(subdir),
     "'.+subdir' does not look like an outpack root")
 
-  expect_silent(outpack_location_path$new(path))
+  expect_silent(outpack_location_path$new(root$path))
 })
 
 
 test_that("outpack_location_path returns list of packet ids", {
-  path <- temp_file()
-
-  outpack_init(path)
+  root <- create_temporary_root()
+  path <- root$path
   loc <- outpack_location_path$new(path)
 
-  ids <- vcapply(1:3, function(i) create_random_packet(path))
+  ids <- vcapply(1:3, function(i) create_random_packet(root$path))
 
   dat <- loc$list()
   expect_s3_class(dat, "data.frame")
@@ -49,9 +48,8 @@ test_that("outpack_location_path returns list of packet ids", {
 
 
 test_that("outpack_location_path can return metadata", {
-  path <- temp_file()
-
-  outpack_init(path)
+  root <- create_temporary_root()
+  path <- root$path
   loc <- outpack_location_path$new(path)
 
   ids <- vcapply(1:3, function(i) create_random_packet(path))
@@ -66,9 +64,9 @@ test_that("outpack_location_path can return metadata", {
 
 
 test_that("requesting nonexistant metadata is an error", {
-  path <- temp_file()
+  root <- create_temporary_root()
+  path <- root$path
 
-  outpack_init(path)
   loc <- outpack_location_path$new(path)
   ids <- vcapply(1:3, function(i) create_random_packet(path))
 
@@ -86,12 +84,11 @@ test_that("requesting nonexistant metadata is an error", {
 
 
 test_that("can locate files from the store", {
-  path <- temp_file()
+  root <- create_temporary_root(use_file_store = TRUE)
+  path <- root$path
 
-  outpack_init(path, use_file_store = TRUE)
   loc <- outpack_location_path$new(path)
   ids <- vcapply(1:3, function(i) create_random_packet(path))
-  root <- outpack_root_open(path)
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
@@ -103,9 +100,9 @@ test_that("can locate files from the store", {
 
 
 test_that("sensible error if file not found in store", {
-  path <- temp_file()
+  root <- create_temporary_root(use_file_store = TRUE)
+  path <- root$path
 
-  outpack_init(path, use_file_store = TRUE)
   loc <- outpack_location_path$new(path)
   h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
   dest <- temp_file()
@@ -117,12 +114,11 @@ test_that("sensible error if file not found in store", {
 
 
 test_that("Can find file from archive", {
-  path <- temp_file()
+  root <- create_temporary_root(use_file_store = TRUE)
+  path <- root$path
 
-  outpack_init(path, use_file_store = FALSE)
   loc <- outpack_location_path$new(path)
   ids <- vcapply(1:3, function(i) create_random_packet(path))
-  root <- outpack_root_open(path)
   idx <- root$index()
 
   h <- idx$metadata[[1]]$files$hash
@@ -134,9 +130,9 @@ test_that("Can find file from archive", {
 
 
 test_that("sensible error if file not found in archive", {
-  path <- temp_file()
+  root <- create_temporary_root(use_file_store = FALSE)
+  path <- root$path
 
-  outpack_init(path, use_file_store = FALSE)
   loc <- outpack_location_path$new(path)
   h <- "md5:c7be9a2c3cd8f71210d9097e128da316"
   dest <- temp_file()

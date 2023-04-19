@@ -1,37 +1,33 @@
 test_that("index can include only unpacked packets", {
-  t <- temp_file()
-  path <- list()
-  path$src <- file.path(t, "src")
-  path$dst <- file.path(t, "dst")
   root <- list()
-  root$src <- outpack_init(path$src)
-  root$dst <- outpack_init(path$dst)
-  outpack_location_add("src", "path", list(path = path$src),
-                       root = path$dst)
+  for (name in c("src", "dst")) {
+    root[[name]] <- create_temporary_root()
+  }
+  outpack_location_add("src", "path", list(path = root$src$path),
+                       root = root$dst)
 
-  x1 <- create_random_packet(path$src, "x")
-  x2 <- create_random_packet(path$src, "x")
-  outpack_location_pull_metadata(root = path$dst)
+  x1 <- create_random_packet(root$src, "x")
+  x2 <- create_random_packet(root$src, "x")
+  outpack_location_pull_metadata(root = root$dst)
 
-  index <- new_query_index(path$dst, FALSE)
-  index_unpacked <- new_query_index(path$dst, TRUE)
+  index <- new_query_index(root$dst, FALSE)
+  index_unpacked <- new_query_index(root$dst, TRUE)
   expect_setequal(index$index$id, c(x1, x2))
   expect_equal(index_unpacked$index$id, character(0))
 
   for (i in c(x1, x2)) {
-    outpack_location_pull_packet(i, location = "src", root = path$dst)
+    outpack_location_pull_packet(i, location = "src", root = root$dst)
   }
 
-  index <- new_query_index(path$dst, FALSE)
-  index_unpacked <- new_query_index(path$dst, TRUE)
+  index <- new_query_index(root$dst, FALSE)
+  index_unpacked <- new_query_index(root$dst, TRUE)
   expect_setequal(index$index$id, c(x1, x2))
   expect_setequal(index_unpacked$index$id, c(x1, x2))
 })
 
 
 test_that("index includes depends info", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 3)
   ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
 
@@ -53,8 +49,7 @@ test_that("index includes depends info", {
 
 
 test_that("index includes uses info", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   ids <- create_random_packet_chain(root, 3)
   ids["d"] <- create_random_dependent_packet(root, "d", ids[c("b", "c")])
 

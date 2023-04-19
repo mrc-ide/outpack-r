@@ -1,6 +1,6 @@
 describe("server integration tests", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
   server <- outpack_server(path)
 
   url <- server$url("")
@@ -55,25 +55,22 @@ describe("server integration tests", {
 
 
 describe("http location integration tests", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
   server <- outpack_server(path)
   url <- server$url("")
 
   ids <- vcapply(1:3, function(i) create_random_packet(path))
 
   it("can pull metadata", {
-    tmp <- temp_file()
-    path_downstream <- file.path(tmp, "downstream")
-    outpack_init(path_downstream, use_file_store = TRUE)
-    expect_null(names(outpack_root_open(path_downstream)$index()$metadata))
+    root_downstream <- create_temporary_root(use_file_store = TRUE)
+    expect_null(names(root_downstream$index()$metadata))
     outpack_location_add("upstream", "http", list(url = url),
-                         root = path_downstream)
-    expect_equal(outpack_location_list(root = path_downstream),
+                         root = root_downstream)
+    expect_equal(outpack_location_list(root = root_downstream),
                  c("local", "upstream"))
-    outpack_location_pull_metadata("upstream", root = path_downstream)
+    outpack_location_pull_metadata("upstream", root = root_downstream)
 
-    root_downstream <- outpack_root_open(path_downstream)
     idx <- root_downstream$index()
     expect_equal(names(idx$metadata), ids)
   })

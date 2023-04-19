@@ -1,6 +1,5 @@
 test_that("Validate inputs to config set", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
 
   expect_error(
     outpack_config_set(TRUE, root = root),
@@ -12,17 +11,15 @@ test_that("Validate inputs to config set", {
 
 
 test_that("Setting no options does nothing", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
   config <- root$config
   outpack_config_set(root = root)
-  expect_identical(outpack_root_open(path)$config, config)
+  expect_identical(outpack_root_open(root$path)$config, config)
 })
 
 
 test_that("Disallow unknown configuration options", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
   expect_error(
     outpack_config_set(whatever = TRUE, root = root),
     "Can't set configuration option: 'whatever'")
@@ -30,8 +27,7 @@ test_that("Disallow unknown configuration options", {
 
 
 test_that("Can update core.require_complete_tree in empty archive", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
   expect_false(root$config$core$require_complete_tree)
 
   outpack_config_set(core.require_complete_tree = TRUE, root = root)
@@ -42,8 +38,7 @@ test_that("Can update core.require_complete_tree in empty archive", {
 
 
 test_that("Can remove file_store if path_archive exists", {
-  path <- temp_file()
-  root <- outpack_init(path, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   expect_true(root$config$core$use_file_store)
 
   file_store <- root$files$path
@@ -63,8 +58,7 @@ test_that("Can remove file_store if path_archive exists", {
 
 
 test_that("Cannot remove file_store if no path_archive", {
-  path <- temp_file()
-  root <- outpack_init(path, use_file_store = TRUE, path_archive = NULL)
+  root <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
   file_store <- root$files$path
   expect_true(fs::dir_exists(file_store))
   expect_error(outpack_config_set(core.use_file_store = FALSE, root = root),
@@ -77,10 +71,10 @@ test_that("Cannot remove file_store if no path_archive", {
 
 
 test_that("Can add file_store", {
-  path <- temp_file()
   root <- list()
-  root$src <- outpack_init(file.path(path, "src"))
-  root$dst <- outpack_init(file.path(path, "dst"))
+  root$src <- create_temporary_root()
+  root$dst <- create_temporary_root()
+
   expect_false(root$dst$config$core$use_file_store)
 
   id <- create_random_packet_chain(root$src, 3)
@@ -113,14 +107,13 @@ test_that("Can add file_store", {
 
 
 test_that("File store is not added if a hash cannot be resolved", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
   expect_false(root$config$core$use_file_store)
 
   id <- create_random_packet(root, name = "test")
 
   expect_equal(root$index()$unpacked$packet, id)
-  fs::file_delete(file.path(path, "archive", "test", id,
+  fs::file_delete(file.path(root$path, "archive", "test", id,
                             root$metadata(id)$files$path))
   regex <- paste("Error adding file store:(.*)",
     "the following files were missing or corrupted: 'data.rds'")
@@ -133,15 +126,14 @@ test_that("File store is not added if a hash cannot be resolved", {
 
 
 test_that("Files will be searched for by hash when adding file store", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
   expect_false(root$config$core$use_file_store)
 
   id <- create_deterministic_packet(root, name = "data")
   id_new <- create_deterministic_packet(root, name = "data-new")
 
   expect_equal(root$index()$unpacked$packet, c(id, id_new))
-  fs::file_delete(file.path(path, "archive", "data", id,
+  fs::file_delete(file.path(root$path, "archive", "data", id,
                             root$metadata(id)$files$path))
 
   suppressMessages(outpack_config_set(core.use_file_store = TRUE, root = root))
@@ -155,9 +147,8 @@ test_that("Files will be searched for by hash when adding file store", {
 
 
 test_that("Can remove uninitialised archive if using file store", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive",
-                       use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive",
+                                use_file_store = TRUE)
 
   expect_equal(root$config$core$path_archive, "archive")
   outpack_config_set(core.path_archive = NULL, root = root)
@@ -166,16 +157,15 @@ test_that("Can remove uninitialised archive if using file store", {
 
 
 test_that("Can remove initialised archive if using file store", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive",
-                       use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive",
+                                use_file_store = TRUE)
 
   expect_equal(root$config$core$path_archive, "archive")
   expect_message(outpack_config_set(core.path_archive = "archive", root = root),
                  "'core.path_archive' was unchanged")
 
   create_random_packet(root)
-  path_archive <- file.path(path, "archive")
+  path_archive <- file.path(root$path, "archive")
   expect_true(fs::dir_exists(path_archive))
 
   outpack_config_set(core.path_archive = NULL, root = root)
@@ -188,8 +178,7 @@ test_that("Can remove initialised archive if using file store", {
 
 
 test_that("Can rename uninitialised archive", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive")
+  root <- create_temporary_root(path_archive = "archive")
 
   expect_equal(root$config$core$path_archive, "archive")
 
@@ -200,27 +189,25 @@ test_that("Can rename uninitialised archive", {
 
 
 test_that("Can rename initialised archive", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive")
+  root <- create_temporary_root(path_archive = "archive")
 
   create_random_packet(root)
 
   expect_equal(root$config$core$path_archive, "archive")
-  path_archive <- file.path(path, "archive")
+  path_archive <- file.path(root$path, "archive")
   expect_true(fs::dir_exists(path_archive))
 
   outpack_config_set(core.path_archive = "new", root = root)
 
   expect_equal(root$config$core$path_archive, "new")
-  path_archive_new <- file.path(path, "new")
+  path_archive_new <- file.path(root$path, "new")
   expect_false(fs::dir_exists(path_archive))
   expect_true(fs::dir_exists(path_archive_new))
 })
 
 
 test_that("Cannot remove archive if not using file store", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive")
+  root <- create_temporary_root(path_archive = "archive")
 
   expect_error(outpack_config_set(core.path_archive = NULL, root = root),
                "If 'path_archive' is NULL, then 'use_file_store' must be TRUE")
@@ -228,8 +215,8 @@ test_that("Cannot remove archive if not using file store", {
 
 
 test_that("Can add archive", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+  path <- root$path
 
   id <- create_random_packet_chain(root, 3)
   outpack_config_set(core.path_archive = "archive", root = root)
@@ -265,8 +252,7 @@ test_that("Can add archive", {
 
 
 test_that("Archive is not added if file store is corrupt", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
 
   id <- create_random_packet_chain(root, 3)
   hash <- root$metadata(id[["c"]])$files$hash
@@ -276,18 +262,17 @@ test_that("Archive is not added if file store is corrupt", {
                e)
 
   expect_null(root$config$core$path_archive)
-  expect_false(fs::dir_exists(file.path(path, "archive")))
+  expect_false(fs::dir_exists(file.path(root$path, "archive")))
 })
 
 
 test_that("Validates path_archive", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = NULL, use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
   expect_error(outpack_config_set(core.path_archive = "/archive", root = root),
                "'path_archive' must be relative path")
   expect_null(root$config$core$path_archive)
 
-  dir.create(file.path(path, "archive"))
+  dir.create(file.path(root$path, "archive"))
   expect_error(outpack_config_set(core.path_archive = "archive", root = root),
                "Directory already exists")
   expect_null(root$config$core$path_archive)
@@ -302,11 +287,10 @@ test_that("Validates path_archive", {
 
 
 test_that("Enabling recursive pulls forces pulling missing packets", {
-  path <- temp_file()
-
   root <- list()
-  root$src <- outpack_init(file.path(path, "src"))
-  root$dst <- outpack_init(file.path(path, "dst"))
+  root$src <- create_temporary_root()
+  root$dst <- create_temporary_root()
+
   expect_false(root$dst$config$core$require_complete_tree)
 
   id <- create_random_packet_chain(root$src, 3)
@@ -325,8 +309,7 @@ test_that("Enabling recursive pulls forces pulling missing packets", {
 
 
 test_that("Unchanged require_complete_tree prints message", {
-  path <- temp_file()
-  root <- outpack_init(path)
+  root <- create_temporary_root()
   expect_false(root$config$core$require_complete_tree)
   expect_message(
     outpack_config_set(core.require_complete_tree = FALSE, root = root),
