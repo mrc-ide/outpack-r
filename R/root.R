@@ -23,24 +23,44 @@
 ##'   location; if `TRUE` you will always have all the packets that
 ##'   you hold metadata about.
 ##'
+##' @param logging_console Logical, indicating if we should log to the
+##'   console. If `TRUE`, then many operations will produce
+##'   informational output; set to `FALSE` to prevent this.
+##'
+##' @param logging_threshold The degree of verbosity; this reflects
+##'   lgr's structures and we might change it later.
+##'
 ##' @return Invisibly, an `outpack_root` object; these will change in
 ##'   future verisons!
 ##' @export
 outpack_init <- function(root, path_archive = "archive",
                          use_file_store = FALSE,
-                         require_complete_tree = FALSE) {
-  outpack_log_info("init", root, caller = "outpack::outpack_init")
+                         require_complete_tree = FALSE,
+                         logging_console = TRUE,
+                         logging_threshold = "info") {
+  ## TODO: there's an inconsistency here between the arguments to this
+  ## function using underscores and the arguments to
+  ## 'outpack_config_set' which uses dots. We might take a list of
+  ## options and dots here, which would allow sharing more code. That
+  ## would also allow addition of more options more easily.
+  ##
+  ## TODO: the constraints here need writing out clearly for any other
+  ## implementation that might seek to change them!
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
     stop(sprintf("outpack already initialised at '%s'", path_outpack))
   }
 
-  config <- config_new(path_archive, use_file_store, require_complete_tree)
+  config <- config_new(path_archive, use_file_store, require_complete_tree,
+                       logging_console, logging_threshold)
 
   fs::dir_create(path_outpack)
   fs::dir_create(file.path(path_outpack, "metadata"))
   fs::dir_create(file.path(path_outpack, "location"))
   config_write(config, root)
+
+  ret <- outpack_root$new(root)
+  outpack_log_info("init", root, ret, "outpack::outpack_init")
 
   invisible(outpack_root$new(root))
 }
@@ -88,16 +108,22 @@ outpack_root <- R6::R6Class(
     path = NULL,
     config = NULL,
     files = NULL,
+    id = NULL,
+    logger = NULL,
 
     initialize = function(path) {
       assert_file_exists(path)
       assert_file_exists(file.path(path, ".outpack"))
       self$path <- path
       self$config <- config_read(path)
+      self$id <- lookup_location_id("local", self)
       if (self$config$core$use_file_store) {
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
+      self$logger <- new_root_logger(self$id, self$config)
       lockBinding("path", self)
+      lockBinding("id", self)
+      lockBinding("logger", self)
     },
 
     metadata = function(id, full = FALSE) {

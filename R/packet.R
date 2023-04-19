@@ -30,6 +30,17 @@
 ##' @param id Optionally, an outpack id via [outpack::outpack_id]. If
 ##'   not given a new id will be generated.
 ##'
+##' @param logging_console Optional logical, indicating if we should
+##'   override the root's default in logging to the console. A value
+##'   of `NULL` uses the root value, `TRUE` enables console output
+##'   even when this is suppressed by the root, and `FALSE` disables
+##'   it even when this is enabled by the root.
+##'
+##' @param logging_threshold Optional log threshold, indicating if we
+##'   override the root's default in logging to the console. A value
+##'   of `NULL` uses the root value, otherwise use a `lgr`-compatible
+##'   log threshold (e.g., `debug`, `all`, etc)
+##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
@@ -39,6 +50,8 @@
 ##' @rdname outpack_packet
 ##' @export
 outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
+                                 logging_console = NULL,
+                                 logging_threshold = NULL,
                                  local = FALSE, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   assert_scalar_logical(local)
@@ -58,7 +71,8 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
     validate_outpack_id(id)
   }
 
-  logger <- new_packet_logger(id, path)
+  logger <- new_packet_logger(path, root$id, id,
+                              logging_console, logging_threshhold)
   caller <- "outpack::outpack_packet_start"
 
   time <- list(start = Sys.time())

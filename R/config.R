@@ -40,8 +40,9 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
   setters <- list(
     "core.require_complete_tree" = config_set_require_complete_tree,
     "core.use_file_store" = config_set_use_file_store,
-    "core.path_archive" = config_set_path_archive
-  )
+    "core.path_archive" = config_set_path_archive,
+    "logging.console" = config_set_logging_console,
+    "logging.threshold" = config_set_logging_threshold)
 
   unknown <- setdiff(names(options), names(setters))
   if (length(unknown)) {
@@ -160,7 +161,27 @@ config_set_path_archive <- function(value, root) {
 }
 
 
-config_new <- function(path_archive, use_file_store, require_complete_tree) {
+config_set_logging_threshold <- function(value, root) {
+  assert_scalar(value)
+  value <- lgr::standardize_threshold(value)
+  config <- root$config
+  config$logging$threshold <- value
+  config_write(config, root$path)
+  root$config <- config
+}
+
+
+config_set_logging_console <- function(value, root) {
+  assert_scalar_logical(value)
+  config <- root$config
+  config$logging$console <- value
+  config_write(config, root$path)
+  root$config <- config
+}
+
+
+config_new <- function(path_archive, use_file_store, require_complete_tree,
+                       logging_console, logging_threshold) {
   if (!is.null(path_archive)) {
     assert_scalar_character(path_archive)
   }
@@ -170,6 +191,9 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
   }
 
   assert_scalar_logical(require_complete_tree)
+
+  assert_scalar_logical(logging_console)
+  logging_threshold <- lgr::standardize_threshold(logging_threshold)
 
   ## TODO: There's a good reason here to wonder if this _should_ be
   ## configurable.  I'll keep it here within the configuration even
@@ -183,6 +207,10 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
       use_file_store = use_file_store,
       require_complete_tree = require_complete_tree,
       hash_algorithm = hash_algorithm),
+    logging = list(
+      console = logging_console,
+      threshold = logging_threshold
+    ),
     location = new_location_entry(local, 0, "local", NULL))
 }
 
@@ -190,6 +218,11 @@ config_new <- function(path_archive, use_file_store, require_complete_tree) {
 config_serialise <- function(config, path) {
   config$schema_version <- scalar(config$schema_version)
   config$core <- lapply(config$core, scalar)
+  if (length(config$logging) == 0) {
+    config$logging <- set_names(list(), character())
+  } else {
+    config$logging <- lapply(config$logging, scalar)
+  }
 
   prepare_location <- function(loc) {
     c(lapply(loc[setdiff(names(loc), "args")], scalar),

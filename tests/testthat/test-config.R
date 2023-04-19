@@ -113,7 +113,7 @@ test_that("File store is not added if a hash cannot be resolved", {
 
   id <- create_random_packet(root, name = "test")
 
-  meta <- outpack_root_open(path)$metadata(id)
+  meta <- root$metadata(id)
 
   expect_equal(root$index()$unpacked$packet, id)
   fs::file_delete(file.path(root$path, "archive", "test", id, "data.rds"))
@@ -322,4 +322,32 @@ test_that("Unchanged require_complete_tree prints message", {
   expect_message(
     outpack_config_set(core.require_complete_tree = TRUE, root = root),
     "'core.require_complete_tree' was unchanged")
+})
+
+
+test_that("can set logging threshold", {
+  root <- create_temporary_root()
+  expect_equal(root$config$logging,
+               list(console = FALSE, threshold = 400))
+
+  outpack_config_set(logging.threshold = "debug", root = root)
+  expect_equal(root$config$logging$threshold, 500)
+  expect_equal(
+    outpack_root_open(root$path, FALSE)$config$logging$threshold,
+    500)
+})
+
+
+test_that("reject invalid logging thresholds", {
+  root <- create_temporary_root()
+  expect_error(
+    outpack_config_set(logging.threshold = "unknown", root = root))
+})
+
+
+test_that("can control console logging", {
+  root <- create_temporary_root()
+  outpack_config_set(logging.console = TRUE, root = root)
+  expect_true(root$config$logging$console)
+  expect_true(outpack_root_open(root$path, FALSE)$config$logging$console)
 })

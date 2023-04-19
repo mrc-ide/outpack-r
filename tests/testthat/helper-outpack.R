@@ -2,10 +2,6 @@
 ## disabled on CRAN, and only enabled if jsonvalidate is found.
 options(outpack.schema_validate = TRUE)
 
-## For now, disable to console to keep tests easy to work with. We'll
-## enable this in tests that specifically look at logging.
-outpack_log_set_console(FALSE)
-
 create_random_packet <- function(root, name = "data", parameters = NULL) {
   src <- fs::dir_create(tempfile())
   on.exit(unlink(src, recursive = TRUE))
@@ -93,14 +89,7 @@ create_random_dependent_packet <- function(root, name, dependency_ids) {
 create_temporary_root <- function(...) {
   path <- tempfile()
   withr::defer_parent(unlink(path, recursive = TRUE))
-  outpack_init(path, ...)
-}
-
-
-
-local_log_console_enable <- function() {
-  withr::defer_parent(outpack_log_set_console(FALSE))
-  outpack_log_set_console(TRUE)
+  outpack_init(path, ..., logging_console = FALSE)
 }
 
 

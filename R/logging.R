@@ -1,10 +1,11 @@
 ## TODO: need to also log the calling package etc so that we get
 ## decent feedback about orderly; get logging working there too.
-outpack_log <- function(log_level, topic, detail, logger = NULL,
-                        caller = NULL) {
-  logger <- outpack_logger(logger)
-  logger$log(log_level, topic, custom = list(detail = detail),
-             caller = lgr::get_caller(-9))
+outpack_log <- function(log_level, topic, detail, logger, caller) {
+  if (inherits(logger, "outpack_packet") || inherits(logger, "outpack_root")) {
+    logger <- logger$logger
+  }
+  assert_is(logger, "Logger")
+  logger$log(log_level, topic, custom = list(detail = detail), caller = caller)
 }
 
 
@@ -15,26 +16,6 @@ outpack_log_info <- function(topic, detail, logger = NULL, caller = NULL) {
 
 outpack_log_debug <- function(topic, detail, logger = NULL, caller = NULL) {
   outpack_log("debug", topic, detail, logger, caller)
-}
-
-
-outpack_log_set_threshold <- function(value, logger = NULL) {
-  logger <- outpack_logger(logger)
-  logger$set_threshold(value)
-  invisible(logger)
-}
-
-
-outpack_log_set_console <- function(value, logger = NULL) {
-  logger <- outpack_logger(logger)
-  if (("console" %in% names(logger$appenders)) != value) {
-    if (value) {
-      logger$add_appender(outpack_console_appender(), name = "console")
-    } else {
-      logger$remove_appender("console")
-    }
-  }
-  invisible(logger)
 }
 
 
@@ -49,6 +30,7 @@ outpack_log_level <- function(level) {
   logger$set_threshold(level)
   invisible()
 }
+
 
 outpack_console_layout <- R6::R6Class(
   "outpack_console_layout",
@@ -79,26 +61,37 @@ outpack_console_layout <- R6::R6Class(
 logging_init <- function() {
   logger <- lgr::get_logger("outpack", reset = TRUE)
   logger$set_propagate(FALSE)
-  logger$add_appender(outpack_console_appender(), name = "console")
   logger
 }
 
 
-new_packet_logger <- function(id, path) {
+new_root_logger <- function(id, config) {
+  logger <- lgr::get_logger(c("outpack", id))
+  has_console_logger <- "console" %in% names(logger$appenders)
+  if (config$logging$console != has_console_logger) {
+    if (has_console_logger) {
+      logger$remove_appender("console")
+    } else {
+      logger$add_appender(outpack_console_appender(), name = "console")
+    }
+  }
+  logger$set_threshold(config$logging$threshold)
+  logger
+}
+
+
+new_packet_logger <- function(path, root_id, id, console, threshold) {
   stopifnot(fs::is_dir(path))
-  logger <- lgr::get_logger(c("outpack", "packet", id))
+  logger <- lgr::get_logger(c("outpack", root_id, id))
   file_json <- tempfile("outpack-log-", fileext = ".json")
   logger$add_appender(lgr::AppenderJson$new(file_json), name = "json")
-  logger
-}
-
-
-outpack_logger <- function(logger = NULL) {
-  if (inherits(logger, "outpack_packet")) {
-    logger$logger
-  } else {
-    logger %||% lgr::get_logger("outpack")
+  if (!is.null(console)) {
+    stop("WRITEME")
   }
+  if (!is.null(threshold)) {
+    stop("WRITEME")
+  }
+  logger
 }
 
 
