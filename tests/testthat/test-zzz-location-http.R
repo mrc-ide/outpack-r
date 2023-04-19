@@ -1,6 +1,6 @@
 describe("server integration tests", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
   server <- outpack_server(path)
 
   url <- server$url("")
@@ -55,8 +55,8 @@ describe("server integration tests", {
 
 
 describe("http location integration tests", {
-  path <- temp_file()
-  root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  path <- root$path
   server <- outpack_server(path)
   url <- server$url("")
 

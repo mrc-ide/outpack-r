@@ -1,6 +1,5 @@
 test_that("can copy files from outpack", {
-  tmp <- temp_file()
-  root <- outpack_init(tmp, use_file_store = TRUE)
+  root <- create_temporary_root(use_file_store = TRUE)
   id <- create_random_packet(root)
   dst <- temp_file()
   outpack_copy_files(id, c("incoming.rds" = "data.rds"), dst, root)
