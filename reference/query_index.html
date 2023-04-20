@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.5</span>
       </span>
     </div>
 
@@ -71,11 +71,6 @@
 are packets dependend on by this packet id (i.e. its parents).</p></dd>
 
 
-<dt><code>uses</code></dt>
-<dd><p>Named list of data frames. Names are packet ids, values
-are packets which are used by this packet id (i.e. its children).</p></dd>
-
-
 <dt><code>root</code></dt>
 <dd><p>The outpack root object</p></dd>
 
@@ -91,12 +86,11 @@ are packets which are used by this packet id (i.e. its children).</p></dd>
 <ul><li><p><a href="#method-query_index-new"><code>query_index$new()</code></a></p></li>
 <li><p><a href="#method-query_index-scope"><code>query_index$scope()</code></a></p></li>
 <li><p><a href="#method-query_index-get_packet_depends"><code>query_index$get_packet_depends()</code></a></p></li>
-<li><p><a href="#method-query_index-get_packet_uses"><code>query_index$get_packet_uses()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-query_index-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Create a new query_index object</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/query_index.html">query_index</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">root</span>, <span class="va">index</span>, <span class="va">depends</span>, <span class="va">uses</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/query_index.html">query_index</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">root</span>, <span class="va">index</span>, <span class="va">depends</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
@@ -112,13 +106,6 @@ are packets which are used by this packet id (i.e. its children).</p></dd>
 <dt><code>depends</code></dt>
 <dd><p>Named list of data frames. Names are packet ids, values
 are packets dependend on by this packet id (i.e. its parents).</p></dd>
-
-
-<dt><code>uses</code></dt>
-<dd><p>Named list of data frames. Names are packet ids, values
-are packets used by on by this packet id (i.e. its children). This is
-the same data as <code>depends</code> but relationships flow in the other
-direction.</p></dd>
 
 
 </dl><p></p></div>
@@ -169,32 +156,6 @@ recurse the whole tree to get all parents</p></dd>
 <div class="section">
 <h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
 <p>The ids of the parents of this packet</p>
-</div>
-
-</div><p></p><hr><a id="method-query_index-get_packet_uses"></a><div class="section">
-<h3 id="method-get-packet-uses-">Method <code>get_packet_uses()</code><a class="anchor" aria-label="anchor" href="#method-get-packet-uses-"></a></h3>
-<p>Get the ids of packets which are used by this packet</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">query_index</span><span class="op">$</span><span class="fu">get_packet_uses</span><span class="op">(</span><span class="va">id</span>, <span class="va">depth</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
-<h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
-<p></p><div class="arguments"><dl><dt><code>id</code></dt>
-<dd><p>The id of the packet to get children of</p></dd>
-
-
-<dt><code>depth</code></dt>
-<dd><p>Depth of children to get, <code>depth</code> 1 gets immediate children
-<code>depth</code> 2 gets children and children of children, <code>depth</code> Inf will
-recurse the whole tree to get all children</p></dd>
-
-
-</dl><p></p></div>
-</div>
-<div class="section">
-<h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
-<p>The ids of the children of this packet</p>
 </div>
 
 </div>
