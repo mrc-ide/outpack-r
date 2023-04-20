@@ -54,6 +54,12 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
     root <- setters[[nm]](options[[nm]], root)
   }
 
+  if (any(grepl("^logging\\.", names(options)))) {
+    logger_configure(root$logger,
+                     root$config$logging$console,
+                     root$config$logging$threshold)
+  }
+
   invisible()
 }
 
@@ -72,8 +78,7 @@ config_set_require_complete_tree <- function(value, root) {
   }
 
   config$core$require_complete_tree <- value
-  config_write(config, root$path)
-  root$config <- config
+  config_update(config, root)
 }
 
 
@@ -103,8 +108,7 @@ config_set_use_file_store <- function(value, root) {
   }
 
   config$core$use_file_store <- value
-  config_write(config, root$path)
-  root$config <- config
+  config_update(config, root)
 }
 
 
@@ -156,8 +160,7 @@ config_set_path_archive <- function(value, root) {
     })
   }
 
-  config_write(config, root$path)
-  root$config <- config
+  config_update(config, root)
 }
 
 
@@ -166,8 +169,7 @@ config_set_logging_threshold <- function(value, root) {
   value <- lgr::standardize_threshold(value)
   config <- root$config
   config$logging$threshold <- value
-  config_write(config, root$path)
-  root$config <- config
+  config_update(config, root)
 }
 
 
@@ -175,8 +177,7 @@ config_set_logging_console <- function(value, root) {
   assert_scalar_logical(value)
   config <- root$config
   config$logging$console <- value
-  config_write(config, root$path)
-  root$config <- config
+  config_update(config, root)
 }
 
 
@@ -233,6 +234,13 @@ config_serialise <- function(config, path) {
   })
 
   to_json(config, "config")
+}
+
+
+config_update <- function(config, root) {
+  root$config <- config
+  config_write(config, root$path)
+  root
 }
 
 

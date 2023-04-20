@@ -71,8 +71,8 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
     validate_outpack_id(id)
   }
 
-  logger <- new_packet_logger(path, root$id, id,
-                              logging_console, logging_threshhold)
+  logger <- new_packet_logger(path, root, id,
+                              logging_console, logging_threshold)
   caller <- "outpack::outpack_packet_start"
 
   time <- list(start = Sys.time())

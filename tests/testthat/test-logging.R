@@ -1,7 +1,5 @@
 test_that("can log creation of outpack repo", {
   path <- temp_file()
-
-  outpack_config_set(logging.console = FALSE, root)
   expect_output(
     root <- outpack_init(path, path_archive = "archive", use_file_store = TRUE),
     "[ init       ]",
@@ -9,15 +7,36 @@ test_that("can log creation of outpack repo", {
 })
 
 
+test_that("can enable console logging for packet level, if disabled at root", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+
+  path_src <- create_temporary_simple_src()
+  out <- capture.output(
+    p <- outpack_packet_start(path_src, "example", root = root,
+                              logging_console = TRUE))
+
+  expect_length(root$logger$appenders, 0)
+  expect_length(p$logger$appenders, 2)
+  expect_setequal(names(p$logger$appenders), c("json", "console"))
+
+  expect_length(out, 3)
+  expect_equal(out[[1]], "[ name       ]  example")
+  expect_equal(out[[2]], sprintf("[ id         ]  %s", p$id))
+  expect_match(out[[3]], "^\\[ start")
+})
+
+
 test_that("can log basic packet running", {
   on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  outpack_config_set(logging.console = TRUE, root = root)
+
   path_src <- create_temporary_simple_src()
 
   inputs <- c("data.csv", "script.R")
   env <- new.env()
 
-  local_log_console_enable()
   out <- capture.output(
     p <- outpack_packet_start(path_src, "example", root = root))
 
@@ -46,8 +65,9 @@ test_that("can log basic packet running", {
     c("name", "id", "start", "script", "end", "elapsed"))
   expect_equal(
     dat$caller,
-    paste0("outpack_packet_", rep(c("start", "run", "end"), c(3, 1, 2))))
+    paste0("outpack::outpack_packet_",
+           rep(c("start", "run", "end"), c(3, 1, 2))))
   expect_equal(
     dat$logger,
-    rep(paste0("outpack/packet/", p$id), 6))
+    rep(sprintf("outpack/%s/%s", root$id, p$id), 6))
 })

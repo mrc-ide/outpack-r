@@ -25,13 +25,6 @@ outpack_console_appender <- function() {
 }
 
 
-outpack_log_level <- function(level) {
-  logger <- lgr::get_logger("outpack")
-  logger$set_threshold(level)
-  invisible()
-}
-
-
 outpack_console_layout <- R6::R6Class(
   "outpack_console_layout",
   inherit = lgr::Layout,
@@ -67,30 +60,34 @@ logging_init <- function() {
 
 new_root_logger <- function(id, config) {
   logger <- lgr::get_logger(c("outpack", id))
-  has_console_logger <- "console" %in% names(logger$appenders)
-  if (config$logging$console != has_console_logger) {
+  logger_configure(logger, config$logging$console, config$logging$threshold)
+  logger
+}
+
+
+logger_configure <- function(logger, console, threshold) {
+  appenders <- c(names(logger$appenders), names(logger$inherited_appenders))
+  has_console_logger <- "console" %in% appenders
+  if (console != has_console_logger) {
     if (has_console_logger) {
       logger$remove_appender("console")
     } else {
       logger$add_appender(outpack_console_appender(), name = "console")
     }
   }
-  logger$set_threshold(config$logging$threshold)
-  logger
+  logger$set_threshold(threshold)
 }
 
 
-new_packet_logger <- function(path, root_id, id, console, threshold) {
+new_packet_logger <- function(path, root, id, console, threshold) {
+  console <- console %||% root$config$logging$console
+  threshold <- threshold %||% root$config$logging$threshold
+  assert_scalar_logical(console, "logging_console")
   stopifnot(fs::is_dir(path))
-  logger <- lgr::get_logger(c("outpack", root_id, id))
+  logger <- lgr::get_logger(c("outpack", root$id, id))
   file_json <- tempfile("outpack-log-", fileext = ".json")
   logger$add_appender(lgr::AppenderJson$new(file_json), name = "json")
-  if (!is.null(console)) {
-    stop("WRITEME")
-  }
-  if (!is.null(threshold)) {
-    stop("WRITEME")
-  }
+  logger_configure(logger, console, threshold)
   logger
 }
 

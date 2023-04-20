@@ -167,8 +167,7 @@ outpack_root <- R6::R6Class(
     },
 
     update_config = function(config) {
-      config_write(config, self$path)
-      self$config <- config_read(self$path)
+      config_update(config, self)
     }
   ))
 
