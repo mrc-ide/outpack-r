@@ -1,10 +1,19 @@
-deparse_query <- function(x) {
-  if (length(x) == 1) {
-    return(deparse_single(x))
+#' Format outpack query for displaying to users
+#'
+#' @param query The outpack query to print
+#'
+#' @return Query expression as a string
+#' @export
+#'
+#' @examples
+#' outpack_query_format(quote(name == "example"))
+outpack_query_format <- function(query) {
+  if (length(query) == 1) {
+    return(deparse_single(query))
   }
 
-  fn <- as.character(x[[1]])
-  args <- x[-1]
+  fn <- as.character(query[[1]])
+  args <- query[-1]
 
   ## Note this includes invalid operators, even if they are invalid we
   ## still want to return formatted nicely
@@ -43,7 +52,8 @@ deparse_prefix <- function(fn, args) {
 
 deparse_infix <- function(fn, args) {
   sep <- if (fn == ":") "" else " "
-  paste(deparse_query(args[[1]]), fn, deparse_query(args[[2]]), sep = sep)
+  paste(outpack_query_format(args[[1]]), fn,
+        outpack_query_format(args[[2]]), sep = sep)
 }
 
 deparse_brackets <- function(fn, args, closing) {
@@ -58,6 +68,6 @@ deparse_brackets <- function(fn, args, closing) {
 
 deparse_regular_function <- function(fn, args, opening_bracket = "(",
                                      closing_bracket = ")") {
-  arg_str <- paste(vcapply(args, deparse_query), collapse = ", ")
+  arg_str <- paste(vcapply(args, outpack_query_format), collapse = ", ")
   paste0(fn, opening_bracket, arg_str, closing_bracket)
 }
