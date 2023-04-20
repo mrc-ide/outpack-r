@@ -294,11 +294,12 @@ query_error <- function(msg, expr, context, prefix) {
          call. = FALSE)
   } else {
     width <- max(nchar(prefix), nchar("within"))
-    stop(sprintf("%s\n  - %s %s\n  - %s %s",
-                 msg,
-                 format(prefix, width = width), outpack_query_format(expr),
-                 format("within", width = width), outpack_query_format(context)),
-         call. = FALSE)
+    stop(sprintf(
+      "%s\n  - %s %s\n  - %s %s",
+      msg,
+      format(prefix, width = width), outpack_query_format(expr),
+      format("within", width = width), outpack_query_format(context)),
+      call. = FALSE)
   }
 }
 
