@@ -35,4 +35,8 @@ test_that("queries can be deparsed", {
   expect_equal(outpack_query_format(quote(!(x || y))), "!(x || y)")
   expect_equal(outpack_query_format(quote(usedby("thing", -2))),
                'usedby("thing", -2)')
+
+  expect_error(
+    outpack_query_format(c("one", "two")),
+    "Cannot format query, it must be a language object or be length 1.")
 })

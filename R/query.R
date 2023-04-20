@@ -223,7 +223,7 @@ query_parse_subquery <- function(expr, context, subquery_env) {
         expr, context)
     }
   } else {
-    query_name <- openssl::md5(outpack_query_format(subquery[[1]]))
+    query_name <- openssl::md5(deparse_query(subquery[[1]]))
     subquery_env[[query_name]] <- as_anonymous_subquery(subquery[[1]])
   }
   parsed_query <- query_parse(subquery_env[[query_name]], context, subquery_env)
@@ -290,15 +290,15 @@ is_id_lookup <- function(expr) {
 
 query_error <- function(msg, expr, context, prefix) {
   if (identical(expr, context)) {
-    stop(sprintf("%s\n  - %s %s", msg, prefix, outpack_query_format(expr)),
+    stop(sprintf("%s\n  - %s %s", msg, prefix, deparse_query(expr)),
          call. = FALSE)
   } else {
     width <- max(nchar(prefix), nchar("within"))
     stop(sprintf(
       "%s\n  - %s %s\n  - %s %s",
       msg,
-      format(prefix, width = width), outpack_query_format(expr),
-      format("within", width = width), outpack_query_format(context)),
+      format(prefix, width = width), deparse_query(expr),
+      format("within", width = width), deparse_query(context)),
       call. = FALSE)
   }
 }
@@ -318,7 +318,7 @@ query_parse_check_call <- function(expr, context) {
   if (!is.call(expr)) {
     query_parse_error(sprintf(
       "Invalid query '%s'; expected some sort of expression",
-      outpack_query_format(expr)),
+      deparse_query(expr)),
       expr, context)
   }
 
@@ -340,7 +340,7 @@ query_parse_check_call <- function(expr, context) {
   if (is.null(len)) {
     query_parse_error(sprintf(
       "Invalid query '%s'; unknown query component '%s'",
-      outpack_query_format(expr), fn),
+      deparse_query(expr), fn),
       expr, context)
   }
 
@@ -382,7 +382,7 @@ query_parse_value <- function(expr, context, subquery_env) {
     list(type = "lookup",
          name = deparse(expr))
   } else if (is_call(expr, ":")) {
-    name <- outpack_query_format(expr[[2]])
+    name <- deparse_query(expr[[2]])
     valid <- c("parameter", "this")
     if (!(name %in% valid)) {
         query_parse_error(sprintf(
@@ -390,13 +390,13 @@ query_parse_value <- function(expr, context, subquery_env) {
     }
     list(type = "lookup",
          name = name,
-         query = outpack_query_format(expr[[3]]),
+         query = deparse_query(expr[[3]]),
          expr = expr,
          context = context)
   } else {
     query_parse_error(
       sprintf("Unhandled query expression value '%s'",
-              outpack_query_format(expr)),
+              deparse_query(expr)),
       expr, context)
   }
 }
