@@ -27,6 +27,24 @@ test_that("can enable console logging for packet level, if disabled at root", {
 })
 
 
+test_that("can disable console logging for packet level, if enabled at root", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+  outpack_config_set(logging.console = TRUE, root = root)
+
+  path_src <- create_temporary_simple_src()
+  out <- capture.output(
+    p <- outpack_packet_start(path_src, "example", root = root,
+                              logging_console = FALSE))
+  expect_equal(out, character())
+
+  expect_length(root$logger$appenders, 1)
+  expect_length(p$logger$appenders, 1)
+  expect_setequal(names(p$logger$appenders), "json")
+  expect_null(p$logger$inherited_appenders)
+})
+
+
 test_that("can log basic packet running", {
   on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)

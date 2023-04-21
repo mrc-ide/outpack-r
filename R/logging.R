@@ -51,13 +51,6 @@ outpack_console_layout <- R6::R6Class(
   ))
 
 
-logging_init <- function() {
-  logger <- lgr::get_logger("outpack", reset = TRUE)
-  logger$set_propagate(FALSE)
-  logger
-}
-
-
 new_root_logger <- function(id, config) {
   logger <- lgr::get_logger(c("outpack", id))
   logger_configure(logger, config$logging$console, config$logging$threshold)
@@ -70,7 +63,22 @@ logger_configure <- function(logger, console, threshold) {
   has_console_logger <- "console" %in% appenders
   if (console != has_console_logger) {
     if (has_console_logger) {
-      logger$remove_appender("console")
+      if ("console" %in% names(logger$appenders)) {
+        logger$remove_appender("console")
+      }
+      ## Technically this is too big a hammer, because it prevents any
+      ## forwarding to the parent logger. However, it works fine with
+      ## the way that we do use things because the parent logger only
+      ## contains at most one logger, which *is* the console logger.
+      ##
+      ## lgr does not seem to have a sensible way of forwarding to
+      ## only some of the inherited appenders, so if this is not
+      ## enough we'll need to do inheritance slightly differently
+      ## (e.g., copy appenders out of the parent into the child and
+      ## not propagate).
+      if ("console" %in% names(logger$inherited_appenders)) {
+        logger$set_propagate(FALSE)
+      }
     } else {
       logger$add_appender(outpack_console_appender(), name = "console")
     }

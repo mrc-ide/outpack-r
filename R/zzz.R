@@ -1,5 +1,5 @@
 cache <- new.env(parent = emptyenv())
 
 .onLoad <- function(...) {
-  logging_init() # nocov
+  lgr::get_logger("outpack", reset = TRUE)$set_propagate(FALSE) # nocov
 }
