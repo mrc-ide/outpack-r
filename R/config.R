@@ -219,11 +219,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree,
 config_serialise <- function(config, path) {
   config$schema_version <- scalar(config$schema_version)
   config$core <- lapply(config$core, scalar)
-  if (length(config$logging) == 0) {
-    config$logging <- set_names(list(), character())
-  } else {
-    config$logging <- lapply(config$logging, scalar)
-  }
+  config$logging <- lapply(config$logging, scalar)
 
   prepare_location <- function(loc) {
     c(lapply(loc[setdiff(names(loc), "args")], scalar),

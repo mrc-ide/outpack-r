@@ -354,4 +354,12 @@ test_that("can control console logging", {
   root2 <- outpack_root_open(root$path, FALSE)
   expect_true(root2$config$logging$console)
   expect_true("console" %in% names(root2$logger$appenders))
+
+  outpack_config_set(logging.console = FALSE, root = root)
+  expect_false(root$config$logging$console)
+  expect_false("console" %in% names(root$logger$appenders))
+
+  root3 <- outpack_root_open(root$path, FALSE)
+  expect_false(root3$config$logging$console)
+  expect_false("console" %in% names(root3$logger$appenders))
 })
