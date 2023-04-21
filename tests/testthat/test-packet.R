@@ -591,25 +591,6 @@ test_that("Files cannot be immutable and ignored", {
 })
 
 
-test_that("Can echo log to console", {
-  on.exit(outpack_packet_clear(), add = TRUE)
-  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
-  path_src <- create_temporary_simple_src()
-
-  inputs <- c("data.csv", "script.R")
-  env <- new.env()
-
-  p <- outpack_packet_start(path_src, "example", root = root)
-  res1 <- testthat::evaluate_promise(
-    outpack_packet_run("script.R", env, echo = TRUE))
-  expect_match(res1$output, "read.csv", fixed = TRUE)
-  res2 <- testthat::evaluate_promise(
-    outpack_packet_run("script.R", env, echo = FALSE))
-  expect_equal(res2$output, "")
-  outpack_packet_end()
-})
-
-
 test_that("can detect device imbalance", {
   on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
@@ -664,7 +645,7 @@ test_that("run basic report with explicit packet", {
   env <- new.env()
 
   p <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
-  outpack_packet_run("script.R", env, echo = FALSE, packet = p)
+  outpack_packet_run("script.R", env, packet = p)
   outpack_packet_end(packet = p)
 
   expect_equal(names(root$index()$metadata), p$id)

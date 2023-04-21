@@ -160,17 +160,13 @@ outpack_packet_end <- function(packet = NULL) {
 ##'   times within a single packet run (or zero times!) as needed.
 ##'
 ##' @param envir Environment in which to run the script
-##'
-##' @param echo Print the result of running the R code to the
-##'   console. This may be difficult to suppress in some context, as
-##'   it comes directly from R's [source] function.
-outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
-                               packet = NULL) {
+outpack_packet_run <- function(script, envir = .GlobalEnv, packet = NULL) {
   p <- check_current_packet(packet)
   assert_relative_path(script, no_dots = TRUE)
   assert_file_exists(script, p$path, "Script")
+  caller <- "outpack::outpack_packet_run"
 
-  outpack_log_info("script", script, p, "outpack::outpack_packet_run")
+  outpack_log_info("script", script, p, caller)
 
   ## TODO: not sure that this is the correct environment; should it be
   ## parent.frame() perhaps (see default args to new.env)
@@ -188,15 +184,27 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
 
   ## TODO: What should we do/store on error?
 
+  ## TODO: be careful with nesting; as that complicates the logs
+
   info <- outpack_packet_run_global_state()
+
+  ## I think that here we want to take the same value as the computed
+  ## console print value, but it's possible this wants separate
+  ## configuration perhaps? It's also possible that we should enable
+  ## console logging in the script for the duration of the function
+  ## here?
+  echo <- logger_has_console(p$logger)
 
   ## It's important to do the global state check in the packet working
   ## directory (not the calling working directory) otherwise we might
   ## write out files in unexpected places when flushing devices.
   with_dir(p$path, {
-    source_script(script, envir, echo)
+    output <- source_and_capture(script, envir, echo)
     outpack_packet_run_check_global_state(info)
   })
+
+  ## This is fine, except that we don't actually cope with nesting yet.
+  outpack_log_info("output", I(output), p$logger, caller)
 
   p$script <- c(p$script, script)
 

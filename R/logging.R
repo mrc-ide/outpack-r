@@ -21,7 +21,13 @@ outpack_log_debug <- function(topic, detail, logger = NULL, caller = NULL) {
 
 outpack_console_appender <- function() {
   lgr::AppenderConsole$new(
-    layout = outpack_console_layout$new())
+    layout = outpack_console_layout$new(),
+    filters = list(filter_drop_script_output))
+}
+
+
+filter_drop_script_output <- function(event) {
+  !(event$caller == "outpack::outpack_packet_run" && event$msg == "output")
 }
 
 
@@ -33,20 +39,13 @@ outpack_console_layout <- R6::R6Class(
     format_event = function(event) {
       ## This is the original orderly log format, seems like a
       ## sensible one to use here, at least for now, as users are
-      ## familar with it.  We'll sort out colouring here later, andou
+      ## familar with it.  We'll sort out colouring here later, and/or
       ## possibly use cli for the final format. For now though we just
       ## care about getting things out.
       topic <- event$msg
       detail <- event$custom$detail %||% ""
-      if (length(detail) > 1) {
-        browser()
-      }
-      ret <- trimws(sprintf("[ %s ]  %s", format(topic, width = 10), detail))
-      if (is.null(ret) || !any(nzchar(ret))) {
-        stop("preventing invalid log")
-        browser()
-      }
-      ret
+      stopifnot(length(detail) == 1)
+      trimws(sprintf("[ %s ]  %s", format(topic, width = 10), detail))
     }
   ))
 
@@ -58,11 +57,16 @@ new_root_logger <- function(id, config) {
 }
 
 
+logger_has_console <- function(logger) {
+  "console" %in% names(logger$appenders) ||
+    "console" %in% names(logger$inherited_appenders)
+}
+
+
 logger_configure <- function(logger, console, threshold) {
-  appenders <- c(names(logger$appenders), names(logger$inherited_appenders))
-  has_console_logger <- "console" %in% appenders
-  if (console != has_console_logger) {
-    if (has_console_logger) {
+  has_console <- logger_has_console(logger)
+  if (console != has_console) {
+    if (has_console) {
       if ("console" %in% names(logger$appenders)) {
         logger$remove_appender("console")
       }

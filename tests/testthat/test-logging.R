@@ -64,7 +64,7 @@ test_that("can log basic packet running", {
   expect_match(out[[3]], "^\\[ start")
 
   expect_output(
-    outpack_packet_run("script.R", env, echo = FALSE, packet = p),
+    outpack_packet_run("script.R", env, packet = p),
     "[ script     ]  script.R",
     fixed = TRUE)
 
@@ -77,15 +77,20 @@ test_that("can log basic packet running", {
   expect_true(file.exists(file.path(path_src, "log.json")))
   dat <- read_log_json(file.path(path_src, "log.json"))
 
-  expect_equal(nrow(dat), 6)
+  expect_equal(nrow(dat), 7)
   expect_equal(
     dat$msg,
-    c("name", "id", "start", "script", "end", "elapsed"))
+    c("name", "id", "start", "script", "output", "end", "elapsed"))
   expect_equal(
     dat$caller,
     paste0("outpack::outpack_packet_",
-           rep(c("start", "run", "end"), c(3, 1, 2))))
+           rep(c("start", "run", "end"), c(3, 2, 2))))
   expect_equal(
     dat$logger,
-    rep(sprintf("outpack/%s/%s", root$id, p$id), 6))
+    rep(sprintf("outpack/%s/%s", root$id, p$id), 7))
+  ## browser()
+  expect_match(
+    dat$custom$detail[[5]][[1]],
+    "read.csv('data.csv')",
+    fixed = TRUE)
 })
