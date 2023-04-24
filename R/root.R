@@ -115,7 +115,6 @@ outpack_root <- R6::R6Class(
       assert_file_exists(file.path(path, ".outpack"))
       self$path <- path
       self$config <- config_read(path)
-      self$id <- lookup_location_id("local", self)
       if (self$config$core$use_file_store) {
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
