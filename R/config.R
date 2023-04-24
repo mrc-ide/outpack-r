@@ -55,9 +55,7 @@ outpack_config_set <- function(..., options = list(...), root = NULL) {
   }
 
   if (any(grepl("^logging\\.", names(options)))) {
-    logger_configure(root$logger,
-                     root$config$logging$console,
-                     root$config$logging$threshold)
+    root$logger <- root$config$logging
   }
 
   invisible()
@@ -165,10 +163,8 @@ config_set_path_archive <- function(value, root) {
 
 
 config_set_logging_threshold <- function(value, root) {
-  assert_scalar(value)
-  value <- lgr::standardize_threshold(value)
   config <- root$config
-  config$logging$threshold <- value
+  config$logging$threshold <- log_level_check(value, "logging.threshold")
   config_update(config, root)
 }
 
@@ -194,7 +190,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree,
   assert_scalar_logical(require_complete_tree)
 
   assert_scalar_logical(logging_console)
-  logging_threshold <- lgr::standardize_threshold(logging_threshold)
+  logging_threshold <- log_level_check(logging_threshold)
 
   ## TODO: There's a good reason here to wonder if this _should_ be
   ## configurable.  I'll keep it here within the configuration even

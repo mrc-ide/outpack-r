@@ -1,110 +1,121 @@
-## TODO: need to also log the calling package etc so that we get
-## decent feedback about orderly; get logging working there too.
-outpack_log <- function(log_level, topic, detail, logger, caller) {
-  if (inherits(logger, "outpack_packet") || inherits(logger, "outpack_root")) {
-    logger <- logger$logger
+outpack_log <- function(object, log_level, topic, detail, caller) {
+  if (inherits(object, "outpack_packet") || inherits(object, "outpack_root")) {
+    logger <- object$logger
+  } else {
+    stop("Invalid call to outpack_log")
   }
-  assert_is(logger, "Logger")
-  logger$log(log_level, topic, custom = list(detail = detail), caller = caller)
-}
 
+  assert_scalar_character(topic)
+  assert_scalar_character(caller)
+  assert_character(detail)
 
-outpack_log_info <- function(topic, detail, logger = NULL, caller = NULL) {
-  outpack_log("info", topic, detail, logger, caller)
-}
-
-
-outpack_log_debug <- function(topic, detail, logger = NULL, caller = NULL) {
-  outpack_log("debug", topic, detail, logger, caller)
-}
-
-
-outpack_console_appender <- function() {
-  lgr::AppenderConsole$new(
-    layout = outpack_console_layout$new(),
-    filters = list(filter_drop_script_output))
-}
-
-
-filter_drop_script_output <- function(event) {
-  !(event$caller == "outpack::outpack_packet_run" && event$msg == "output")
-}
-
-
-outpack_console_layout <- R6::R6Class(
-  "outpack_console_layout",
-  inherit = lgr::Layout,
-
-  public = list(
-    format_event = function(event) {
-      ## This is the original orderly log format, seems like a
-      ## sensible one to use here, at least for now, as users are
-      ## familar with it.  We'll sort out colouring here later, and/or
-      ## possibly use cli for the final format. For now though we just
-      ## care about getting things out.
-      topic <- event$msg
-      detail <- event$custom$detail %||% ""
-      stopifnot(length(detail) == 1)
-      trimws(sprintf("[ %s ]  %s", format(topic, width = 10), detail))
+  if (log_show(log_level, logger)) {
+    if (logger$console) {
+      log_console(topic, detail, caller, log_level)
     }
-  ))
-
-
-new_root_logger <- function(id, config) {
-  logger <- lgr::get_logger(c("outpack", id))
-  logger_configure(logger, config$logging$console, config$logging$threshold)
-  logger
-}
-
-
-logger_has_console <- function(logger) {
-  "console" %in% names(logger$appenders) ||
-    "console" %in% names(logger$inherited_appenders)
-}
-
-
-logger_configure <- function(logger, console, threshold) {
-  has_console <- logger_has_console(logger)
-  if (console != has_console) {
-    if (has_console) {
-      if ("console" %in% names(logger$appenders)) {
-        logger$remove_appender("console")
-      }
-      ## Technically this is too big a hammer, because it prevents any
-      ## forwarding to the parent logger. However, it works fine with
-      ## the way that we do use things because the parent logger only
-      ## contains at most one logger, which *is* the console logger.
-      ##
-      ## lgr does not seem to have a sensible way of forwarding to
-      ## only some of the inherited appenders, so if this is not
-      ## enough we'll need to do inheritance slightly differently
-      ## (e.g., copy appenders out of the parent into the child and
-      ## not propagate).
-      if ("console" %in% names(logger$inherited_appenders)) {
-        logger$set_propagate(FALSE)
-      }
-    } else {
-      logger$add_appender(outpack_console_appender(), name = "console")
+    if (!is.null(logger$json)) {
+      logger$json$append(topic, detail, caller, log_level)
     }
   }
-  logger$set_threshold(threshold)
 }
 
 
-new_packet_logger <- function(path, root, id, console, threshold) {
-  console <- console %||% root$config$logging$console
-  threshold <- threshold %||% root$config$logging$threshold
-  assert_scalar_logical(console, "logging_console")
-  stopifnot(fs::is_dir(path))
-  logger <- lgr::get_logger(c("outpack", root$id, id))
-  file_json <- tempfile("outpack-log-", fileext = ".json")
-  logger$add_appender(lgr::AppenderJson$new(file_json), name = "json")
-  logger_configure(logger, console, threshold)
-  logger
+outpack_log_info <- function(object, topic, detail, caller) {
+  outpack_log(object, "info", topic, detail, caller)
 }
 
 
-## We might tweak this later
-read_log_json <- function(path, ...) {
-  lgr::read_json_lines(path, ...)
+outpack_log_debug <- function(object, topic, detail, caller) {
+  outpack_log(object, "debug", topic, detail, caller)
+}
+
+
+outpack_packet_logger <- function(path, root, console, threshold) {
+  ret <- root$config$logging
+  ret$json <- log_collector_json()
+
+  ## Override root defaults with arguments:
+  if (!is.null(console)) {
+    ret$console <- assert_scalar_logical(console, "logging_console")
+  }
+  if (!is.null(threshold)) {
+    ret$threshold <- log_level_check(threshold)
+  }
+
+  ret
+}
+
+
+log_console <- function(topic, detail, caller, log_level) {
+  ## Filter out some log types; these will never want echoing to the
+  ## console like via this function and I imagine that this list will
+  ## grow...
+  if (caller == "outpack::outpack_packet_run" && topic == "output") {
+    return()
+  }
+  if (length(detail) > 1) {
+    topic <- c(topic, rep_len("...", length(detail) - 1))
+  }
+  ## This is the original orderly log format, seems like a sensible
+  ## one to use here, at least for now, as users are familar with it.
+  ## We'll sort out colouring here later, and/or possibly use cli for
+  ## the final format. For now though we just care about getting
+  ## things out.
+  str <- trimws(sprintf("[ %s ]  %s", format(topic, width = 10), detail))
+  message(paste(str, collapse = "\n"))
+}
+
+
+log_collector_json <- function() {
+  env <- new.env(parent = emptyenv())
+  env$data <- list()
+  list(
+    append = function(topic, detail, caller, log_level) {
+      el <- list(topic = topic,
+                 detail = detail,
+                 caller = caller,
+                 log_level = log_level,
+                 time = as.numeric(Sys.time()))
+      env$data <- c(env$data, list(el))
+    },
+    get = function() {
+      log_serialise(env$data)
+    }
+  )
+}
+
+
+log_serialise <- function(data) {
+  log_serialise_entry <- function(el) {
+    if (length(el$detail) != 1) {
+      el$detail <- I(el$detail)
+    }
+    el
+  }
+  data <- lapply(data, log_serialise_entry)
+  to_json(data, "log", auto_unbox = TRUE, digits = NA)
+}
+
+
+log_read <- function(path) {
+  d <- from_json(path, simplifyDataFrame = TRUE)
+  if (is.character(d$detail)) {
+    d$detail <- I(as.list(d$detail))
+  }
+  d$time <- num_to_time(d$time)
+  d
+}
+
+
+log_levels <- c("info", "debug", "trace")
+
+
+log_level_check <- function(level, name = deparse(substitute(level))) {
+  match_value(level, log_levels, name)
+}
+
+
+log_show <- function(log_level, logger) {
+  match(log_level_check(log_level), log_levels) <=
+    match(logger$threshold, log_levels)
 }

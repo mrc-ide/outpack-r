@@ -60,9 +60,9 @@ outpack_init <- function(root, path_archive = "archive",
   config_write(config, root)
 
   ret <- outpack_root$new(root)
-  outpack_log_info("init", root, ret, "outpack::outpack_init")
+  outpack_log_info(ret, "init", root, "outpack::outpack_init")
 
-  invisible(outpack_root$new(root))
+  invisible(ret)
 }
 
 
@@ -120,10 +120,9 @@ outpack_root <- R6::R6Class(
       if (self$config$core$use_file_store) {
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
-      self$logger <- new_root_logger(self$id, self$config)
+      self$logger <- self$config$logging
       lockBinding("path", self)
       lockBinding("id", self)
-      lockBinding("logger", self)
     },
 
     metadata = function(id, full = FALSE) {

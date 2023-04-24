@@ -71,20 +71,11 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
     validate_outpack_id(id)
   }
 
-  logger <- new_packet_logger(path, root, id,
-                              logging_console, logging_threshold)
+  logger <- outpack_packet_logger(path, root, logging_console,
+                                  logging_threshold)
   caller <- "outpack::outpack_packet_start"
 
   time <- list(start = Sys.time())
-
-  outpack_log_info("name", name, logger, caller)
-  outpack_log_info("id", id, logger, caller)
-  if (length(parameters) > 0) {
-    outpack_log_info("parameter",
-                     sprintf("%s: %s", names(parameters), unname(parameters)),
-                     logger, caller)
-  }
-  outpack_log_info("start", format(time$start), logger, caller)
 
   packet <- structure(
     list2env(
@@ -100,6 +91,14 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
       parent = emptyenv()),
     class = "outpack_packet")
 
+  outpack_log_info(packet, "name", name, caller)
+  outpack_log_info(packet, "id", id, caller)
+  if (length(parameters) > 0) {
+    detail <- sprintf("%s: %s", names(parameters), unname(parameters))
+    outpack_log_info(packet, "parameter", detail, caller)
+  }
+  outpack_log_info(packet, "start", format(time$start), caller)
+
   if (!local) {
     current$packet <- packet
   }
@@ -113,7 +112,7 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
 ##' @param packet Optionally, an explicitly-passed packet; see Details
 outpack_packet_cancel <- function(packet = NULL) {
   p <- check_current_packet(packet)
-  outpack_log_info("cancel", p$id, p, "outpack::outpack_packet_cancel")
+  outpack_log_info(p, "cancel", p$id, "outpack::outpack_packet_cancel")
   outpack_packet_finish(p)
 }
 
@@ -132,11 +131,9 @@ outpack_packet_end <- function(packet = NULL) {
   p$time$end <- Sys.time()
   hash_algorithm <- p$root$config$core$hash_algorithm
   caller <- "outpack::outpack_packet_end"
-  outpack_log_info("end", format(p$time$end), p, caller)
-  outpack_log_info("elapsed", format(p$time$end - p$time$start), p, caller)
-  fs::file_copy(p$logger$appenders$json$destination,
-                file.path(p$path, "log.json"),
-                overwrite = TRUE)
+  outpack_log_info(p, "end", format(p$time$end), caller)
+  outpack_log_info(p, "elapsed", format(p$time$end - p$time$start), caller)
+  writeLines(p$logger$json$get(), file.path(p$path, "log.json"))
   json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
                                   files = NULL,
                                   depends = p$depends,
@@ -166,7 +163,7 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, packet = NULL) {
   assert_file_exists(script, p$path, "Script")
   caller <- "outpack::outpack_packet_run"
 
-  outpack_log_info("script", script, p, caller)
+  outpack_log_info(p, "script", script, caller)
 
   ## TODO: not sure that this is the correct environment; should it be
   ## parent.frame() perhaps (see default args to new.env)
@@ -184,27 +181,20 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, packet = NULL) {
 
   ## TODO: What should we do/store on error?
 
-  ## TODO: be careful with nesting; as that complicates the logs
-
+  ## TODO: be careful with nesting; as that complicates the logs and
+  ## in particular the sinks.
   info <- outpack_packet_run_global_state()
-
-  ## I think that here we want to take the same value as the computed
-  ## console print value, but it's possible this wants separate
-  ## configuration perhaps? It's also possible that we should enable
-  ## console logging in the script for the duration of the function
-  ## here?
-  echo <- logger_has_console(p$logger)
 
   ## It's important to do the global state check in the packet working
   ## directory (not the calling working directory) otherwise we might
   ## write out files in unexpected places when flushing devices.
+  echo <- p$logger$console
   with_dir(p$path, {
     output <- source_and_capture(script, envir, echo)
     outpack_packet_run_check_global_state(info)
   })
 
-  ## This is fine, except that we don't actually cope with nesting yet.
-  outpack_log_info("output", I(output), p$logger, caller)
+  outpack_log_info(p, "output", I(output), caller)
 
   p$script <- c(p$script, script)
 

@@ -92,9 +92,10 @@ empty_time <- function() {
 }
 
 
-to_json <- function(x, schema) {
-  json <- jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
-                           json_verbatim = TRUE, na = "null", null = "null")
+to_json <- function(x, schema, auto_unbox = FALSE, ...) {
+  json <- jsonlite::toJSON(x, pretty = FALSE, auto_unbox = auto_unbox,
+                           json_verbatim = TRUE, na = "null", null = "null",
+                           ...)
   if (should_validate_schema(schema)) {
     outpack_schema(schema)$validate(json, error = TRUE)
   }

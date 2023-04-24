@@ -328,20 +328,22 @@ test_that("Unchanged require_complete_tree prints message", {
 test_that("can set logging threshold", {
   root <- create_temporary_root()
   expect_equal(root$config$logging,
-               list(console = FALSE, threshold = 400))
+               list(console = FALSE, threshold = "info"))
 
   outpack_config_set(logging.threshold = "debug", root = root)
-  expect_equal(root$config$logging$threshold, 500)
+  expect_equal(root$config$logging$threshold, "debug")
   expect_equal(
     outpack_root_open(root$path, FALSE)$config$logging$threshold,
-    500)
+    "debug")
 })
 
 
 test_that("reject invalid logging thresholds", {
   root <- create_temporary_root()
   expect_error(
-    outpack_config_set(logging.threshold = "unknown", root = root))
+    outpack_config_set(logging.threshold = "unknown", root = root),
+    "logging.threshold must be one of 'info', 'debug', 'trace'",
+    fixed = TRUE)
 })
 
 
@@ -349,17 +351,13 @@ test_that("can control console logging", {
   root <- create_temporary_root()
   outpack_config_set(logging.console = TRUE, root = root)
   expect_true(root$config$logging$console)
-  expect_true("console" %in% names(root$logger$appenders))
 
   root2 <- outpack_root_open(root$path, FALSE)
   expect_true(root2$config$logging$console)
-  expect_true("console" %in% names(root2$logger$appenders))
 
   outpack_config_set(logging.console = FALSE, root = root)
   expect_false(root$config$logging$console)
-  expect_false("console" %in% names(root$logger$appenders))
 
   root3 <- outpack_root_open(root$path, FALSE)
   expect_false(root3$config$logging$console)
-  expect_false("console" %in% names(root3$logger$appenders))
 })
