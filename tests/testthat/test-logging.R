@@ -154,7 +154,7 @@ test_that("control logging threshold", {
     "[ hello      ]  info", fixed = TRUE)
   expect_message(
     outpack_log_debug(object, "hello", "debug", "test"),
-    "[ hello      ]  info", fixed = TRUE)
+    "[ hello      ]  debug", fixed = TRUE)
   expect_message(
     outpack_log_debug(object, "hello", "trace", "test"),
     "[ hello      ]  trace", fixed = TRUE)

@@ -206,8 +206,7 @@ config_new <- function(path_archive, use_file_store, require_complete_tree,
       hash_algorithm = hash_algorithm),
     logging = list(
       console = logging_console,
-      threshold = logging_threshold
-    ),
+      threshold = logging_threshold),
     location = new_location_entry(local, 0, "local", NULL))
 }
 

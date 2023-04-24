@@ -108,7 +108,6 @@ outpack_root <- R6::R6Class(
     path = NULL,
     config = NULL,
     files = NULL,
-    id = NULL,
     logger = NULL,
 
     initialize = function(path) {
@@ -122,7 +121,6 @@ outpack_root <- R6::R6Class(
       }
       self$logger <- self$config$logging
       lockBinding("path", self)
-      lockBinding("id", self)
     },
 
     metadata = function(id, full = FALSE) {

@@ -2,6 +2,7 @@
 ## disabled on CRAN, and only enabled if jsonvalidate is found.
 options(outpack.schema_validate = TRUE)
 
+
 create_random_packet <- function(root, name = "data", parameters = NULL) {
   src <- fs::dir_create(tempfile())
   on.exit(unlink(src, recursive = TRUE))
