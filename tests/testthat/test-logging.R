@@ -132,3 +132,30 @@ test_that("sensible handling of parameter vectors", {
   expect_equal(msg[[3]], "[ parameter  ]  a: 1\n[ ...        ]  b: 2\n")
   expect_match(msg[[4]], "^\\[ start")
 })
+
+
+test_that("control logging threshold", {
+  object <- structure(
+    list(logger = list(console = TRUE, threshold = "info")),
+    class = "outpack_root")
+  expect_message(
+    outpack_log_info(object, "hello", "info", "test"),
+    "[ hello      ]  info", fixed = TRUE)
+  expect_silent(
+    outpack_log_debug(object, "hello", "debug", "test"))
+  expect_silent(
+    outpack_log_debug(object, "hello", "trace", "test"))
+
+  object <- structure(
+    list(logger = list(console = TRUE, threshold = "debug")),
+    class = "outpack_root")
+  expect_message(
+    outpack_log_info(object, "hello", "info", "test"),
+    "[ hello      ]  info", fixed = TRUE)
+  expect_message(
+    outpack_log_debug(object, "hello", "debug", "test"),
+    "[ hello      ]  info", fixed = TRUE)
+  expect_message(
+    outpack_log_debug(object, "hello", "trace", "test"),
+    "[ hello      ]  trace", fixed = TRUE)
+})
