@@ -1,3 +1,35 @@
+##' Create a log entry from outpack. This can be used to either log at
+##' the packet level (in which case `object` should be a packet
+##' object) or root level (in which case pass a root). What is
+##' actually printed to the screen or log files depends on the
+##' thresholds and settings in the root and console. The functions
+##' `outpack_log_info`, `outpack_log_debug` and outpack_log_trace` are
+##' convenience wrappers around `outpack_log` and should be preferred.
+##'
+##' @title Create log entry
+##'
+##' @param object Either an `outpack_packet` or `outpack_root` object;
+##'   anything else is an error for now.
+##'
+##' @param log_level A log level; one of `info`, `debug` or `trace` in
+##'   increasing order of verbosity (`trace` being a superset of
+##'   `debug`, which is a superset of `info`). There is no `warning`
+##'   or `error` log level
+##'
+##' @param topic A short string (less than 10 characters) as the title
+##'   of the action.
+##'
+##' @param detail A character vector of any length to be used as
+##'   detail for the logs. If you provide a single string this *will*
+##'   be unboxed in the final JSON. If you want to force an array of
+##'   strings, use `I()` around the value here (see
+##'   [jsonlite::toJSON]'s documentation on `auto_unbox`)
+##'
+##' @param caller The name of the calling function; include the
+##'   package name here.
+##'
+##' @return Nothing, this is called for its side effects
+##' @export
 outpack_log <- function(object, log_level, topic, detail, caller) {
   if (inherits(object, "outpack_packet") || inherits(object, "outpack_root")) {
     logger <- object$logger
@@ -20,13 +52,24 @@ outpack_log <- function(object, log_level, topic, detail, caller) {
 }
 
 
+##' @export
+##' @rdname outpack_log
 outpack_log_info <- function(object, topic, detail, caller) {
   outpack_log(object, "info", topic, detail, caller)
 }
 
 
+##' @export
+##' @rdname outpack_log
 outpack_log_debug <- function(object, topic, detail, caller) {
   outpack_log(object, "debug", topic, detail, caller)
+}
+
+
+##' @export
+##' @rdname outpack_log
+outpack_log_trace <- function(object, topic, detail, caller) {
+  outpack_log(object, "trace", topic, detail, caller)
 }
 
 
@@ -86,13 +129,6 @@ log_collector_json <- function() {
 
 
 log_serialise <- function(data) {
-  log_serialise_entry <- function(el) {
-    if (length(el$detail) != 1) {
-      el$detail <- I(el$detail)
-    }
-    el
-  }
-  data <- lapply(data, log_serialise_entry)
   to_json(data, "log", auto_unbox = TRUE, digits = NA)
 }
 

@@ -95,7 +95,7 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
   outpack_log_info(packet, "id", id, caller)
   if (length(parameters) > 0) {
     detail <- sprintf("%s: %s", names(parameters), unname(parameters))
-    outpack_log_info(packet, "parameter", detail, caller)
+    outpack_log_info(packet, "parameter", I(detail), caller)
   }
   outpack_log_info(packet, "start", format(time$start), caller)
 

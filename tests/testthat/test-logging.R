@@ -119,6 +119,7 @@ test_that("can safely deserialise logs that would otherwise simplify", {
 
 
 test_that("sensible handling of parameter vectors", {
+  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   path_src <- create_temporary_simple_src()
   msg <- capture_messages(

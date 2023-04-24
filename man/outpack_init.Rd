@@ -8,7 +8,9 @@ outpack_init(
   root,
   path_archive = "archive",
   use_file_store = FALSE,
-  require_complete_tree = FALSE
+  require_complete_tree = FALSE,
+  logging_console = TRUE,
+  logging_threshold = "info"
 )
 }
 \arguments{
@@ -32,6 +34,13 @@ always operates in recursive mode.  This is \code{FALSE} by default,
 but set to \code{TRUE} if you want your archive to behave well as a
 location; if \code{TRUE} you will always have all the packets that
 you hold metadata about.}
+
+\item{logging_console}{Logical, indicating if we should log to the
+console. If \code{TRUE}, then many operations will produce
+informational output; set to \code{FALSE} to prevent this.}
+
+\item{logging_threshold}{The degree of verbosity; this reflects
+lgr's structures and we might change it later.}
 }
 \value{
 Invisibly, an \code{outpack_root} object; these will change in
