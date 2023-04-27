@@ -345,11 +345,10 @@ outpack_packet_file_mark <- function(files, status, packet = NULL) {
                    paste(squote(intersect(files, p$files$ignored)),
                          collapse = ", ")))
     }
-    if (any(files %in% names(p$files$immutable))) {
-      validate_hashes(value, p$files$immutable)
-      value <- value[!(names(value) %in% names(p$files))]
-    }
 
+    prev <- names(p$files$immutable)
+    validate_hashes(value, p$files$immutable[intersect(files, prev)])
+    value <- value[setdiff(names(value), prev)]
     p$files$immutable <- c(p$files$immutable, value)
   } else if (status == "ignored") {
     if (any(files %in% names(p$files$immutable))) {
