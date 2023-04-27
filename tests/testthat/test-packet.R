@@ -669,3 +669,36 @@ test_that("run basic report with explicit packet", {
   expect_equal(names(root$index()$metadata), p$id)
   expect_true(p$complete)
 })
+
+
+test_that("can mark subsets of files immutably without error", {
+  on.exit(outpack_packet_clear(), add = TRUE)
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+
+  path_src <- temp_file()
+  fs::dir_create(path_src)
+  for (i in letters[1:6]) {
+    writeLines(i, file.path(path_src, i))
+  }
+  hash <- with_dir(path_src, hash_files(letters[1:6], "sha256", named = TRUE))
+
+  p <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
+  outpack_packet_file_mark(c("a", "b", "c"), "immutable", packet = p)
+  expect_equal(p$files$immutable, hash[1:3])
+
+  expect_silent(
+    outpack_packet_file_mark(c("b", "c"), "immutable", packet = p))
+  expect_equal(p$files$immutable, hash[1:3])
+
+  expect_silent(
+    outpack_packet_file_mark(c("b", "e", "f"), "immutable", packet = p))
+  expect_equal(p$files$immutable, hash[c("a", "b", "c", "e", "f")])
+
+  expect_silent(
+    outpack_packet_file_mark("d", "immutable", packet = p))
+  expect_equal(p$files$immutable, hash[c("a", "b", "c", "e", "f", "d")])
+
+  expect_silent(
+    outpack_packet_file_mark(names(hash), "immutable", packet = p))
+  expect_equal(p$files$immutable, hash[c("a", "b", "c", "e", "f", "d")])
+})
