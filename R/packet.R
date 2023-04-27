@@ -38,8 +38,8 @@
 ##'
 ##' @param logging_threshold Optional log threshold, indicating if we
 ##'   override the root's default in logging to the console. A value
-##'   of `NULL` uses the root value, otherwise use a `lgr`-compatible
-##'   log threshold (e.g., `debug`, `all`, etc)
+##'   of `NULL` uses the root value, otherwise use `info`, `debug` or
+##'   `trace` (in increasing order of verbosity).
 ##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
@@ -422,7 +422,6 @@ outpack_packet_clear <- function() {
 
 outpack_packet_finish <- function(packet) {
   packet$complete <- TRUE
-  unlink(packet$logger$appenders$json$destination)
   if (identical(packet, current$packet)) {
     current$packet <- NULL
   }

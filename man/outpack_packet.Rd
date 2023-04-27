@@ -52,8 +52,8 @@ it even when this is enabled by the root.}
 
 \item{logging_threshold}{Optional log threshold, indicating if we
 override the root's default in logging to the console. A value
-of \code{NULL} uses the root value, otherwise use a \code{lgr}-compatible
-log threshold (e.g., \code{debug}, \code{all}, etc)}
+of \code{NULL} uses the root value, otherwise use \code{info}, \code{debug} or
+\code{trace} (in increasing order of verbosity).}
 
 \item{local}{Logical, indicating if this should be considered a
 "local" packet and not set as the default for other packet
