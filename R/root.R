@@ -439,3 +439,22 @@ validate_packet_has_file <- function(root, id, path) {
                  id, paste(squote(err), collapse = ", ")))
   }
 }
+
+
+root_unknown_packets <- function(ids, root) {
+  setdiff(ids, root$index()$unpacked$packet)
+}
+
+
+root_unknown_files <- function(hashes, root) {
+  if (root$config$core$use_file_store) {
+    hashes[!root$files$exists(hashes)]
+  } else {
+    idx <- root$index()
+    if (length(idx$unpacked$packet) == 0) {
+      return(hashes)
+    }
+    browser()
+    stop("This operation not supported")
+  }
+}

@@ -1,0 +1,31 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "contents of a zip file used to transfer between outpack repositories",
+    "version": "0.0.1",
+
+    "type": "object",
+    "properties": {
+        "metadata": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "$ref": "id.json"
+                    },
+                    "hash": {
+                        "$ref": "hash.json"
+                    }
+                },
+                "required": ["id", "hash"]
+            }
+        },
+        "files": {
+            "type": "array",
+            "items": {
+                "$ref": "hash.json"
+            }
+        }
+    },
+    "required": ["metadata", "files"]
+}

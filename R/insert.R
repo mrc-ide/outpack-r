@@ -5,29 +5,15 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   assert_directory(path)
 
-  ## TODO(RFC): Is 'local' really the only valid choice here?  It feels
-  ## like we could allow for temporary locations and implement
-  ## transactions this way.
-  location_name <- local
-  location_id <- root$config$location$id[
-    root$config$location$name == location_name]
+  location_id <- local_location_id(root)
+  packet_id <- meta$id
 
-  hash_algorithm <- root$config$core$hash_algorithm
-
-  ## At this point we need to require that 'id' is not known to the
-  ## system at least in any remote, but possibly also not in the
-  ## entire metadata store?
-  id <- meta$id
-
-  ## TODO: For 'insert', rather than 'import', do we want to check for
-  ## *any* packet that exists?  For now it's academic as there's no
-  ## equivalent to "pull" so this is the only way that things might
-  ## appear.
   index <- root$index()
-  exists <- any(index$location$packet == id &
+  exists <- any(index$location$packet == packet_id &
                 index$location$location == location_id)
   if (exists) {
-    stop(sprintf("'%s' has already been added for '%s'", id, location_name))
+    stop(sprintf("'%s' has already been added for '%s'",
+                 packet_id, location_name))
   }
 
   for (i in seq_len(nrow(meta$depends))) {
@@ -41,17 +27,10 @@ outpack_insert_packet <- function(path, json, root = NULL) {
     file_import_store(root, path, meta$files$path, meta$files$hash)
   }
   if (!is.null(root$config$core$path_archive)) {
-    file_import_archive(root, path, meta$files$path, meta$name, meta$id)
+    file_import_archive(root, path, meta$files$path, meta$name, packet_id)
   }
 
-  path_meta <- file.path(root$path, ".outpack", "metadata", id)
-  writeLines(json, path_meta)
-
-  ## TODO: once we get more flexible remotes, this will get moved into
-  ## its own thing.
-  hash <- hash_data(json, hash_algorithm)
-  mark_packet_known(id, location_id, hash, Sys.time(), root)
-  mark_packet_unpacked(id, location_id, root)
+  write_metadata(json, packet_id, Sys.time(), location_id, root)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
@@ -59,23 +38,39 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 }
 
 
-mark_packet_known <- function(packet_id, location_id, hash, time, root) {
-  dat <- list(schema_version = scalar(outpack_schema_version()),
-              packet = scalar(packet_id),
-              time = scalar(time_to_num(time)),
-              hash = scalar(hash))
-  dest <- file.path(root$path, ".outpack", "location", location_id, packet_id)
-  fs::dir_create(dirname(dest))
-  writeLines(to_json(dat, "location"), dest)
+write_metadata <- function(json, packet_id, time, location_id, root) {
+  hash_algorithm <- root$config$core$hash_algorithm
+  hash <- hash_data(json, hash_algorithm)
+  path_meta <- file.path(root$path, ".outpack", "metadata", packet_id)
+  if (!file.exists(path_meta)) {
+    writeLines(json, path_meta)
+  }
+  mark_packet_known(packet_id, location_id, hash, time, root)
+  mark_packet_unpacked(packet_id, location_id, time, root)
 }
 
 
-mark_packet_unpacked <- function(packet_id, location_id, root) {
-  dat <- list(schema_version = scalar(outpack_schema_version()),
-              packet = scalar(packet_id),
-              time = scalar(time_to_num()),
-              location = scalar(location_id))
+mark_packet_known <- function(packet_id, location_id, hash, time, root) {
+  dest <- file.path(root$path, ".outpack", "location", location_id, packet_id)
+  if (!file.exists(dest)) {
+    dat <- list(schema_version = scalar(outpack_schema_version()),
+                packet = scalar(packet_id),
+                time = scalar(time_to_num(time)),
+                hash = scalar(hash))
+    fs::dir_create(dirname(dest))
+    writeLines(to_json(dat, "location"), dest)
+  }
+}
+
+
+mark_packet_unpacked <- function(packet_id, location_id, time, root) {
   dest <- file.path(root$path, ".outpack", "unpacked", packet_id)
-  fs::dir_create(dirname(dest))
-  writeLines(to_json(dat, "unpacked"), dest)
+  if (!file.exists(dest)) {
+    dat <- list(schema_version = scalar(outpack_schema_version()),
+                packet = scalar(packet_id),
+                time = scalar(time_to_num(time)),
+                location = scalar(location_id))
+    fs::dir_create(dirname(dest))
+    writeLines(to_json(dat, "unpacked"), dest)
+  }
 }

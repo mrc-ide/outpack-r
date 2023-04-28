@@ -143,3 +143,87 @@ test_that("sensible error if file not found in archive", {
     "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
   expect_false(file.exists(dest))
 })
+
+
+## This is the pattern that pete has; all comands are executed on the
+## 'client' and the aim is to push the packets into the 'server':
+test_that("Import complete tree via push into server with file store only", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  outpack_location_push(ids[[4]], "server", client)
+
+  idx_c <- client$index()
+  idx_s <- server$index()
+
+  expect_equal(idx_s$metadata, idx_c$metadata)
+  expect_equal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_equal(idx_s$location$packet, idx_c$location$packet)
+  expect_equal(idx_s$location$hash, idx_c$location$hash)
+})
+
+
+test_that("Import complete tree via push into server with store and archive", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = TRUE)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  outpack_location_push(ids[[4]], "server", client)
+
+  idx_c <- client$index()
+  idx_s <- server$index()
+
+  expect_equal(idx_s$metadata, idx_c$metadata)
+  expect_equal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_equal(idx_s$location$packet, idx_c$location$packet)
+  expect_equal(idx_s$location$hash, idx_c$location$hash)
+
+  files_c <- withr::with_dir(client$path,
+                             fs::dir_ls("archive", all = TRUE, recurse = TRUE))
+  files_s <- withr::with_dir(server$path,
+                             fs::dir_ls("archive", all = TRUE, recurse = TRUE))
+  expect_equal(files_c, files_s)
+
+  i <- fs::is_file(file.path(client$path, files_c))
+  expect_equal(
+    hash_files(file.path(client$path, files_c[i])),
+    hash_files(file.path(server$path, files_s[i])))
+})
+
+
+test_that("Import complete tree via push into server only archive", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = FALSE)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  outpack_location_push(ids[[4]], "server", client)
+
+  idx_c <- client$index()
+  idx_s <- server$index()
+
+  expect_equal(idx_s$metadata, idx_c$metadata)
+  expect_equal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_equal(idx_s$location$packet, idx_c$location$packet)
+  expect_equal(idx_s$location$hash, idx_c$location$hash)
+
+  files_c <- withr::with_dir(client$path,
+                             fs::dir_ls("archive", all = TRUE, recurse = TRUE))
+  files_s <- withr::with_dir(server$path,
+                             fs::dir_ls("archive", all = TRUE, recurse = TRUE))
+  expect_equal(files_c, files_s)
+
+  i <- fs::is_file(file.path(client$path, files_c))
+  expect_equal(
+    hash_files(file.path(client$path, files_c[i])),
+    hash_files(file.path(server$path, files_s[i])))
+})

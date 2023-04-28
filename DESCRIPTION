@@ -18,7 +18,8 @@ Imports:
     fs,
     gert,
     jsonlite,
-    openssl
+    openssl,
+    zip
 Suggests:
     httr,
     jsonvalidate (>= 1.4.0),

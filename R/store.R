@@ -5,6 +5,12 @@
 ## the content is stored as is (not in git's 'blob <content>|tree
 ## <content>' format), and we include an additional layer with the
 ## hash used.
+##
+## TODO: When importing with a different algorithm, we should be able
+## to link. So suppose we import some data that was hashed with md5
+## but we want to use sha256 we should be able to import it into the
+## md5 part of the file, then create a link (hard link perhaps) to the
+## sha256 of the same file.
 file_store <- R6::R6Class(
   "file_store",
   cloneable = FALSE,
@@ -71,6 +77,21 @@ file_store <- R6::R6Class(
 
     destroy = function() {
       fs::dir_delete(self$path)
+    },
+
+    import = function(hash, other, validate = TRUE) {
+      src <- other$filename(hash)
+      dst <- self$filename(hash)
+      i <- !fs::file_exists(dst)
+      if (any(i)) {
+        if (validate) {
+          for (j in which(i)) {
+            hash_validate(src[i][[j]], hash[i][[j]])
+          }
+        }
+        fs::dir_create(dirname(dst[i]))
+        fs::file_copy(src[i], dst[i])
+      }
     },
 
     tmp = function() {

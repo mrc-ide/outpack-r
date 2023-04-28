@@ -319,6 +319,30 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 }
 
 
+##' Push packets into a location. Potentially a costly operation.
+##'
+##' @title Push packets into a location
+##'
+##' @param ids A vector of packets
+##' @param location The name of the location to push to
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Undecided
+##'
+##' @export
+outpack_location_push <- function(ids, location, root) {
+  root <- outpack_root_open(root, locate = TRUE)
+  assert_scalar_character(location)
+  location_id <- location_resolve_valid(location, root,
+                                        include_local = FALSE,
+                                        allow_no_locations = FALSE)
+  dest <- tempfile(fileext = ".zip")
+  driver <- location_driver(location_id, root)
+  create_zip(ids, driver, root, dest)
+}
+
+
 location_driver <- function(location_id, root) {
   i <- match(location_id, root$config$location$id)
   type <- root$config$location$type[[i]]
@@ -525,6 +549,11 @@ lookup_location_id <- function(name, root) {
 
 lookup_location_name <- function(id, root) {
   root$config$location$name[match(id, root$config$location$id)]
+}
+
+
+local_location_id <- function(root) {
+  lookup_location_id(local, root)
 }
 
 

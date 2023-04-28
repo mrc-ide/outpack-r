@@ -161,3 +161,8 @@ collector <- function() {
     }
   )
 }
+
+
+list_to_character <- function(x, named = FALSE) {
+  vcapply(x, identity, USE.NAMES = named)
+}
