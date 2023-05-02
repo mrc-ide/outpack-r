@@ -312,7 +312,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
     driver <- location_driver(plan$location_id[i], root)
     location_pull_files_store(root, driver, plan$packet[i])
     location_pull_files_archive(root, driver, plan$packet[i])
-    mark_packet_unpacked(plan$packet[i], plan$location_id[i], root)
+    mark_packet_unpacked(plan$packet[i], plan$location_id[i], Sys.time(), root)
   }
 
   invisible(id)
@@ -323,23 +323,36 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 ##'
 ##' @title Push packets into a location
 ##'
-##' @param ids A vector of packets
+##' @param packet_ids One or more packet identifiers
+##'
 ##' @param location The name of the location to push to
 ##'
 ##' @inheritParams outpack_location_list
 ##'
-##' @return Undecided
+##' @return Invisibly, details of the files copied to the location;
+##'   this is a list with elements:
+##'
+##' * metadata: A `data.frame` with columns `id` and `hash`
+##'   corresponding to the packet identifier and hash of metadata that
+##'   was missing on the location but which has been pushed.
+##' * files: A vector of hashes of files that were copied
 ##'
 ##' @export
-outpack_location_push <- function(ids, location, root) {
+outpack_location_push <- function(packet_ids, location, root) {
   root <- outpack_root_open(root, locate = TRUE)
   assert_scalar_character(location)
   location_id <- location_resolve_valid(location, root,
                                         include_local = FALSE,
                                         allow_no_locations = FALSE)
-  dest <- tempfile(fileext = ".zip")
-  driver <- location_driver(location_id, root)
-  create_zip(ids, driver, root, dest)
+  plan <- location_build_push_plan(packet_ids, location_id, root)
+
+  zipfile <- tempfile(fileext = ".zip")
+  on.exit(unlink(zipfile))
+  create_export_zip(plan, root, zipfile)
+
+  location_driver(location_id, root)$import(zipfile)
+
+  invisible(plan)
 }
 
 
@@ -508,6 +521,35 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
   }
 
   plan
+}
+
+
+location_build_push_plan <- function(packet_id, location_id, root) {
+  driver <- location_driver(location_id, root)
+
+  ## The first part is to get the full set of ids within a chain - we
+  ## have support for this in the query index but I am not certain
+  ## that's the best way to achive this.
+  ##
+  ## TODO: check these are all unpacked here!
+  packet_id <- recursive_dependencies(packet_id, root)
+
+  ## Which of these does the server not know about:
+  packet_id_msg <- driver$unknown_packets(packet_id)
+
+  if (length(packet_id_msg) == 0) {
+    files_msg <- character(0)
+  } else {
+    metadata <- root$index()$metadata
+    ## All files across all missing ids:
+    files <- unique(unlist(
+      lapply(packet_id_msg, function(i) metadata[[i]]$files$hash)))
+
+    ## Which of these does the server not know about:
+    files_msg <- driver$unknown_files(files)
+  }
+
+  list(packet_id = packet_id_msg, files = files_msg)
 }
 
 

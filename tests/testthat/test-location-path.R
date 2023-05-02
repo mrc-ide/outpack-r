@@ -227,3 +227,31 @@ test_that("Import complete tree via push into server only archive", {
     hash_files(file.path(client$path, files_c[i])),
     hash_files(file.path(server$path, files_s[i])))
 })
+
+
+## Here, we import a partial tree and check that it all behaves as
+## expected.
+test_that("Import partial tree via push into server with file store only", {
+  client <- create_temporary_root()
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  ## Create a packet on server
+  id_base <- create_random_packet(server)
+
+  ## Pull that into the client:
+  outpack_location_pull_metadata(root = client)
+  outpack_location_pull_packet(id_base, "server", root = client)
+
+  ids <- create_random_packet_chain(client, 3, id_base)
+  outpack_location_push(ids[[3]], "server", client)
+
+  idx_c <- client$index()
+  idx_s <- server$index()
+
+  expect_mapequal(idx_s$metadata, idx_c$metadata)
+  expect_setequal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_setequal(idx_s$location$packet, idx_c$location$packet)
+  expect_setequal(idx_s$location$hash, idx_c$location$hash)
+})

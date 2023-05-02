@@ -454,7 +454,6 @@ root_unknown_files <- function(hashes, root) {
     if (length(idx$unpacked$packet) == 0) {
       return(hashes)
     }
-    browser()
     stop("This operation not supported")
   }
 }

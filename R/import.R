@@ -5,7 +5,7 @@ import_zip <- function(zip, root) {
   zip::unzip(zip, exdir = tmp)
   path <- file.path(tmp, "outpack")
 
-  res <- import_validate(path, root)
+  res <- import_dir_validate(path, root)
 
   has_archive <- !is.null(root$config$core$path_archive)
   files <- file_store$new(file.path(path, "files"))
@@ -44,79 +44,6 @@ import_zip <- function(zip, root) {
 }
 
 
-sitrep <- function(ids, driver, root) {
-  ## The first part is to get the full set of ids within a chain - we
-  ## have support for this in the query index but I am not certain
-  ## that's the best way to achive this.
-  ids <- recursive_dependencies(ids, root)
-
-  ## Which of these does the server not know about:
-  ids_msg <- driver$unknown_packets(ids)
-
-  if (length(ids_msg) == 0) {
-    files_msg <- character(0)
-  } else {
-    metadata <- root$index()$metadata
-    ## All files across all missing ids:
-    files <- unique(unlist(
-      lapply(ids_msg, function(i) metadata[[i]]$files$hash)))
-
-    ## Which of these does the server not know about:
-    files_msg <- driver$unknown_files(files)
-  }
-
-  list(ids = ids_msg, files = files_msg)
-}
-
-
-create_zip <- function(ids, driver, root, dest) {
-  dat <- sitrep(ids, driver, root)
-  export_zip(root, dat$ids, dat$files, dest)
-  driver$import(dest)
-}
-
-
-export_zip <- function(root, ids, files, dest) {
-  tmp <- tempfile()
-  on.exit(unlink(tmp, recursive = TRUE))
-
-  path <- file.path(tmp, "outpack")
-  fs::dir_create(path)
-
-  ## Metadata:
-  fs::dir_create(file.path(path, "metadata"))
-  fs::file_copy(file.path(root$path, ".outpack", "metadata", ids),
-                file.path(path, "metadata", ids))
-
-  ## We do need to find the files here too, and import them into the
-  ## temporary file store:
-  store <- file_store$new(file.path(path, "files"))
-  if (is.null(root$files)) {
-    for (h in files) {
-      store$put(find_file_by_hash(root, h), h)
-    }
-  } else {
-    store$import(files_msg, root$files, validate = FALSE)
-  }
-
-  ## TODO: do we check that the hashes agree? If so we can avoid this
-  ## lookup entirely and just do a match against the metadata.
-  idx <- root$index()
-  idx_here <-
-    idx$location[idx$location$location == lookup_location_id("local", root), ]
-  hash <- idx_here$hash[match(ids, idx_here$packet)]
-
-  contents <- list(
-    metadata = data_frame(id = ids, hash = hash),
-    files = files)
-  writeLines(to_json(contents, "contents"),
-             file.path(path, "contents.json"))
-
-  zip::zip(dest, "outpack", root = tmp)
-  dest
-}
-
-
 import_zip_validate <- function(file) {
   files <- zip::zip_list(file)$filename
   if (!all(vcapply(fs::path_split(files), "[[", 1) == "outpack")) {
@@ -131,7 +58,7 @@ import_zip_validate <- function(file) {
 }
 
 
-import_validate <- function(path, root) {
+import_dir_validate <- function(path, root) {
   contents <- jsonlite::fromJSON(file.path(path, "contents.json"))
   ids <- contents$metadata$id
   json <- vcapply(file.path(path, "metadata", ids), read_string,
@@ -176,4 +103,41 @@ import_validate <- function(path, root) {
   list(files = contents$files,
        metadata = metadata,
        unpack = unpack)
+}
+
+
+create_export_zip <- function(plan, root, dest) {
+  tmp <- withr::local_tempdir()
+  path <- file.path(tmp, "outpack")
+  fs::dir_create(path)
+
+  ## Metadata:
+  fs::dir_create(file.path(path, "metadata"))
+  fs::file_copy(file.path(root$path, ".outpack", "metadata", plan$packet_id),
+                file.path(path, "metadata", plan$packet_id))
+
+  ## We do need to find the files here too, and import them into the
+  ## temporary file store:
+  store <- file_store$new(file.path(path, "files"))
+  if (root$config$core$use_file_store) {
+    store$import(plan$files, root$files, validate = FALSE)
+  } else {
+    for (h in plan$files) {
+      store$put(find_file_by_hash(root, h), h)
+    }
+  }
+
+  ## TODO: do we check that the hashes agree? If so we can avoid this
+  ## lookup entirely and just do a match against the metadata.
+  idx <- root$index()
+  location_id <- local_location_id(root)
+  idx_here <- idx$location[idx$location$location == location_id, ]
+  hash <- idx_here$hash[match(plan$packet_id, idx_here$packet)]
+
+  contents <- list(metadata = data_frame(id = plan$packet_id, hash = hash),
+                   files = plan$files)
+  writeLines(to_json(contents, "contents"),
+             file.path(path, "contents.json"))
+
+  zip::zip(dest, "outpack", root = tmp)
 }

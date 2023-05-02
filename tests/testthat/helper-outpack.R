@@ -33,7 +33,7 @@ mock_metadata_depends <- function(id, depends = character(0)) {
 
 ## Creates a simple chain of packets a, b, c, ... that depend on each
 ## other.
-create_random_packet_chain <- function(root, length) {
+create_random_packet_chain <- function(root, length, base = NULL) {
   src <- fs::dir_create(tempfile())
   on.exit(unlink(src, recursive = TRUE), add = TRUE)
 
@@ -45,13 +45,15 @@ create_random_packet_chain <- function(root, length) {
     packet <- outpack_packet_start(p, nm, root = root)
     id[[nm]] <- packet$id
 
-    if (i == 1) {
+    if (i == 1 && is.null(base)) {
       saveRDS(runif(10), file.path(p, "data.rds"))
     } else {
-      code <- sprintf("saveRDS(readRDS('input.rds') * %d, 'data.rds')", i)
+      code <- sprintf("saveRDS(readRDS('input.rds') * %d, 'data.rds')",
+                      i + !is.null(base))
       writeLines(code, file.path(p, "script.R"))
-      outpack_packet_use_dependency(packet, id[[letters[i - 1]]],
-                                    c("input.rds" = "data.rds"))
+      outpack_packet_use_dependency(
+        packet, if (i > 1) id[[letters[i - 1]]] else base,
+        c("input.rds" = "data.rds"))
       outpack_packet_run(packet, "script.R")
     }
     outpack_packet_end(packet)
