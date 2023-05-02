@@ -294,11 +294,12 @@ query_error <- function(msg, expr, context, prefix) {
          call. = FALSE)
   } else {
     width <- max(nchar(prefix), nchar("within"))
-    stop(sprintf("%s\n  - %s %s\n  - %s %s",
-                 msg,
-                 format(prefix, width = width), deparse_query(expr),
-                 format("within", width = width), deparse_query(context)),
-         call. = FALSE)
+    stop(sprintf(
+      "%s\n  - %s %s\n  - %s %s",
+      msg,
+      format(prefix, width = width), deparse_query(expr),
+      format("within", width = width), deparse_query(context)),
+      call. = FALSE)
   }
 }
 
@@ -394,7 +395,8 @@ query_parse_value <- function(expr, context, subquery_env) {
          context = context)
   } else {
     query_parse_error(
-      sprintf("Unhandled query expression value '%s'", deparse_query(expr)),
+      sprintf("Unhandled query expression value '%s'",
+              deparse_query(expr)),
       expr, context)
   }
 }

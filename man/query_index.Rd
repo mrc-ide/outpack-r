@@ -15,6 +15,9 @@ Class for managing the active index whilst evaluating a query
 \item{\code{depends}}{Named list of data frames. Names are packet ids, values
 are packets dependend on by this packet id (i.e. its parents).}
 
+\item{\code{uses}}{Named list of data frames. Names are packet ids, values
+are packets which are used by this packet id (i.e. its children).}
+
 \item{\code{root}}{The outpack root object}
 }
 \if{html}{\out{</div>}}
@@ -25,6 +28,7 @@ are packets dependend on by this packet id (i.e. its parents).}
 \item \href{#method-query_index-new}{\code{query_index$new()}}
 \item \href{#method-query_index-scope}{\code{query_index$scope()}}
 \item \href{#method-query_index-get_packet_depends}{\code{query_index$get_packet_depends()}}
+\item \href{#method-query_index-get_packet_uses}{\code{query_index$get_packet_uses()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -33,7 +37,7 @@ are packets dependend on by this packet id (i.e. its parents).}
 \subsection{Method \code{new()}}{
 Create a new query_index object
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{query_index$new(root, index, depends)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{query_index$new(root, index, depends, uses)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -45,6 +49,11 @@ Create a new query_index object
 
 \item{\code{depends}}{Named list of data frames. Names are packet ids, values
 are packets dependend on by this packet id (i.e. its parents).}
+
+\item{\code{uses}}{Named list of data frames. Names are packet ids, values
+are packets used by on by this packet id (i.e. its children). This is
+the same data as \code{depends} but relationships flow in the other
+direction.}
 }
 \if{html}{\out{</div>}}
 }
@@ -92,6 +101,30 @@ recurse the whole tree to get all parents}
 }
 \subsection{Returns}{
 The ids of the parents of this packet
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-query_index-get_packet_uses"></a>}}
+\if{latex}{\out{\hypertarget{method-query_index-get_packet_uses}{}}}
+\subsection{Method \code{get_packet_uses()}}{
+Get the ids of packets which are used by this packet
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{query_index$get_packet_uses(id, depth)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{id}}{The id of the packet to get children of}
+
+\item{\code{depth}}{Depth of children to get, \code{depth} 1 gets immediate children
+\code{depth} 2 gets children and children of children, \code{depth} Inf will
+recurse the whole tree to get all children}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+The ids of the children of this packet
 }
 }
 }

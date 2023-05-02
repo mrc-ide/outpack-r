@@ -1,3 +1,21 @@
+#' Format outpack query for displaying to users
+#'
+#' @param query The outpack query to print
+#'
+#' @return Query expression as a string
+#' @export
+#'
+#' @examples
+#' outpack_query_format(quote(name == "example"))
+outpack_query_format <- function(query) {
+  ok <- is.language(query) || (is.atomic(query) && length(query) == 1)
+  if (!ok) {
+    stop("Cannot format query, it must be a language object or be length 1.")
+  }
+  deparse_query(query)
+}
+
+
 deparse_query <- function(x) {
   if (length(x) == 1) {
     return(deparse_single(x))
@@ -43,7 +61,8 @@ deparse_prefix <- function(fn, args) {
 
 deparse_infix <- function(fn, args) {
   sep <- if (fn == ":") "" else " "
-  paste(deparse_query(args[[1]]), fn, deparse_query(args[[2]]), sep = sep)
+  paste(deparse_query(args[[1]]), fn,
+        deparse_query(args[[2]]), sep = sep)
 }
 
 deparse_brackets <- function(fn, args, closing) {
