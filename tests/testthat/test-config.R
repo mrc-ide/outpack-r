@@ -92,13 +92,14 @@ test_that("Can add file_store", {
   expect_true(fs::dir_exists(root$dst$files$path))
 
   hash_pulled <- root$dst$metadata(id[["c"]])$files$hash
-  expect_equal(length(hash_pulled), 3)
+  expect_equal(length(hash_pulled), 4)
 
   dest <- temp_file()
   dir.create(dest)
   root$dst$files$get(hash_pulled[[1]], dest)
   root$dst$files$get(hash_pulled[[2]], dest)
   root$dst$files$get(hash_pulled[[3]], dest)
+  root$dst$files$get(hash_pulled[[4]], dest)
 
   hash_not_pulled <- root$dst$metadata(id[["a"]])$files$hash
   expect_error(root$dst$files$get(hash_not_pulled[[1]], dest),
@@ -112,11 +113,13 @@ test_that("File store is not added if a hash cannot be resolved", {
 
   id <- create_random_packet(root, name = "test")
 
+  meta <- root$metadata(id)
+
   expect_equal(root$index()$unpacked$packet, id)
-  fs::file_delete(file.path(root$path, "archive", "test", id,
-                            root$metadata(id)$files$path))
+  fs::file_delete(file.path(root$path, "archive", "test", id, "data.rds"))
   regex <- paste("Error adding file store:(.*)",
-    "the following files were missing or corrupted: 'data.rds'")
+                 "the following files were missing or corrupted: 'data.rds'")
+
   expect_error(suppressMessages(
     outpack_config_set(core.use_file_store = TRUE, root = root)),
     regex)
@@ -133,8 +136,7 @@ test_that("Files will be searched for by hash when adding file store", {
   id_new <- create_deterministic_packet(root, name = "data-new")
 
   expect_equal(root$index()$unpacked$packet, c(id, id_new))
-  fs::file_delete(file.path(root$path, "archive", "data", id,
-                            root$metadata(id)$files$path))
+  fs::file_delete(file.path(root$path, "archive", "data", id, "data.rds"))
 
   suppressMessages(outpack_config_set(core.use_file_store = TRUE, root = root))
 
@@ -241,13 +243,14 @@ test_that("Can add archive", {
   outpack_config_set(core.path_archive = NULL, root = root)
 
   hash <- root$metadata(id[["c"]])$files$hash
-  expect_equal(length(hash), 3)
+  expect_equal(length(hash), 4)
 
   dest <- temp_file()
   dir.create(dest)
   root$files$get(hash[[1]], dest)
   root$files$get(hash[[2]], dest)
   root$files$get(hash[[3]], dest)
+  root$files$get(hash[[4]], dest)
 })
 
 
@@ -319,4 +322,42 @@ test_that("Unchanged require_complete_tree prints message", {
   expect_message(
     outpack_config_set(core.require_complete_tree = TRUE, root = root),
     "'core.require_complete_tree' was unchanged")
+})
+
+
+test_that("can set logging threshold", {
+  root <- create_temporary_root()
+  expect_equal(root$config$logging,
+               list(console = FALSE, threshold = "info"))
+
+  outpack_config_set(logging.threshold = "debug", root = root)
+  expect_equal(root$config$logging$threshold, "debug")
+  expect_equal(
+    outpack_root_open(root$path, FALSE)$config$logging$threshold,
+    "debug")
+})
+
+
+test_that("reject invalid logging thresholds", {
+  root <- create_temporary_root()
+  expect_error(
+    outpack_config_set(logging.threshold = "unknown", root = root),
+    "logging.threshold must be one of 'info', 'debug', 'trace'",
+    fixed = TRUE)
+})
+
+
+test_that("can control console logging", {
+  root <- create_temporary_root()
+  outpack_config_set(logging.console = TRUE, root = root)
+  expect_true(root$config$logging$console)
+
+  root2 <- outpack_root_open(root$path, FALSE)
+  expect_true(root2$config$logging$console)
+
+  outpack_config_set(logging.console = FALSE, root = root)
+  expect_false(root$config$logging$console)
+
+  root3 <- outpack_root_open(root$path, FALSE)
+  expect_false(root3$config$logging$console)
 })

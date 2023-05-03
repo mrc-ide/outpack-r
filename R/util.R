@@ -92,9 +92,10 @@ empty_time <- function() {
 }
 
 
-to_json <- function(x, schema) {
-  json <- jsonlite::toJSON(x, pretty = FALSE, auto_unbox = FALSE,
-                           json_verbatim = TRUE, na = "null", null = "null")
+to_json <- function(x, schema, auto_unbox = FALSE, ...) {
+  json <- jsonlite::toJSON(x, pretty = FALSE, auto_unbox = auto_unbox,
+                           json_verbatim = TRUE, na = "null", null = "null",
+                           ...)
   if (should_validate_schema(schema)) {
     outpack_schema(schema)$validate(json, error = TRUE)
   }
@@ -148,7 +149,18 @@ last <- function(x) {
 }
 
 
-source_script <- function(path, envir, echo) {
-  source(path, local = envir, # nolint
-         echo = echo, max.deparse.length = Inf)
+source_and_capture <- function(path, envir, echo) {
+  tmp <- tempfile()
+  con <- file(tmp, "w")
+  on.exit({
+    close(con)
+    unlink(tmp)
+  })
+  withr::with_output_sink(
+    new = con, split = echo,
+    withr::with_message_sink(
+      stdout(),
+      source(path, local = envir, echo = TRUE, # nolint
+             max.deparse.length = Inf, keep.source = TRUE, spaced = FALSE)))
+  readLines(tmp)
 }

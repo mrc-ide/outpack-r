@@ -1,6 +1,8 @@
 outpack_insert_packet <- function(path, json, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   meta <- outpack_metadata_load(json)
+  outpack_log_debug(root, "insert", meta$id, "outpack:::outpack_insert_packet")
+
   assert_directory(path)
 
   ## TODO(RFC): Is 'local' really the only valid choice here?  It feels

@@ -90,7 +90,7 @@ create_random_dependent_packet <- function(root, name, dependency_ids) {
 create_temporary_root <- function(...) {
   path <- tempfile()
   withr::defer_parent(unlink(path, recursive = TRUE))
-  outpack_init(path, ...)
+  outpack_init(path, ..., logging_console = FALSE)
 }
 
 

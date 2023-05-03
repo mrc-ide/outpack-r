@@ -91,7 +91,8 @@ test_that("can locate files from the store", {
   ids <- vcapply(1:3, function(i) create_random_packet(path))
   idx <- root$index()
 
-  h <- idx$metadata[[1]]$files$hash
+  files <- idx$metadata[[1]]$files
+  h <- files$hash[files$path == "data.rds"]
   dest <- temp_file()
   res <- loc$fetch_file(h, dest)
   expect_identical(res, dest)
@@ -121,7 +122,8 @@ test_that("Can find file from archive", {
   ids <- vcapply(1:3, function(i) create_random_packet(path))
   idx <- root$index()
 
-  h <- idx$metadata[[1]]$files$hash
+  files <- idx$metadata[[1]]$files
+  h <- files$hash[files$path == "data.rds"]
   dest <- temp_file()
   res <- loc$fetch_file(h, dest)
   expect_identical(res, dest)

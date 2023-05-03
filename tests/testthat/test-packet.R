@@ -66,7 +66,8 @@ test_that("Can run a basic packet", {
   expect_null(meta$parameters)
   expect_equal(meta$depends, data_frame(packet = character(),
                                         files = I(list())))
-  expect_setequal(meta$files$path, c("data.csv", "myplot.png", "script.R"))
+  expect_setequal(meta$files$path,
+                  c("data.csv", "myplot.png", "script.R", "log.json"))
   expect_equal(meta$files$size,
                file.size(file.path(path_src, meta$files$path)))
   expect_equal(meta$files$hash,
@@ -563,12 +564,12 @@ test_that("Can ignore files from the final packet", {
   outpack_packet_end()
 
   meta <- root$metadata(p$id)
-  expect_equal(meta$files$path, c("script.R", "zzz.png"))
-  expect_length(root$files$list(), 2)
+  expect_equal(meta$files$path, c("log.json", "script.R", "zzz.png"))
+  expect_length(root$files$list(), 3)
   expect_setequal(dir(file.path(root$path, "archive", "example", p$id)),
-                  c("script.R", "zzz.png"))
+                  c("log.json", "script.R", "zzz.png"))
   expect_setequal(dir(path_src),
-                  c("data.csv", "script.R", "zzz.png"))
+                  c("data.csv", "log.json", "script.R", "zzz.png"))
 })
 
 
@@ -587,25 +588,6 @@ test_that("Files cannot be immutable and ignored", {
   expect_error(
     outpack_packet_file_mark("script.R", "ignored"),
     "Cannot mark immutable files as ignored: 'script.R'")
-})
-
-
-test_that("Can echo log to console", {
-  on.exit(outpack_packet_clear(), add = TRUE)
-  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
-  path_src <- create_temporary_simple_src()
-
-  inputs <- c("data.csv", "script.R")
-  env <- new.env()
-
-  p <- outpack_packet_start(path_src, "example", root = root)
-  res1 <- testthat::evaluate_promise(
-    outpack_packet_run("script.R", env, echo = TRUE))
-  expect_match(res1$output, "read.csv", fixed = TRUE)
-  res2 <- testthat::evaluate_promise(
-    outpack_packet_run("script.R", env, echo = FALSE))
-  expect_equal(res2$output, "")
-  outpack_packet_end()
 })
 
 
@@ -663,7 +645,7 @@ test_that("run basic report with explicit packet", {
   env <- new.env()
 
   p <- outpack_packet_start(path_src, "example", local = TRUE, root = root)
-  outpack_packet_run("script.R", env, echo = FALSE, packet = p)
+  outpack_packet_run("script.R", env, packet = p)
   outpack_packet_end(packet = p)
 
   expect_equal(names(root$index()$metadata), p$id)

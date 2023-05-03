@@ -15,6 +15,8 @@ outpack_packet_start(
   name,
   parameters = NULL,
   id = NULL,
+  logging_console = NULL,
+  logging_threshold = NULL,
   local = FALSE,
   root = NULL
 )
@@ -25,7 +27,7 @@ outpack_packet_current()
 
 outpack_packet_end(packet = NULL)
 
-outpack_packet_run(script, envir = .GlobalEnv, echo = FALSE, packet = NULL)
+outpack_packet_run(script, envir = .GlobalEnv, packet = NULL)
 
 outpack_packet_use_dependency(id, files, packet = NULL)
 
@@ -41,6 +43,17 @@ names must be unique, and the values must all be non-NA scalar
 atomics (logical, integer, numeric, character)}
 
 \item{id}{The id of an existing packet to use files from}
+
+\item{logging_console}{Optional logical, indicating if we should
+override the root's default in logging to the console. A value
+of \code{NULL} uses the root value, \code{TRUE} enables console output
+even when this is suppressed by the root, and \code{FALSE} disables
+it even when this is enabled by the root.}
+
+\item{logging_threshold}{Optional log threshold, indicating if we
+override the root's default in logging to the console. A value
+of \code{NULL} uses the root value, otherwise use \code{info}, \code{debug} or
+\code{trace} (in increasing order of verbosity).}
 
 \item{local}{Logical, indicating if this should be considered a
 "local" packet and not set as the default for other packet
@@ -59,10 +72,6 @@ relative path).  This function can be safely called multiple
 times within a single packet run (or zero times!) as needed.}
 
 \item{envir}{Environment in which to run the script}
-
-\item{echo}{Print the result of running the R code to the
-console. This may be difficult to suppress in some context, as
-it comes directly from R's \link{source} function.}
 
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the

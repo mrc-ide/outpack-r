@@ -23,26 +23,46 @@
 ##'   location; if `TRUE` you will always have all the packets that
 ##'   you hold metadata about.
 ##'
+##' @param logging_console Logical, indicating if we should log to the
+##'   console. If `TRUE`, then many operations will produce
+##'   informational output; set to `FALSE` to prevent this.
+##'
+##' @param logging_threshold The degree of verbosity; this reflects
+##'   lgr's structures and we might change it later.
+##'
 ##' @return Invisibly, an `outpack_root` object; these will change in
 ##'   future verisons!
 ##' @export
 outpack_init <- function(root, path_archive = "archive",
                          use_file_store = FALSE,
-                         require_complete_tree = FALSE) {
-  ## Logging: print information about what we're doing here.
+                         require_complete_tree = FALSE,
+                         logging_console = TRUE,
+                         logging_threshold = "info") {
+  ## TODO: there's an inconsistency here between the arguments to this
+  ## function using underscores and the arguments to
+  ## 'outpack_config_set' which uses dots. We might take a list of
+  ## options and dots here, which would allow sharing more code. That
+  ## would also allow addition of more options more easily.
+  ##
+  ## TODO: the constraints here need writing out clearly for any other
+  ## implementation that might seek to change them!
   path_outpack <- file.path(root, ".outpack")
   if (file.exists(path_outpack)) {
     stop(sprintf("outpack already initialised at '%s'", path_outpack))
   }
 
-  config <- config_new(path_archive, use_file_store, require_complete_tree)
+  config <- config_new(path_archive, use_file_store, require_complete_tree,
+                       logging_console, logging_threshold)
 
   fs::dir_create(path_outpack)
   fs::dir_create(file.path(path_outpack, "metadata"))
   fs::dir_create(file.path(path_outpack, "location"))
   config_write(config, root)
 
-  invisible(outpack_root$new(root))
+  ret <- outpack_root$new(root)
+  outpack_log_info(ret, "init", root, "outpack::outpack_init")
+
+  invisible(ret)
 }
 
 
@@ -88,6 +108,7 @@ outpack_root <- R6::R6Class(
     path = NULL,
     config = NULL,
     files = NULL,
+    logger = NULL,
 
     initialize = function(path) {
       assert_file_exists(path)
@@ -97,6 +118,7 @@ outpack_root <- R6::R6Class(
       if (self$config$core$use_file_store) {
         self$files <- file_store$new(file.path(path, ".outpack", "files"))
       }
+      self$logger <- self$config$logging
       lockBinding("path", self)
     },
 
@@ -118,10 +140,11 @@ outpack_root <- R6::R6Class(
       self$files <- file_store$new(file.path(self$path, ".outpack", "files"))
       invisible(lapply(self$index()$unpacked$packet, function(id) {
         meta <- self$metadata(id)
-        path <- unlist(lapply(meta$files$hash,
-                       function(hash) find_file_by_hash(self, hash)))
-        if (any(is.null(path))) {
-          missing <- meta$files$path[is.null(path)]
+        path <- lapply(meta$files$hash,
+                       function(hash) find_file_by_hash(self, hash))
+        failed <- vlapply(path, is.null)
+        if (any(failed)) {
+          missing <- meta$files$path[failed]
           message <- sprintf(
             "the following files were missing or corrupted: '%s'",
             paste(missing, collapse = ", ")
@@ -129,6 +152,7 @@ outpack_root <- R6::R6Class(
           stop(sprintf("Failed to import packet '%s': %s",
                        id, message))
         }
+        path <- vcapply(path, identity)
         file_import_store(self, NULL, path, meta$files$hash)
       }))
     },
@@ -139,8 +163,7 @@ outpack_root <- R6::R6Class(
     },
 
     update_config = function(config) {
-      config_write(config, self$path)
-      self$config <- config_read(self$path)
+      config_update(config, self)
     }
   ))
 

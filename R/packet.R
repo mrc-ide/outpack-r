@@ -30,6 +30,17 @@
 ##' @param id Optionally, an outpack id via [outpack::outpack_id]. If
 ##'   not given a new id will be generated.
 ##'
+##' @param logging_console Optional logical, indicating if we should
+##'   override the root's default in logging to the console. A value
+##'   of `NULL` uses the root value, `TRUE` enables console output
+##'   even when this is suppressed by the root, and `FALSE` disables
+##'   it even when this is enabled by the root.
+##'
+##' @param logging_threshold Optional log threshold, indicating if we
+##'   override the root's default in logging to the console. A value
+##'   of `NULL` uses the root value, otherwise use `info`, `debug` or
+##'   `trace` (in increasing order of verbosity).
+##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
@@ -39,6 +50,8 @@
 ##' @rdname outpack_packet
 ##' @export
 outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
+                                 logging_console = NULL,
+                                 logging_threshold = NULL,
                                  local = FALSE, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   assert_scalar_logical(local)
@@ -58,11 +71,12 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
     validate_outpack_id(id)
   }
 
+  logger <- outpack_packet_logger(path, root, logging_console,
+                                  logging_threshold)
+  caller <- "outpack::outpack_packet_start"
+
   time <- list(start = Sys.time())
 
-  ## LOGGING: name / id / path, start time, parameters
-  ##
-  ## We log these all in orderly and that's super useful
   packet <- structure(
     list2env(
       list(
@@ -72,9 +86,18 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
         parameters = parameters,
         files = list(),
         time = time,
+        logger = logger,
         root = root),
       parent = emptyenv()),
     class = "outpack_packet")
+
+  outpack_log_info(packet, "name", name, caller)
+  outpack_log_info(packet, "id", id, caller)
+  if (length(parameters) > 0) {
+    detail <- sprintf("%s: %s", names(parameters), unname(parameters))
+    outpack_log_info(packet, "parameter", I(detail), caller)
+  }
+  outpack_log_info(packet, "start", format(time$start), caller)
 
   if (!local) {
     current$packet <- packet
@@ -89,6 +112,7 @@ outpack_packet_start <- function(path, name, parameters = NULL, id = NULL,
 ##' @param packet Optionally, an explicitly-passed packet; see Details
 outpack_packet_cancel <- function(packet = NULL) {
   p <- check_current_packet(packet)
+  outpack_log_info(p, "cancel", p$id, "outpack::outpack_packet_cancel")
   outpack_packet_finish(p)
 }
 
@@ -106,6 +130,10 @@ outpack_packet_end <- function(packet = NULL) {
   p <- check_current_packet(packet)
   p$time$end <- Sys.time()
   hash_algorithm <- p$root$config$core$hash_algorithm
+  caller <- "outpack::outpack_packet_end"
+  outpack_log_info(p, "end", format(p$time$end), caller)
+  outpack_log_info(p, "elapsed", format(p$time$end - p$time$start), caller)
+  writeLines(p$logger$json$get(), file.path(p$path, "log.json"))
   json <- outpack_metadata_create(p$path, p$name, p$id, p$time,
                                   files = NULL,
                                   depends = p$depends,
@@ -129,15 +157,13 @@ outpack_packet_end <- function(packet = NULL) {
 ##'   times within a single packet run (or zero times!) as needed.
 ##'
 ##' @param envir Environment in which to run the script
-##'
-##' @param echo Print the result of running the R code to the
-##'   console. This may be difficult to suppress in some context, as
-##'   it comes directly from R's [source] function.
-outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
-                               packet = NULL) {
+outpack_packet_run <- function(script, envir = .GlobalEnv, packet = NULL) {
   p <- check_current_packet(packet)
   assert_relative_path(script, no_dots = TRUE)
   assert_file_exists(script, p$path, "Script")
+  caller <- "outpack::outpack_packet_run"
+
+  outpack_log_info(p, "script", script, caller)
 
   ## TODO: not sure that this is the correct environment; should it be
   ## parent.frame() perhaps (see default args to new.env)
@@ -155,15 +181,20 @@ outpack_packet_run <- function(script, envir = .GlobalEnv, echo = FALSE,
 
   ## TODO: What should we do/store on error?
 
+  ## TODO: be careful with nesting; as that complicates the logs and
+  ## in particular the sinks.
   info <- outpack_packet_run_global_state()
 
   ## It's important to do the global state check in the packet working
   ## directory (not the calling working directory) otherwise we might
   ## write out files in unexpected places when flushing devices.
+  echo <- p$logger$console
   with_dir(p$path, {
-    source_script(script, envir, echo)
+    output <- source_and_capture(script, envir, echo)
     outpack_packet_run_check_global_state(info)
   })
+
+  outpack_log_info(p, "output", I(output), caller)
 
   p$script <- c(p$script, script)
 
