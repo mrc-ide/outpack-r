@@ -71,6 +71,8 @@ the current packet (<code>outpack_packet_use_dependency</code>,
 <span>  <span class="va">name</span>,</span>
 <span>  parameters <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  logging_console <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  logging_threshold <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  local <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  root <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span>
@@ -81,7 +83,7 @@ the current packet (<code>outpack_packet_use_dependency</code>,
 <span></span>
 <span><span class="fu">outpack_packet_end</span><span class="op">(</span>packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span>, echo <span class="op">=</span> <span class="cn">FALSE</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+<span><span class="fu">outpack_packet_run</span><span class="op">(</span><span class="va">script</span>, envir <span class="op">=</span> <span class="va">.GlobalEnv</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">outpack_packet_use_dependency</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
@@ -106,6 +108,21 @@ atomics (logical, integer, numeric, character)</p></dd>
 
 <dt>id</dt>
 <dd><p>The id of an existing packet to use files from</p></dd>
+
+
+<dt>logging_console</dt>
+<dd><p>Optional logical, indicating if we should
+override the root's default in logging to the console. A value
+of <code>NULL</code> uses the root value, <code>TRUE</code> enables console output
+even when this is suppressed by the root, and <code>FALSE</code> disables
+it even when this is enabled by the root.</p></dd>
+
+
+<dt>logging_threshold</dt>
+<dd><p>Optional log threshold, indicating if we
+override the root's default in logging to the console. A value
+of <code>NULL</code> uses the root value, otherwise use <code>info</code>, <code>debug</code> or
+<code>trace</code> (in increasing order of verbosity).</p></dd>
 
 
 <dt>local</dt>
@@ -134,12 +151,6 @@ times within a single packet run (or zero times!) as needed.</p></dd>
 
 <dt>envir</dt>
 <dd><p>Environment in which to run the script</p></dd>
-
-
-<dt>echo</dt>
-<dd><p>Print the result of running the R code to the
-console. This may be difficult to suppress in some context, as
-it comes directly from R's <a href="https://rdrr.io/r/base/source.html" class="external-link">source</a> function.</p></dd>
 
 
 <dt>files</dt>
