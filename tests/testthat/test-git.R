@@ -32,7 +32,6 @@ test_that("can get git information from a path", {
 
 
 test_that("store git information into packet, if under git's control", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   path_src <- create_temporary_simple_src()
 
@@ -48,8 +47,8 @@ test_that("store git information into packet, if under git's control", {
 
   p <- outpack_packet_start(path_src, "example", root = root)
   id <- p$id
-  outpack_packet_run("script.R")
-  outpack_packet_end()
+  outpack_packet_run(p, "script.R")
+  outpack_packet_end(p)
 
   meta <- outpack_root_open(root$path)$metadata(id, TRUE)
   expect_mapequal(meta$git,
@@ -58,14 +57,13 @@ test_that("store git information into packet, if under git's control", {
 
 
 test_that("store no information into packet, if no git found", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   path_src <- create_temporary_simple_src()
 
   p <- outpack_packet_start(path_src, "example", root = root)
   id <- p$id
-  outpack_packet_run("script.R")
-  outpack_packet_end()
+  outpack_packet_run(p, "script.R")
+  outpack_packet_end(p)
 
   meta <- outpack_root_open(root$path)$metadata(id, TRUE)
   expect_true("git" %in% names(meta))

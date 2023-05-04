@@ -5,18 +5,18 @@
 \alias{outpack_packet_file_list}
 \title{Mark files during packet run}
 \usage{
-outpack_packet_file_mark(files, status, packet = NULL)
+outpack_packet_file_mark(packet, files, status)
 
-outpack_packet_file_list(packet = NULL)
+outpack_packet_file_list(packet)
 }
 \arguments{
+\item{packet}{Optionally, an explicitly-passed packet; see
+\code{\link[=outpack_packet_start]{outpack_packet_start()}} for details.}
+
 \item{files}{A character vector of relative paths}
 
 \item{status}{A status to mark the file with. Must be "immutable"
 or "ignored"}
-
-\item{packet}{Optionally, an explicitly-passed packet; see
-\code{\link[=outpack_packet_start]{outpack_packet_start()}} for details.}
 }
 \value{
 Depending on function

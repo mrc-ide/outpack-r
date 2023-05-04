@@ -3,7 +3,6 @@
 \name{outpack_packet_start}
 \alias{outpack_packet_start}
 \alias{outpack_packet_cancel}
-\alias{outpack_packet_current}
 \alias{outpack_packet_end}
 \alias{outpack_packet_run}
 \alias{outpack_packet_use_dependency}
@@ -17,21 +16,18 @@ outpack_packet_start(
   id = NULL,
   logging_console = NULL,
   logging_threshold = NULL,
-  local = FALSE,
   root = NULL
 )
 
-outpack_packet_cancel(packet = NULL)
+outpack_packet_cancel(packet)
 
-outpack_packet_current()
+outpack_packet_end(packet)
 
-outpack_packet_end(packet = NULL)
+outpack_packet_run(packet, script, envir = .GlobalEnv)
 
-outpack_packet_run(script, envir = .GlobalEnv, packet = NULL)
+outpack_packet_use_dependency(packet, id, files)
 
-outpack_packet_use_dependency(id, files, packet = NULL)
-
-outpack_packet_add_custom(application, data, schema = NULL, packet = NULL)
+outpack_packet_add_custom(packet, application, data, schema = NULL)
 }
 \arguments{
 \item{path}{Path to the build / output directory.}
@@ -54,13 +50,6 @@ it even when this is enabled by the root.}
 override the root's default in logging to the console. A value
 of \code{NULL} uses the root value, otherwise use \code{info}, \code{debug} or
 \code{trace} (in increasing order of verbosity).}
-
-\item{local}{Logical, indicating if this should be considered a
-"local" packet and not set as the default for other packet
-functions. If \code{TRUE}, then you must explicitly pass the packet
-(the return value from \code{outpack_packet_start}) into each of the
-other packet functions (e.g, \code{outpack_packet_run} and
-\code{outpack_packet_end})}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
@@ -96,16 +85,8 @@ as the \code{packet} argument.
 \description{
 Start a packet build (\code{outpack_packet_start}), end one
 (\code{outpack_packet_cancel}, \code{outpack_packet_end}) and interact with
-the current packet (\code{outpack_packet_use_dependency},
+one (\code{outpack_packet_use_dependency},
 \code{outpack_packet_run})
-}
-\details{
-There are two ways of using these functions - normally you call
-\code{outpack_packet_start}, which registers an "active" packet,
-following this all other functions (e.g., \code{outpack_packet_run})
-use this active packet. The other approach is to take the return
-value from \code{outpack_packet_start} and pass that through as the
-\code{packet} argument to any other function.
 }
 \section{Custom metadata}{
 

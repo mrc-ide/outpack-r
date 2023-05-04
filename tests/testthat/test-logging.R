@@ -8,7 +8,6 @@ test_that("can log creation of outpack repo", {
 
 
 test_that("can enable console logging for packet level, if disabled at root", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   path_src <- create_temporary_simple_src()
@@ -27,7 +26,6 @@ test_that("can enable console logging for packet level, if disabled at root", {
 
 
 test_that("can disable console logging for packet level, if enabled at root", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   outpack_config_set(logging.console = TRUE, root = root)
 
@@ -43,7 +41,6 @@ test_that("can disable console logging for packet level, if enabled at root", {
 
 
 test_that("can log basic packet running", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   outpack_config_set(logging.console = TRUE, root = root)
 
@@ -61,12 +58,12 @@ test_that("can log basic packet running", {
   expect_match(msg[[3]], "^\\[ start")
 
   res <- evaluate_promise(
-    outpack_packet_run("script.R", env, packet = p))
+    outpack_packet_run(p, "script.R", env))
   expect_equal(res$messages, "[ script     ]  script.R\n")
 
   expect_match(res$output, "read.csv('data.csv')", fixed = TRUE)
 
-  msg <- capture_messages(outpack_packet_end(packet = p))
+  msg <- capture_messages(outpack_packet_end(p))
 
   expect_length(msg, 2)
   expect_match(msg[[1]], "^\\[ end")
@@ -94,7 +91,6 @@ test_that("can log basic packet running", {
 
 
 test_that("can change threshold when running a packet", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   path_src <- create_temporary_simple_src()
@@ -106,12 +102,11 @@ test_that("can change threshold when running a packet", {
 
 
 test_that("can safely deserialise logs that would otherwise simplify", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
 
   path_src <- create_temporary_simple_src()
   p <- outpack_packet_start(path_src, "example", root = root)
-  outpack_packet_end()
+  outpack_packet_end(p)
   dat <- log_read(file.path(path_src, "log.json"))
   expect_true(is.list(dat$detail))
   expect_equal(lengths(dat$detail), rep(1, 5))
@@ -119,7 +114,6 @@ test_that("can safely deserialise logs that would otherwise simplify", {
 
 
 test_that("sensible handling of parameter vectors", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   path_src <- create_temporary_simple_src()
   msg <- capture_messages(
