@@ -34,13 +34,7 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
                           require_unpacked = FALSE,
                           root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
-  if (!is.null(subquery)) {
-    assert_named(subquery, unique = TRUE)
-    subquery_env <- as.environment(subquery)
-  } else {
-    subquery_env <- new.env(parent = emptyenv())
-  }
-
+  subquery_env <- make_subquery_env(subquery)
   expr_parsed <- query_parse(expr, expr, subquery_env)
 
   if (!is.null(name)) {
@@ -101,27 +95,29 @@ query_functions <- list(
 
 
 query_component <- function(type, expr, context, args, ...) {
-  list(type = type, expr = expr, context = context, args = args, ...)
+  structure(
+    list(type = type, expr = expr, context = context, args = args, ...),
+    class = "outpack_query")
 }
 
 
 query_parse_expr <- function(expr, context, subquery_env) {
   type <- query_parse_check_call(expr, context)
-  switch(type,
-         test = query_parse_test(expr, context),
-         group = query_parse_group(expr, context, subquery_env),
-         latest = query_parse_latest(expr, context, subquery_env),
-         single = query_parse_single(expr, context, subquery_env),
-         at_location = query_parse_at_location(expr, context,
-                                               subquery_env),
-         subquery = query_parse_subquery(expr, context, subquery_env),
-         dependency = query_parse_dependency(expr, context, subquery_env),
-         ## normally unreachable
-         stop("Unhandled expression [outpack bug - please report]"))
+  fn <- switch(type,
+               test = query_parse_test,
+               group = query_parse_group,
+               latest = query_parse_latest,
+               single = query_parse_single,
+               at_location = query_parse_at_location,
+               subquery = query_parse_subquery,
+               dependency = query_parse_dependency,
+               ## normally unreachable
+               stop("Unhandled expression [outpack bug - please report]"))
+  fn(expr, context, subquery_env)
 }
 
 
-query_parse_test <- function(expr, context) {
+query_parse_test <- function(expr, context, subquery_env) {
   args <- lapply(expr[-1], query_parse_value, context)
   name <- deparse(expr[[1]])
   query_component("test", expr, context, args, name = name)
@@ -204,16 +200,13 @@ query_parse_subquery <- function(expr, context, subquery_env) {
   subquery <- expr[-1]
   if (is_named_subquery(subquery)) {
     query_name <- deparse(subquery[[1]])
-    if (!exists(query_name, where = subquery_env)) {
-      all_subqueries <- mget(ls(envir = subquery_env), subquery_env)
-      named_subqueries <- vlapply(all_subqueries,
-                                  function(x) !is_anonymous_subquery(x))
-      available_subqueries <- all_subqueries[named_subqueries]
-      if (length(available_subqueries) > 0) {
-        available_queries <- paste0(
-          "Available subqueries are '",
-          paste0(names(available_subqueries), collapse = "', '"),
-          "'.")
+    if (is.null(subquery_env[[query_name]])) {
+      named_subqueries <-
+        names(which(vlapply(as.list(subquery_env), function(x) !x$anonymous)))
+      if (length(named_subqueries) > 0) {
+        available_queries <- sprintf(
+          "Available subqueries are %s.",
+          paste0(squote(sort(named_subqueries)), collapse = ", "))
       } else {
         available_queries <- "No named subqueries provided."
       }
@@ -223,13 +216,9 @@ query_parse_subquery <- function(expr, context, subquery_env) {
         expr, context)
     }
   } else {
-    query_name <- openssl::md5(deparse_query(subquery[[1]]))
-    subquery_env[[query_name]] <- as_anonymous_subquery(subquery[[1]])
+    query_name <- add_subquery(NULL, subquery[[1]], context, subquery_env)
   }
-  parsed_query <- query_parse(subquery_env[[query_name]], context, subquery_env)
-  query_component("subquery", expr, context,
-                  args = list(name = query_name,
-                              subquery = parsed_query))
+  query_component("subquery", expr, context, args = list(name = query_name))
 }
 
 
@@ -254,7 +243,7 @@ query_parse_dependency <- function(expr, context, subquery_env) {
   args[[2]]$name <- names(args[2]) %||% "depth"
   if (is.call(args[[1]])) {
     args[[1]] <- query_parse_expr(args[[1]], context, subquery_env)
-    if (!is_expr_single_value(args[[1]])) {
+    if (!is_expr_single_value(args[[1]], subquery_env)) {
       query_parse_error(
         sprintf(paste(
           "%s must be called on an expression guaranteed to return",
@@ -274,13 +263,14 @@ query_parse_dependency <- function(expr, context, subquery_env) {
 ##   * it is a function call to single
 ##   * it is an ID lookup
 ##   * it is a subquery whose expression is validates one of these conditions
-is_expr_single_value <- function(parsed_expr) {
+is_expr_single_value <- function(parsed_expr, subquery_env) {
   if (parsed_expr$type == "subquery") {
-    return(is_expr_single_value(parsed_expr$args$subquery))
+    parsed_expr_sub <- subquery_env[[parsed_expr$args$name]]$parsed
+    return(is_expr_single_value(parsed_expr_sub, subquery_env))
   }
   parsed_expr$type %in% c("latest", "single") ||
     (parsed_expr$type == "test" && (is_id_lookup(parsed_expr$args[[1]]) ||
-                                      is_id_lookup(parsed_expr$args[[2]])))
+                                    is_id_lookup(parsed_expr$args[[2]])))
 }
 
 is_id_lookup <- function(expr) {
@@ -402,13 +392,35 @@ query_parse_value <- function(expr, context, subquery_env) {
 }
 
 
-as_anonymous_subquery <- function(x) {
-  structure(x, class = c("outpack_anonymous_subquery", class(x)))
+## By looping through in order we'll prevent any circular dependencies
+## between subqueries, though some work will possibly needed to make
+## this obvious to the users - I think this is hard to accidentally
+## trigger though.
+make_subquery_env <- function(subquery) {
+  if (!is.null(subquery)) {
+    assert_named(subquery, unique = TRUE)
+  }
+  subquery_env <- new.env()
+  for (nm in names(subquery)) {
+    add_subquery(nm, subquery[[nm]], NULL, subquery_env)
+  }
+  subquery_env
 }
 
 
-is_anonymous_subquery <- function(x) {
-  inherits(x, "outpack_anonymous_subquery")
+add_subquery <- function(name, expr, context, subquery_env) {
+  anonymous <- is.null(name)
+  if (anonymous) {
+    name <- openssl::md5(deparse_query(expr))
+  }
+  subquery_env[[name]] <- list(
+    name = name,
+    expr = expr,
+    parsed = query_parse(expr, context, subquery_env),
+    anonymous = anonymous,
+    evaluated = FALSE,
+    result = NULL)
+  invisible(name)
 }
 
 
@@ -460,16 +472,20 @@ query_eval_at_location <- function(query, index, pars) {
 }
 
 
+## TODO: we probably also need to make sure that none of this is
+## recursive (e.g., subquery A referencing B etc; do that in the parse
+## phase; things are now set up to support this).
 query_eval_subquery <- function(query, index, pars, subquery_env) {
   name <- query$args$name
-  subquery <- get(name, envir = subquery_env)
-  if (is.null(subquery$result)) {
-    subquery$result <- query_eval(query$args$subquery,
-                                  index,
-                                  pars = NULL,
-                                  subquery_env)
+  if (!subquery_env[[name]]$evaluated) {
+    ## TODO: should we really not allow parameters here? Feels like
+    ## they might be relevant?
+    result <- query_eval(subquery_env[[name]]$parsed, index, pars = NULL,
+                         subquery_env)
+    subquery_env[[name]]$result <- result
+    subquery_env[[name]]$evaluated <- TRUE
   }
-  subquery$result
+  subquery_env[[name]]$result
 }
 
 

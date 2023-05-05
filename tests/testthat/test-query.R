@@ -650,7 +650,7 @@ test_that("subqueries cannot be used within at_location", {
 
   expect_error(
     outpack_query(quote(at_location({sub})), # nolint
-                  subquery = list(sub = quote("x")),
+                  subquery = list(sub = quote("latest")),
                   root = root),
     paste0("All arguments to at_location() must be string literals\n",
            "  - in at_location({sub})"),
