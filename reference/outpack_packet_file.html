@@ -21,7 +21,7 @@ are marked (or unmarked) within the directory."><!-- mathjax --><script src="htt
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.2.6</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.0</span>
       </span>
     </div>
 
@@ -68,25 +68,25 @@ are marked (or unmarked) within the directory.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_packet_file_mark</span><span class="op">(</span><span class="va">files</span>, <span class="va">status</span>, packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_packet_file_mark</span><span class="op">(</span><span class="va">packet</span>, <span class="va">files</span>, <span class="va">status</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">outpack_packet_file_list</span><span class="op">(</span>packet <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">outpack_packet_file_list</span><span class="op">(</span><span class="va">packet</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>files</dt>
+    <dl><dt>packet</dt>
+<dd><p>Optionally, an explicitly-passed packet; see
+<code><a href="outpack_packet.html">outpack_packet_start()</a></code> for details.</p></dd>
+
+
+<dt>files</dt>
 <dd><p>A character vector of relative paths</p></dd>
 
 
 <dt>status</dt>
 <dd><p>A status to mark the file with. Must be "immutable"
 or "ignored"</p></dd>
-
-
-<dt>packet</dt>
-<dd><p>Optionally, an explicitly-passed packet; see
-<code><a href="outpack_packet.html">outpack_packet_start()</a></code> for details.</p></dd>
 
 </dl></div>
     <div id="value">
