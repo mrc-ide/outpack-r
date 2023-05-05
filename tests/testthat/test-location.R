@@ -392,7 +392,6 @@ test_that("can pull a packet from one location to another, archive only", {
 
 
 test_that("detect and avoid modified files in source repository", {
-  on.exit(outpack_packet_clear(), add = TRUE)
   root <- list()
   for (name in c("src", "dst")) {
     root[[name]] <- create_temporary_root()
@@ -404,8 +403,9 @@ test_that("detect and avoid modified files in source repository", {
   saveRDS(runif(10), file.path(tmp, "b.rds"))
   id <- character(2)
   for (i in seq_along(id)) {
-    id[[i]] <- outpack_packet_start(tmp, "data", root = root$src)$id
-    outpack_packet_end()
+    p <- outpack_packet_start(tmp, "data", root = root$src)
+    outpack_packet_end(p)
+    id[[i]] <- p$id
   }
 
   outpack_location_add("src", "path", list(path = root$src$path),
@@ -474,19 +474,21 @@ test_that("Can pull a tree recursively", {
   fs::dir_create(src_b)
   code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
   writeLines(code, file.path(src_b, "script.R"))
-  id$b <- outpack_packet_start(src_b, "b", root = root$src)$id
-  outpack_packet_use_dependency(id$a, c("input.rds" = "data.rds"))
-  outpack_packet_run("script.R")
-  outpack_packet_end()
+  p_b <- outpack_packet_start(src_b, "b", root = root$src)
+  id$b <- p_b$id
+  outpack_packet_use_dependency(p_b, id$a, c("input.rds" = "data.rds"))
+  outpack_packet_run(p_b, "script.R")
+  outpack_packet_end(p_b)
 
   src_c <- temp_file()
   fs::dir_create(src_c)
   code <- "saveRDS(readRDS('input.rds') * 2, 'output.rds')"
   writeLines(code, file.path(src_c, "script.R"))
-  id$c <- outpack_packet_start(src_c, "c", root = root$src)$id
-  outpack_packet_use_dependency(id$b, c("input.rds" = "output.rds"))
-  outpack_packet_run("script.R")
-  outpack_packet_end()
+  p_c <- outpack_packet_start(src_c, "c", root = root$src)
+  id$c <- p_c$id
+  outpack_packet_use_dependency(p_c, id$b, c("input.rds" = "output.rds"))
+  outpack_packet_run(p_c, "script.R")
+  outpack_packet_end(p_c)
 
   outpack_location_add("src", "path", list(path = root$src$path),
                        root = root$dst)
