@@ -586,3 +586,33 @@ test_that("can mark subsets of files immutably without error", {
     outpack_packet_file_mark(p, names(hash), "immutable"))
   expect_equal(p$files$immutable, hash[c("a", "b", "c", "e", "f", "d")])
 })
+
+
+test_that("cope with errors in scripts", {
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+
+  path_src <- withr::local_tempdir()
+  writeLines('f <- function(x) {
+  if (x == 0) {
+    stop("x became negative")
+  } else {
+    f(x - 1)
+  }
+}
+f(5)',
+  file.path(path_src, "script.R"))
+  p <- outpack_packet_start(path_src, "example", root = root)
+  err <- expect_error(
+    outpack_packet_run(p, "script.R"),
+    "Script failed with error: x became negative",
+    class = "outpack_packet_run_error")
+  expect_setequal(names(err),
+                  c("message", "error", "trace", "output", "warnings"))
+
+  expect_type(err$trace, "character")
+  expect_true(length(err$trace) > 5)
+
+  expect_match(err$output,
+               "Error in f(x - 1) : x became negative",
+               fixed = TRUE, all = FALSE)
+})
