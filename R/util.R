@@ -149,6 +149,26 @@ last <- function(x) {
 }
 
 
+collector <- function() {
+  env <- new.env(parent = emptyenv())
+  env$data <- list()
+  list(
+    add = function(x) {
+      env$data <- c(env$data, list(x))
+    },
+    get = function() {
+      env$data
+    }
+  )
+
+}
+
+source_echo <- function(path, envir) {
+  source(path, local = envir, echo = TRUE, # nolint
+         max.deparse.length = Inf, keep.source = TRUE, spaced = FALSE)
+}
+
+
 source_and_capture <- function(path, envir, echo) {
   tmp <- tempfile()
   con <- file(tmp, "w")
@@ -156,11 +176,44 @@ source_and_capture <- function(path, envir, echo) {
     close(con)
     unlink(tmp)
   })
-  withr::with_output_sink(
-    new = con, split = echo,
-    withr::with_message_sink(
-      stdout(),
-      source(path, local = envir, echo = TRUE, # nolint
-             max.deparse.length = Inf, keep.source = TRUE, spaced = FALSE)))
-  readLines(tmp)
+
+  env <- new.env(parent = emptyenv())
+  env$warnings <- collector()
+
+  res <- tryCatch(
+    withr::with_output_sink(
+      new = con, split = echo,
+      withr::with_message_sink(
+        stdout(),
+        withCallingHandlers(
+          source_echo(path, envir),
+          warning = function(e) {
+            env$warnings$add(e)
+            tryInvokeRestart("muffleWarning")
+          },
+          error = function(e) {
+            try(stop(e))
+            env$error <- e
+            env$trace <- utils::limitedLabels(sys.calls())
+          }))),
+    error = identity)
+
+  list(success = is.null(env$error),
+       error = env$error,
+       trace = env$trace,
+       warnings = env$warnings$get(),
+       output = readLines(tmp))
+}
+
+
+## See .makeMessage, stop - probably not doing enough here to allow
+## for translation where that is required
+error_message <- function(e) {
+  try(stop(e))
+  call <- conditionCall(e)
+  if (is.null(call)) {
+    sprintf("Error : %s", conditionMessage(e))
+  } else {
+    sprintf("Error in %s: %s", call, conditionMessage(e))
+  }
 }
