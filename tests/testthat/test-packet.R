@@ -534,8 +534,12 @@ test_that("can detect device imbalance", {
   stack <- dev.list()
 
   p <- outpack_packet_start(path_src, "example", root = root)
-  expect_error(outpack_packet_run(p, "script.R"),
-               "Script left 1 device open")
+
+  err <- expect_error(outpack_packet_run(p, "script.R"),
+                      "Script left 1 device open",
+                      class = "outpack_packet_run_error")
+  expect_null(err$error)
+  expect_type(err$output, "character")
   ## Handler has fixed the stack for us:
   expect_equal(stack, dev.list())
 })

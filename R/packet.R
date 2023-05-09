@@ -121,6 +121,45 @@ outpack_packet_end <- function(packet) {
 }
 
 
+##' @section Running scripts:
+##'
+##' R does not make it extremely easy to "run" a script while
+##'   collecting output and warnings in a nice way; this is something
+##'   you may be familiar with when running scripts through things
+##'   like knitr where differences in behaviour between running from
+##'   within knitr and R are not uncommon.  If you see any behaviour
+##'   which feels very different to what you expect please let us
+##'   know.
+##'
+##' One area of known difference is that of warnings; what R does with
+##'   warnings depends on a number of options - both global and to
+##'   `warning` itself. We do not try very hard currently to get the
+##'   same behaviour with warnings as you might see running directly
+##'   with `source` and observing your terminal, partly because we
+##'   hope that in practice your code will produce very few warnings.
+##'
+##' On failure in the script, `outpack_packet_run` will throw, forcing
+##'   any function that calls `outpack_packet_run` to explicitly cope
+##'   with error. The error that is generated will have class
+##'   `outpack_packet_run_error` allowing this error to be easily
+##'   distinguished from other R errors. It will have, in addition to
+##'   a `message` field, additional data fields containing information
+##'   about the error:
+##'
+##' * `error`: the original error object, as thrown and caught by `outpack`
+##' * `trace`: the backtrace for the above error, currently just as a
+##'   character vector, though this may change in future versions
+##' * `output`: a character vector of interleaved stdout and stderr as
+##'   the script ran
+##' * `warnings`: a list of warnings raised by the script
+##'
+##' The other reason why the script may fail is that it fails to
+##'   balance one of the global resource stacks - either connections
+##'   (rare) or graphics devices (easy to do). In this case, we still
+##'   throw a (classed) error, but the `error` field in the final
+##'   error will be `NULL`, with an informative message explaining
+##'   what was not balanced.
+##'
 ##' @export
 ##' @rdname outpack_packet
 ##'
@@ -140,18 +179,12 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
   ## TODO: not sure that this is the correct environment; should it be
   ## parent.frame() perhaps (see default args to new.env)
 
-  ## TODO: Logging; if we are logging then should we also echo to log
-  ## too? In addition to the console or instead, and what controls
-  ## that?
-
   ## TODO: Control over running in separate process (if we do that,
   ## the process should return session, too). This is probably a bit
   ## hard to get right as we'd need to know what bits of the session
   ## need replaying into the second session - I suspect it should be
   ## an entirely different function. More likely we'll run the whole
   ## packet setup in a new process as we currently do in orderly.
-
-  ## TODO: What should we do/store on error?
 
   ## TODO: be careful with nesting; as that complicates the logs and
   ## in particular the sinks.
@@ -162,16 +195,46 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
   ## write out files in unexpected places when flushing devices.
   echo <- packet$logger$console
   with_dir(packet$path, {
-    output <- source_and_capture(script, envir, echo)
-    outpack_packet_run_check_global_state(info)
+    result <- source_and_capture(script, envir, echo)
+    info_end <- outpack_packet_run_check_global_state(info)
   })
 
-  outpack_log_info(packet, "output", I(output), caller)
+  ## Not sure that I love this TRUE / FALSE string
+  outpack_log_info(packet, "result", as.character(result$success), caller)
+  outpack_log_info(packet, "output", I(result$output), caller)
 
   packet$script <- c(packet$script, script)
 
-  ## What is a good return value here?
-  invisible()
+  if (!info_end$success && result$success) {
+    result$success <- FALSE
+    result$error <- list(message = info_end$message)
+  }
+
+  if (!result$success || !info_end$success) {
+    if (result$success) {
+      msg <- info_end$msg
+      error <- NULL
+    } else {
+      msg <- sprintf("Script failed with error: %s",
+                     result$error$message)
+      error <- NULL
+    }
+    err <- list(
+      message = sprintf("Script failed with error: %s",
+                        result$error$message),
+      error = error,
+      trace = result$trace,
+      output = result$output,
+      warnings = result$output)
+    class(err) <- c("outpack_packet_run_error", "error", "condition")
+    stop(err)
+  }
+
+  ## TODO: At this point we can only have success so we don't want
+  ## some fields
+  ##
+  ## output, warnings only?
+  invisible(result)
 }
 
 
@@ -406,6 +469,14 @@ outpack_packet_run_global_state <- function() {
 
 
 outpack_packet_run_check_global_state <- function(info) {
-  check_device_stack(info$n_open_devices)
-  check_sink_stack(info$n_open_sinks)
+  devices <- check_device_stack(info$n_open_devices)
+  sinks <- check_sink_stack(info$n_open_sinks)
+
+  success <- devices$success && sinks$success
+  if (success) {
+    msg <- NULL
+  } else {
+    msg <- paste(c(devices$message, sinks$message), collapse = " & ")
+  }
+  list(success = success, message = msg)
 }
