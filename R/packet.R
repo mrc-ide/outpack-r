@@ -95,8 +95,20 @@ outpack_packet_cancel <- function(packet) {
 
 
 ##' @export
+##'
+##' @param insert Logical, indicating if we should insert the packet
+##'   into the store. This is the default and generally what you
+##'   want. The use-case we have for `insert = FALSE` is where you
+##'   want to write out all metadata after a failure, and in this case
+##'   you would not want to do a final insertion into the outpack
+##'   archive. When `insert = FALSE`, we write out the json metadata
+##'   that would have been written as `outpack.json` within the packet
+##'   working directory.  Note that this skips a lot of validation
+##'   (for example, validating that all files exist and that files
+##'   marked immutable have not been changed)
+##'
 ##' @rdname outpack_packet
-outpack_packet_end <- function(packet) {
+outpack_packet_end <- function(packet, insert = TRUE) {
   packet <- check_current_packet(packet)
   packet$time$end <- Sys.time()
   hash_algorithm <- packet$root$config$core$hash_algorithm
@@ -116,7 +128,15 @@ outpack_packet_end <- function(packet) {
                                   file_hash = packet$files$immutable,
                                   file_ignore = packet$files$ignored,
                                   hash_algorithm = hash_algorithm)
-  outpack_insert_packet(packet$path, json, packet$root)
+  if (insert) {
+    outpack_insert_packet(packet$path, json, packet$root)
+  } else {
+    ## TODO: I am not sure what the best filename to use here is -
+    ## good options feel like 'outpack.json' (like we do with
+    ## 'log.json') and `<id>` or '<id>.json' (totally collision
+    ## resistant)
+    writeLines(json, file.path(packet$path, "outpack.json"))
+  }
   outpack_packet_finish(packet)
 }
 

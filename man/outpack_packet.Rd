@@ -21,7 +21,7 @@ outpack_packet_start(
 
 outpack_packet_cancel(packet)
 
-outpack_packet_end(packet)
+outpack_packet_end(packet, insert = TRUE)
 
 outpack_packet_run(packet, script, envir = .GlobalEnv)
 
@@ -55,6 +55,17 @@ of \code{NULL} uses the root value, otherwise use \code{info}, \code{debug} or
 current directory if not given.}
 
 \item{packet}{A packet object}
+
+\item{insert}{Logical, indicating if we should insert the packet
+into the store. This is the default and generally what you
+want. The use-case we have for \code{insert = FALSE} is where you
+want to write out all metadata after a failure, and in this case
+you would not want to do a final insertion into the outpack
+archive. When \code{insert = FALSE}, we write out the json metadata
+that would have been written as \code{outpack.json} within the packet
+working directory.  Note that this skips a lot of validation
+(for example, validating that all files exist and that files
+marked immutable have not been changed)}
 
 \item{script}{Path to the script within the packet directory (a
 relative path).  This function can be safely called multiple
