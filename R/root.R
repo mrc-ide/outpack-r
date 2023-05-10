@@ -113,6 +113,7 @@ outpack_root <- R6::R6Class(
     initialize = function(path) {
       assert_file_exists(path)
       assert_file_exists(file.path(path, ".outpack"))
+      path <- as.character(fs::path_real(path))
       self$path <- path
       self$config <- config_read(path)
       if (self$config$core$use_file_store) {
