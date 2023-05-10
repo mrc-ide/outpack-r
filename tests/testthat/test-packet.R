@@ -118,7 +118,7 @@ test_that("Can handle dependencies", {
 
   p2 <- outpack_packet_start(path_src2, "b", root = root)
   id2 <- p2$id
-  outpack_packet_use_dependency(p2, id1, c("incoming.csv" = "data.csv"))
+  outpack_packet_use_dependency(p2, id1, "a", c("incoming.csv" = "data.csv"))
   outpack_packet_run(p2, "script.R")
   outpack_packet_end(p2)
 
@@ -167,7 +167,7 @@ test_that("Can't use nonexistant id as dependency", {
 
   p2 <- outpack_packet_start(path_src, "example", root = root)
   expect_error(
-    outpack_packet_use_dependency(p2, p1$id, c("a" = "b")),
+    outpack_packet_use_dependency(p2, p1$id, "example", c("a" = "b")),
     sprintf("Packet '%s' does not contain path 'b'", p1$id))
   outpack_packet_cancel(p2)
 })
@@ -188,7 +188,8 @@ test_that("Can't use file that does not exist from dependency", {
 
   p2 <- outpack_packet_start(path_src2, "b", root = root)
   expect_error(
-    outpack_packet_use_dependency(p2, p1$id, c("incoming.csv" = "data.csv")),
+    outpack_packet_use_dependency(p2, p1$id, "a",
+                                  c("incoming.csv" = "data.csv")),
     "Packet '.+' does not contain path 'data.csv'")
 })
 
@@ -226,7 +227,7 @@ test_that("Can use dependency from outpack without file store", {
 
   p2 <- outpack_packet_start(path_src2, "b", root = root)
   id2 <- p2$id
-  outpack_packet_use_dependency(p2, id1, c("incoming.csv" = "data.csv"))
+  outpack_packet_use_dependency(p2, id1, "a", c("incoming.csv" = "data.csv"))
   outpack_packet_run(p2, "script.R")
   outpack_packet_end(p2)
 
@@ -278,7 +279,7 @@ test_that("validate dependencies from archive", {
   p2 <- outpack_packet_start(path_src2, "b", root = root)
   id2 <- p2$id
   expect_error(
-    outpack_packet_use_dependency(p2, id1, c("incoming.csv" = "data.csv")),
+    outpack_packet_use_dependency(p2, id1, "a", c("incoming.csv" = "data.csv")),
     "Hash of '.+' does not match")
 })
 
@@ -581,4 +582,42 @@ test_that("can mark subsets of files immutably without error", {
   expect_silent(
     outpack_packet_file_mark(p, names(hash), "immutable"))
   expect_equal(p$files$immutable, hash[c("a", "b", "c", "e", "f", "d")])
+})
+
+
+test_that("can depend based on a simple query", {
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+
+  src <- withr::local_tempdir()
+  src_a <- file.path(src, "a")
+  src_b <- file.path(src, "b")
+  fs::dir_create(c(src_a, src_b))
+
+  id <- character()
+  for (i in 1:3) {
+    saveRDS(runif(10), file.path(src_a, "data.rds"))
+    p <- outpack_packet_start(src_a, "a", parameters = list(i = i), root = root)
+    outpack_packet_end(p)
+    id <- c(id, p$id)
+  }
+
+  p <- outpack_packet_start(src_b, "b", root = root)
+  outpack_packet_use_dependency(p, "latest", NULL, c("1.rds" = "data.rds"))
+
+  expect_mapequal(
+    p$depends[[1]],
+    list(id = id[[3]],
+         name = "a",
+         query = "latest()",
+         files = data.frame(here = "1.rds", there = "data.rds")))
+
+  outpack_packet_use_dependency(p, "latest(parameter:i < 3)", "a",
+                                c("2.rds" = "data.rds"))
+
+  expect_mapequal(
+    p$depends[[2]],
+    list(id = id[[2]],
+         name = "a",
+         query = 'latest(parameter:i < 3 && name == "a")',
+         files = data.frame(here = "2.rds", there = "data.rds")))
 })

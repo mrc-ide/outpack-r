@@ -50,7 +50,7 @@ create_random_packet_chain <- function(root, length) {
     } else {
       code <- sprintf("saveRDS(readRDS('input.rds') * %d, 'data.rds')", i)
       writeLines(code, file.path(p, "script.R"))
-      outpack_packet_use_dependency(packet, id[[letters[i - 1]]],
+      outpack_packet_use_dependency(packet, id[[letters[i - 1]]], NULL,
                                     c("input.rds" = "data.rds"))
       outpack_packet_run(packet, "script.R")
     }
@@ -77,7 +77,7 @@ create_random_dependent_packet <- function(root, name, dependency_ids) {
     writeLines(code, file.path(src, "script.R"))
     for (num in seq_len(len)) {
       input_name <- sprintf("input%s.rds", num)
-      outpack_packet_use_dependency(p, dependency_ids[[num]],
+      outpack_packet_use_dependency(p, dependency_ids[[num]], NULL,
                                     stats::setNames("data.rds", input_name))
     }
     outpack_packet_run(p, "script.R")

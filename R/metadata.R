@@ -78,7 +78,9 @@ outpack_metadata_create <- function(path, name, id, time, files,
     depends <- list()
   } else {
     for (i in seq_along(depends)) {
-      depends[[i]]$packet <- scalar(depends[[i]]$packet)
+      depends[[i]]$id <- scalar(depends[[i]]$id)
+      depends[[i]]$name <- scalar(depends[[i]]$name)
+      depends[[i]]$query <- scalar(depends[[i]]$query)
     }
     ## TODO: Additional checks could be required, but will require a
     ## root.  We do some of these on insert and via

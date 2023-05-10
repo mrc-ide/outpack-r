@@ -290,6 +290,28 @@ test_that("location based queries", {
 })
 
 
+## This test exercises a bunch of options that should all produce the
+## same result, but did not once.
+test_that("Same result with either strings/expressions, named or not", {
+  root <- create_temporary_root(use_file_store = TRUE)
+
+  ids <- vcapply(1:5, function(i) {
+    create_random_packet(root, "x", list(a = i, b = 1))
+  })
+
+  dat <- list(list(query = quote(parameter:b == 1), result = ids),
+              list(query = quote(parameter:a < 3), result = ids[1:2]),
+              list(query = quote(latest(parameter:a < 3)), result = ids[[2]]))
+  for (x in dat) {
+    for (string in c(TRUE, FALSE)) {
+      query <- if (string) deparse(x$query) else x$query
+      expect_setequal(outpack_query(query, root = root), x$result)
+      expect_setequal(outpack_query(query, root = root, name = "x"), x$result)
+    }
+  }
+})
+
+
 test_that("Can filter based on given values", {
   root <- create_temporary_root(use_file_store = TRUE)
 

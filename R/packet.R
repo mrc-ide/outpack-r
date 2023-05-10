@@ -178,27 +178,49 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##' @export
 ##' @rdname outpack_packet
 ##'
-##' @param id The id of an existing packet to use files from
+##' @param query The id of an existing packet to use files from, or a
+##'   query to find such a packet. If a query, then this query *must*
+##'   return exactly one packet.
+##'
+##' @param name Either a string (the packet name to restrict to) or
+##'   `NULL`
 ##'
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
-outpack_packet_use_dependency <- function(packet, id, files) {
+##'
+##' @param parameters Optionally, parameters to pass through to the
+##'   query; if parameters are referenced but found we will throw an
+##'   error
+##'
+##' @param subquery Optionally, a named list of subqueries
+outpack_packet_use_dependency <- function(packet, query, name, files,
+                                          parameters = NULL,
+                                          subquery = NULL,
+                                          scope = NULL) {
   packet <- check_current_packet(packet)
 
-  ## TODO: currently no capacity here for *querying* to find the id
-  ## (e.g., latest(name) or something more complex).  Any progress on
-  ## this will depend on the query interface.  It's probable that we
-  ## might want to record the query here alongside the id, if one was
-  ## used?  Or should we allow a query here?
+  query_parsed <- query_process(query, scope, name, subquery)
+  ## TODO: here - check that the query will return just a scalar
+  id <- outpack_query(query_parsed, pars = parameters, require_unpacked = TRUE,
+                      root = packet$root)
+
+  if (is.null(name)) {
+    name <- packet$root$metadata(id)$name
+  }
+
   outpack_copy_files(id, files, packet$path, packet$root)
 
   ## Only update packet information after success, to reflect new
   ## metadata
   depends <- list(
-    packet = id,
+    id = id,
+    name = name,
+    query = deparse_query(query_parsed$expr),
     files = data_frame(here = names(files), there = unname(files)))
   packet$depends <- c(packet$depends, list(depends))
+
+  outpack_packet_file_mark(packet, names(files), "immutable")
 
   invisible()
 }

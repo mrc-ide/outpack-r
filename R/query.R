@@ -33,7 +33,19 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
                           name = NULL, subquery = NULL,
                           require_unpacked = FALSE,
                           root = NULL) {
+  ## TODO: pars -> parameters for consistency
   root <- outpack_root_open(root, locate = TRUE)
+  expr_parsed <- query_process(expr, scope, name, subquery)
+  validate_parameters(pars)
+  index <- new_query_index(root, require_unpacked)
+  query_eval(expr_parsed, index, pars, subquery_env)
+}
+
+
+query_process <- function(expr, scope, name, subquery) {
+  if (inherits(expr, "outpack_query")) {
+    return(expr)
+  }
   subquery_env <- make_subquery_env(subquery)
   expr_parsed <- query_parse(expr, expr, subquery_env)
 
@@ -47,13 +59,10 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
   }
 
   if (!is.null(scope)) {
-    expr_parsed <- query_parse_add_scope(expr, expr_parsed, scope)
+    expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
 
-  validate_parameters(pars)
-  index <- new_query_index(root, require_unpacked)
-
-  query_eval(expr_parsed, index, pars, subquery_env)
+  expr_parsed
 }
 
 
@@ -155,29 +164,33 @@ query_parse_at_location <- function(expr, context, subquery_env) {
 }
 
 
-query_parse_add_scope <- function(expr, expr_parsed, scope) {
+query_parse_add_scope <- function(expr_parsed, scope) {
   if (!is.language(scope)) {
     stop("Invalid input for `scope`, it must be a language expression.")
   }
 
   parsed_scope <- query_parse(scope, scope, emptyenv())
   scoped_functions <- list("latest", "single")
+  expr <- expr_parsed$expr
+
   if (expr_parsed$type %in% scoped_functions) {
+    fn <- deparse(expr[[1]])
     ## Include scope inside the top level function call
-    if (length(expr) == 1) {
+    if (length(expr_parsed$args) == 0) {
       ## e.g. latest()
-      expr_parsed$args <-  list(parsed_scope)
+      expr_parsed$expr <- call(fn, scope)
+      expr_parsed$args <- list(parsed_scope)
     } else {
       ## e.g. latest(name == "x")
-      scoped_expr <- call(deparse(expr[[1]]), call("&&", expr[[-1]], scope))
+      expr_parsed$expr <- call(fn, call("&&", expr[[-1]], scope))
       expr_parsed$args[[1]] <- query_component(
-        "group", scoped_expr, scoped_expr,
+        "group", expr_parsed$expr, expr_parsed$expr,
         list(expr_parsed$args[[1]], parsed_scope), name = "&&")
     }
   } else {
     ## Include scope at end of expression
-    scoped_expr <- call("&&", expr, scope)
-    expr_parsed <- query_component("group", scoped_expr, scoped_expr,
+    expr_parsed$expr <- call("&&", expr, scope)
+    expr_parsed <- query_component("group", expr_parsed$expr, expr_parsed$expr,
                                    list(expr_parsed, parsed_scope),
                                    name = "&&")
   }

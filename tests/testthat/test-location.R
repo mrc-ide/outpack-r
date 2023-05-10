@@ -476,7 +476,7 @@ test_that("Can pull a tree recursively", {
   writeLines(code, file.path(src_b, "script.R"))
   p_b <- outpack_packet_start(src_b, "b", root = root$src)
   id$b <- p_b$id
-  outpack_packet_use_dependency(p_b, id$a, c("input.rds" = "data.rds"))
+  outpack_packet_use_dependency(p_b, id$a, "a", c("input.rds" = "data.rds"))
   outpack_packet_run(p_b, "script.R")
   outpack_packet_end(p_b)
 
@@ -486,7 +486,7 @@ test_that("Can pull a tree recursively", {
   writeLines(code, file.path(src_c, "script.R"))
   p_c <- outpack_packet_start(src_c, "c", root = root$src)
   id$c <- p_c$id
-  outpack_packet_use_dependency(p_c, id$b, c("input.rds" = "output.rds"))
+  outpack_packet_use_dependency(p_c, id$b, "b", c("input.rds" = "output.rds"))
   outpack_packet_run(p_c, "script.R")
   outpack_packet_end(p_c)
 
