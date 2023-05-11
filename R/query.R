@@ -34,18 +34,22 @@ outpack_query <- function(expr, pars = NULL, scope = NULL,
                           require_unpacked = FALSE,
                           root = NULL) {
   ## TODO: pars -> parameters for consistency
-  root <- outpack_root_open(root, locate = TRUE)
+  ## TODO: add locate arg for consistency?
   expr_parsed <- query_process(expr, scope, name, subquery)
-  validate_parameters(pars)
+  outpack_query_eval(expr_parsed, pars, require_unpacked, root)
+}
+
+
+outpack_query_eval <- function(expr, parameters, require_unpacked, root) {
+  assert_is(expr, "outpack_query_processed")
+  root <- outpack_root_open(root, locate = TRUE)
+  validate_parameters(parameters)
   index <- new_query_index(root, require_unpacked)
-  query_eval(expr_parsed, index, pars, subquery_env)
+  query_eval(expr$value, index, parsed, expr$subquery)
 }
 
 
 query_process <- function(expr, scope, name, subquery) {
-  if (inherits(expr, "outpack_query")) {
-    return(expr)
-  }
   subquery_env <- make_subquery_env(subquery)
   expr_parsed <- query_parse(expr, expr, subquery_env)
 
@@ -62,7 +66,13 @@ query_process <- function(expr, scope, name, subquery) {
     expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
 
-  expr_parsed
+  single_value <- is_expr_single_value(expr_parsed, subqery_env)
+
+  structure(list(value = expr_parsed,
+                 single_value = single_value,
+                 subquery = subquery_env),
+            ## Stupid class name, will fix later
+            class = "outpack_query_processed")
 }
 
 
@@ -418,6 +428,15 @@ make_subquery_env <- function(subquery) {
     add_subquery(nm, subquery[[nm]], NULL, subquery_env)
   }
   subquery_env
+}
+
+
+subquery_env_to_list <- function(subquery_env) {
+  nms <- names(subquery_env)
+  if (length(nms) == 0) {
+    return(NULL)
+  }
+  set_names(lapply(nms, function(x) subquery_env[[x]]$expr), nms)
 }
 
 

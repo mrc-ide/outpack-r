@@ -95,7 +95,7 @@
                         }
                     }
                 },
-                "required": ["packet", "name", "files"]
+                "required": ["id", "name", "query", "files"]
             }
         },
 

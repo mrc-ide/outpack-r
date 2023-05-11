@@ -201,9 +201,17 @@ outpack_packet_use_dependency <- function(packet, query, name, files,
   packet <- check_current_packet(packet)
 
   query_parsed <- query_process(query, scope, name, subquery)
-  ## TODO: here - check that the query will return just a scalar
-  id <- outpack_query(query_parsed, pars = parameters, require_unpacked = TRUE,
-                      root = packet$root)
+
+  if (!query_parsed$single_value) {
+    stop(paste(
+      "The provided query is not guaranteed to return a single value:",
+      squote(deparse_query(query)),
+      "Did you forget latest(...)?"))
+  }
+
+  ## TODO: here - check that the query will return just a scalar, then
+  ## that it does actually return a scalar.
+  id <- outpack_query_eval(query_parsed, parameters, TRUE, packet$root)
 
   if (is.null(name)) {
     name <- packet$root$metadata(id)$name
@@ -211,12 +219,14 @@ outpack_packet_use_dependency <- function(packet, query, name, files,
 
   outpack_copy_files(id, files, packet$path, packet$root)
 
+  query_str <- deparse_query(query_parsed$value$expr,
+                             subquery_env_to_list(query_parsed$subquery))
   ## Only update packet information after success, to reflect new
   ## metadata
   depends <- list(
     id = id,
     name = name,
-    query = deparse_query(query_parsed$expr),
+    query = query_str,
     files = data_frame(here = names(files), there = unname(files)))
   packet$depends <- c(packet$depends, list(depends))
 

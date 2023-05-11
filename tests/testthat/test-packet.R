@@ -621,3 +621,39 @@ test_that("can depend based on a simple query", {
          query = 'latest(parameter:i < 3 && name == "a")',
          files = data.frame(here = "2.rds", there = "data.rds")))
 })
+
+
+test_that("can depend based on a query with subqueries", {
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+
+  src <- withr::local_tempdir()
+  src_a <- file.path(src, "a")
+  src_b <- file.path(src, "b")
+  src_c <- file.path(src, "c")
+  fs::dir_create(c(src_a, src_b, src_c))
+
+  id <- list(a = character())
+  for (i in 1:3) {
+    saveRDS(runif(10), file.path(src_a, "data.rds"))
+    p <- outpack_packet_start(src_a, "a", parameters = list(i = i), root = root)
+    outpack_packet_end(p)
+    id$a <- c(id$a, p$id)
+  }
+
+  p <- outpack_packet_start(src_b, "b", root = root)
+  outpack_packet_use_dependency(p, "latest(parameter:i < 3)", "a",
+                                c("2.rds" = "data.rds"))
+  outpack_packet_end(p)
+  id$b <- p$id
+
+  p <- outpack_packet_start(src_c, "c", root = root)
+  outpack_packet_use_dependency(p, "latest(usedby({B}))", name = "a",
+                                subquery = list(B = id$b),
+                                files = c("new.rds" = "data.rds"))
+  outpack_packet_end(p)
+  expect_length(p$depends, 1)
+  expect_equal(p$depends[[1]]$id, id$a[[2]])
+  expect_equal(p$depends[[1]]$name, "a")
+  expect_equal(p$depends[[1]]$query,
+               sprintf('latest(usedby({"%s"}) && name == "a")', id$b))
+})

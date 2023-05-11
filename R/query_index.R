@@ -84,7 +84,7 @@ query_index <- R6::R6Class(
       if (depth <= 0) {
         return(character(0))
       }
-      deps <- dependency_data[[id]]$packet
+      deps <- dependency_data[[id]]$id
       unique(c(deps, unlist(lapply(deps, private$get_dependencies,
                                    depth - 1, dependency_data))))
     }
@@ -117,7 +117,7 @@ build_packet_uses <- function(dependencies) {
   ids <- names(dependencies)
   uses <- list()
   for (id in ids) {
-    for (packet in dependencies[[id]]$packet) {
+    for (packet in dependencies[[id]]$id) {
       if (is.null(uses[[packet]])) {
         uses[[packet]] <- list(packet = id)
       } else {
