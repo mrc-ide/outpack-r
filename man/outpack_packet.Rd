@@ -54,7 +54,7 @@ of \code{NULL} uses the root value, otherwise use \code{info}, \code{debug} or
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
 
-\item{packet}{Optionally, an explicitly-passed packet; see Details}
+\item{packet}{A packet object}
 
 \item{script}{Path to the script within the packet directory (a
 relative path).  This function can be safely called multiple

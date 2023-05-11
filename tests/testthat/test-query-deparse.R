@@ -40,3 +40,23 @@ test_that("queries can be deparsed", {
     outpack_query_format(c("one", "two")),
     "Cannot format query, it must be a language object or be length 1.")
 })
+
+
+test_that("subqueries can be interpolated into deparsed queries", {
+  subquery <- list(A = "123",
+                   B = quote(latest(name == "b")),
+                   C = quote(latest(usedby({A}))))
+  expect_equal(
+    outpack_query_format(quote(latest(usedby({A}))), subquery),
+    'latest(usedby({"123"}))')
+  expect_equal(
+    outpack_query_format(quote(latest(usedby({B}))), subquery),
+    'latest(usedby({latest(name == "b")}))')
+  expect_equal(
+    outpack_query_format(quote(latest(usedby({Z}))), subquery),
+    'latest(usedby({Z}))')
+  ## Does recurse, for better or worse:
+  expect_equal(
+    outpack_query_format(quote(latest(usedby({C}))), subquery),
+    'latest(usedby({latest(usedby({"123"}))}))')
+})
