@@ -1,3 +1,25 @@
+##' Low-level function for reading metadata and deserialising it. This
+##' function can be used to directly read a metadata json file without
+##' reference to a root which contains it. It may be useful in the
+##' context of reading a metadata file written out as part of a failed
+##' run (see the `insert = FALSE` argument to
+##' [outpack::outpack_packet_end()])
+##'
+##' @title Read outpack metadata json file
+##'
+##' @param path Path to the json file
+##'
+##' @return A list of outpack metadata; see the schema for details. In
+##'   contrast to reading the json file directly with
+##'   `jsonlite::fromJSON`, this function will take care to convert
+##'   scalar and length-one vectors into the expected types.
+##'
+##' @export
+outpack_metadata_read <- function(path) {
+  assert_file_exists(path)
+  outpack_metadata_load(path)
+}
+
 outpack_metadata_create <- function(path, name, id, time, files,
                                     depends, parameters,
                                     script, custom, session,
