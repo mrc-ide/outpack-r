@@ -626,3 +626,29 @@ f(5)',
   expect_length(i_trace, 1)
   expect_equal(d$detail[[i_trace]], err$trace)
 })
+
+
+test_that("save warnings in logs", {
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+
+  path_src <- withr::local_tempdir()
+  writeLines('f <- function(x) {
+  if (x == 0) {
+    TRUE
+  } else {
+    warning(sprintf("x too large: %s", x))
+    f(x - 1)
+  }
+}
+saveRDS(f(5), "result.rds")',
+  file.path(path_src, "script.R"))
+  p <- outpack_packet_start(path_src, "example", root = root)
+  res <- outpack_packet_run(p, "script.R")
+  expect_length(res$warnings, 5)
+  outpack_packet_end(p)
+  d <- log_read(file.path(root$path, "archive", "example", p$id, "log.json"))
+  i_warning <- which(d$topic == "warning")
+  expect_length(i_warning, 1)
+  expect_equal(d$detail[[i_warning]],
+               sprintf("x too large: %d", 5:1))
+})

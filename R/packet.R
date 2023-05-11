@@ -208,7 +208,7 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
   }
   if (length(result$warnings) > 0) {
     warnings_str <- vcapply(result$warnings, conditionMessage)
-    outpack_log_info(packet, "warnings", I(warnings_str), caller)
+    outpack_log_info(packet, "warning", I(warnings_str), caller)
   }
 
   packet$script <- c(packet$script, script)
