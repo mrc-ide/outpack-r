@@ -196,65 +196,27 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 
   outpack_log_info(packet, "script", script, caller)
 
-  ## TODO: not sure that this is the correct environment; should it be
-  ## parent.frame() perhaps (see default args to new.env)
-
-  ## TODO: Control over running in separate process (if we do that,
-  ## the process should return session, too). This is probably a bit
-  ## hard to get right as we'd need to know what bits of the session
-  ## need replaying into the second session - I suspect it should be
-  ## an entirely different function. More likely we'll run the whole
-  ## packet setup in a new process as we currently do in orderly.
-
   ## TODO: be careful with nesting; as that complicates the logs and
   ## in particular the sinks.
-  info <- outpack_packet_run_global_state()
+  result <- evaluate_script(packet$path, script, envir, packet$logger$console)
 
-  ## It's important to do the global state check in the packet working
-  ## directory (not the calling working directory) otherwise we might
-  ## write out files in unexpected places when flushing devices.
-  echo <- packet$logger$console
-  with_dir(packet$path, {
-    result <- source_and_capture(script, envir, echo)
-    info_end <- outpack_packet_run_check_global_state(info)
-  })
-
-  ## Not sure that I love this TRUE / FALSE string
-  outpack_log_info(packet, "result", as.character(result$success), caller)
+  status <- if (result$success) "success" else "failure"
+  outpack_log_info(packet, "result", status, caller)
   outpack_log_info(packet, "output", I(result$output), caller)
+  if (length(result$warnings) > 0) {
+    browser()
+  }
 
   packet$script <- c(packet$script, script)
 
-  if (!info_end$success && result$success) {
-    result$success <- FALSE
-    result$error <- list(message = info_end$message)
+  if (!result$success) {
+    class(result) <- c("outpack_packet_run_error", "error", "condition")
+    stop(result)
   }
 
-  if (!result$success || !info_end$success) {
-    if (result$success) {
-      msg <- info_end$msg
-      error <- NULL
-    } else {
-      msg <- sprintf("Script failed with error: %s",
-                     result$error$message)
-      error <- NULL
-    }
-    err <- list(
-      message = sprintf("Script failed with error: %s",
-                        result$error$message),
-      error = error,
-      trace = result$trace,
-      output = result$output,
-      warnings = result$output)
-    class(err) <- c("outpack_packet_run_error", "error", "condition")
-    stop(err)
-  }
-
-  ## TODO: At this point we can only have success so we don't want
-  ## some fields
-  ##
-  ## output, warnings only?
-  invisible(result)
+  ## At this point we can only have success so we don't want some
+  ## fields; do we even want this though?
+  invisible(result[c("output", "warnings")])
 }
 
 
@@ -479,24 +441,4 @@ check_current_packet <- function(packet) { # TODO: rename
     stop(sprintf("Packet '%s' is complete", packet$id))
   }
   packet
-}
-
-
-outpack_packet_run_global_state <- function() {
-  list(n_open_devices = length(grDevices::dev.list()),
-       n_open_sinks = sink.number())
-}
-
-
-outpack_packet_run_check_global_state <- function(info) {
-  devices <- check_device_stack(info$n_open_devices)
-  sinks <- check_sink_stack(info$n_open_sinks)
-
-  success <- devices$success && sinks$success
-  if (success) {
-    msg <- NULL
-  } else {
-    msg <- paste(c(devices$message, sinks$message), collapse = " & ")
-  }
-  list(success = success, message = msg)
 }
