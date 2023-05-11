@@ -45,25 +45,25 @@ test_that("queries can be deparsed", {
 test_that("subqueries can be interpolated into deparsed queries", {
   subquery <- list(A = "123",
                    B = quote(latest(name == "b")),
-                   C = quote(latest(usedby({A}))))
+                   C = quote(latest(usedby({A})))) # nolint
   expect_equal(
-    outpack_query_format(quote(latest(usedby({A}))), subquery),
+    outpack_query_format(quote(latest(usedby({A}))), subquery), # nolint
     'latest(usedby({"123"}))')
   expect_equal(
-    outpack_query_format(quote(latest(usedby({B}))), subquery),
+    outpack_query_format(quote(latest(usedby({B}))), subquery), # nolint
     'latest(usedby({latest(name == "b")}))')
   expect_equal(
-    outpack_query_format(quote(latest(usedby({Z}))), subquery),
-    'latest(usedby({Z}))')
+    outpack_query_format(quote(latest(usedby({Z}))), subquery), # nolint
+    "latest(usedby({Z}))")
   ## Does recurse, for better or worse:
   expect_equal(
-    outpack_query_format(quote(latest(usedby({C}))), subquery),
+    outpack_query_format(quote(latest(usedby({C}))), subquery), # nolint
     'latest(usedby({latest(usedby({"123"}))}))')
 })
 
 
 test_that("subqueries must be sensible", {
   expect_error(
-    outpack_query_format(quote(latest(usedby({A}))), list(A = list()))
+    outpack_query_format(quote(latest(usedby({A}))), list(A = list())), # nolint
     "Invalid subquery, it must be deparseable: error for 'A'")
 })
