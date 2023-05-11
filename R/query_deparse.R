@@ -21,16 +21,11 @@ outpack_query_format <- function(query, subquery = NULL) {
   }
 
   if (!is.null(subquery)) {
-    ## ## This branch is going to be hit internally:
-    ## if (is.environment(subquery)) {
-    ##   subquery <- set_names(lapply(names(subquery), function(x) x$expr),
-    ##                         names(subquery))
-    ## }
     assert_named(subquery)
     ok <- vlapply(subquery, is_deparseable_query)
     if (!all(ok)) {
-      stop("Invalid query, it must be deparseable: error for %s",
-           paste(squote(names(subquery)[!ok]), collapse = ", "))
+      stop(sprintf("Invalid subquery, it must be deparseable: error for %s",
+                   paste(squote(names(subquery)[!ok]), collapse = ", ")))
     }
   }
 

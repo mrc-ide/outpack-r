@@ -60,3 +60,10 @@ test_that("subqueries can be interpolated into deparsed queries", {
     outpack_query_format(quote(latest(usedby({C}))), subquery),
     'latest(usedby({latest(usedby({"123"}))}))')
 })
+
+
+test_that("subqueries must be sensible", {
+  expect_error(
+    outpack_query_format(quote(latest(usedby({A}))), list(A = list()))
+    "Invalid subquery, it must be deparseable: error for 'A'")
+})
