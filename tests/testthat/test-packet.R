@@ -606,13 +606,23 @@ f(5)',
     outpack_packet_run(p, "script.R"),
     "Script failed with error: x became negative",
     class = "outpack_packet_run_error")
-  expect_setequal(names(err),
-                  c("message", "error", "trace", "output", "warnings"))
+  outpack_packet_end(p, FALSE)
+  expect_setequal(
+    names(err),
+    c("success", "message", "error", "trace", "output", "warnings"))
 
+  expect_false(err$success)
+  expect_equal(err$message, "Script failed with error: x became negative")
   expect_type(err$trace, "character")
   expect_true(length(err$trace) > 5)
-
   expect_match(err$output,
                "Error in f(x - 1) : x became negative",
                fixed = TRUE, all = FALSE)
+
+  expect_true(file.exists(file.path(path_src, "log.json")))
+  d <- log_read(file.path(path_src, "log.json"))
+
+  i_trace <- which(d$topic == "trace")
+  expect_length(i_trace, 1)
+  expect_equal(d$detail[[i_trace]], err$trace)
 })

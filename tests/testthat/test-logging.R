@@ -60,7 +60,7 @@ test_that("can log basic packet running", {
   res <- evaluate_promise(
     outpack_packet_run(p, "script.R", env))
   expect_equal(res$messages,
-               c("[ script     ]  script.R\n", "[ result     ]  TRUE\n"))
+               c("[ script     ]  script.R\n", "[ result     ]  success\n"))
 
   expect_match(res$output, "read.csv('data.csv')", fixed = TRUE)
 

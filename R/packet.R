@@ -203,8 +203,12 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
   status <- if (result$success) "success" else "failure"
   outpack_log_info(packet, "result", status, caller)
   outpack_log_info(packet, "output", I(result$output), caller)
+  if (length(result$trace) > 0) {
+    outpack_log_info(packet, "trace", I(result$trace), caller)
+  }
   if (length(result$warnings) > 0) {
-    browser()
+    warnings_str <- vcapply(result$warnings, conditionMessage)
+    outpack_log_info(packet, "warnings", I(warnings_str), caller)
   }
 
   packet$script <- c(packet$script, script)
