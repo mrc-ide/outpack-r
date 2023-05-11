@@ -280,15 +280,15 @@ is_id_lookup <- function(expr) {
 
 query_error <- function(msg, expr, context, prefix) {
   if (identical(expr, context)) {
-    stop(sprintf("%s\n  - %s %s", msg, prefix, deparse_query(expr)),
+    stop(sprintf("%s\n  - %s %s", msg, prefix, deparse_query(expr, NULL)),
          call. = FALSE)
   } else {
     width <- max(nchar(prefix), nchar("within"))
     stop(sprintf(
       "%s\n  - %s %s\n  - %s %s",
       msg,
-      format(prefix, width = width), deparse_query(expr),
-      format("within", width = width), deparse_query(context)),
+      format(prefix, width = width), deparse_query(expr, NULL),
+      format("within", width = width), deparse_query(context, NULL)),
       call. = FALSE)
   }
 }
@@ -308,7 +308,7 @@ query_parse_check_call <- function(expr, context) {
   if (!is.call(expr)) {
     query_parse_error(sprintf(
       "Invalid query '%s'; expected some sort of expression",
-      deparse_query(expr)),
+      deparse_query(expr, NULL)),
       expr, context)
   }
 
@@ -330,7 +330,7 @@ query_parse_check_call <- function(expr, context) {
   if (is.null(len)) {
     query_parse_error(sprintf(
       "Invalid query '%s'; unknown query component '%s'",
-      deparse_query(expr), fn),
+      deparse_query(expr, NULL), fn),
       expr, context)
   }
 
@@ -372,7 +372,7 @@ query_parse_value <- function(expr, context, subquery_env) {
     list(type = "lookup",
          name = deparse(expr))
   } else if (is_call(expr, ":")) {
-    name <- deparse_query(expr[[2]])
+    name <- deparse_query(expr[[2]], NULL)
     valid <- c("parameter", "this")
     if (!(name %in% valid)) {
         query_parse_error(sprintf(
@@ -380,13 +380,13 @@ query_parse_value <- function(expr, context, subquery_env) {
     }
     list(type = "lookup",
          name = name,
-         query = deparse_query(expr[[3]]),
+         query = deparse_query(expr[[3]], NULL),
          expr = expr,
          context = context)
   } else {
     query_parse_error(
       sprintf("Unhandled query expression value '%s'",
-              deparse_query(expr)),
+              deparse_query(expr, NULL)),
       expr, context)
   }
 }
@@ -411,7 +411,7 @@ make_subquery_env <- function(subquery) {
 add_subquery <- function(name, expr, context, subquery_env) {
   anonymous <- is.null(name)
   if (anonymous) {
-    name <- openssl::md5(deparse_query(expr))
+    name <- openssl::md5(deparse_query(expr, NULL))
   }
   subquery_env[[name]] <- list(
     name = name,

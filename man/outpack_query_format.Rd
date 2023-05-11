@@ -4,10 +4,15 @@
 \alias{outpack_query_format}
 \title{Format outpack query for displaying to users}
 \usage{
-outpack_query_format(query)
+outpack_query_format(query, subquery = NULL)
 }
 \arguments{
 \item{query}{The outpack query to print}
+
+\item{subquery}{Optionally a named list of subqueries - if given,
+each must be a valid deparseable subquery (i.e., a literal or
+language object).  Note that you must not provide an
+already-deparsed query here or it will get quoted!}
 }
 \value{
 Query expression as a string
@@ -16,5 +21,8 @@ Query expression as a string
 Format outpack query for displaying to users
 }
 \examples{
-outpack_query_format(quote(name == "example"))
+outpack::outpack_query_format(quote(name == "example"))
+outpack::outpack_query_format(
+  quote(usedby({A})),
+  subquery = list(A = quote(latest(name == "a"))))
 }
