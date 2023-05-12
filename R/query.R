@@ -1,3 +1,58 @@
+##' Construct an outpack query, typically then passed through to
+##' [outpack_search]
+##'
+##' @title Construct outpack query
+##'
+##' @param expr The query expression
+##'
+##' @param name Optionally, the name of the packet to scope the query on. This
+##'   will be intersected with `scope` arg and is a shorthand way of running
+##'   `scope = list(name = "name")`
+##'
+##' @param scope Optionally, a scope query to limit the packets
+##'   searched by `pars`
+##'
+##' @param subquery Optionally, named list of subqueries which can be
+##'   referenced by name from the `expr`.
+##'
+##' @return An `outpack_query` object, which should not be modified,
+##'   but which can be passed to [outpack::outpack_search()]
+##'
+##' @export
+outpack_query <- function(expr, name = NULL, scope = NULL, subquery = NULL) {
+  subquery_env <- make_subquery_env(subquery)
+  expr_parsed <- query_parse(expr, expr, subquery_env)
+  if (!is.null(name)) {
+    name_call <- call("==", quote(name), name)
+    if (is.null(scope)) {
+      scope <- name_call
+    } else {
+      scope <- call("&&", name_call, scope)
+    }
+  }
+  if (!is.null(scope)) {
+    expr_parsed <- query_parse_add_scope(expr, expr_parsed, scope)
+  }
+
+  ret <- list(value = expr_parsed,
+              subquery = as.list(subquery_env))
+  class(ret) <- "outpack_query"
+  ret
+}
+
+
+as_outpack_query <- function(expr, ...) {
+  if (inherits(expr, "outpack_query")) {
+    if (...length() > 0) {
+      stop("Invalid, unconsumed dots.")
+    }
+    expr
+  } else {
+    outpack_query(expr, ...)
+  }
+}
+
+
 query_parse <- function(expr, context, subquery_env) {
   if (is.character(expr)) {
     if (length(expr) == 1 && grepl(re_id, expr)) {

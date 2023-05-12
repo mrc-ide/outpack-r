@@ -51,7 +51,7 @@ test_that("Scope queries", {
     c(x1, y1))
   expect_equal(
     outpack_search(quote(parameter:a == 1), scope = quote(name == "x"),
-                  root = root),
+                   root = root),
     x1)
 })
 
@@ -96,19 +96,19 @@ test_that("Can filter based on given values", {
 
   expect_equal(
     outpack_search(quote(latest(parameter:a == this:a)),
-                  pars = list(a = 1), root = root),
+                  parameters = list(a = 1), root = root),
     last(x1))
   expect_equal(
     outpack_search(quote(latest(parameter:a == this:a)),
-                  pars = list(a = 2), root = root),
+                  parameters = list(a = 2), root = root),
     last(x2))
   expect_equal(
     outpack_search(quote(latest(parameter:a == this:a)),
-                  pars = list(a = 3), root = root),
+                  parameters = list(a = 3), root = root),
     NA_character_)
   expect_error(
     outpack_search(quote(latest(parameter:a == this:x)),
-                  pars = list(a = 3), root = root),
+                  parameters = list(a = 3), root = root),
     paste0("Did not find 'x' within given pars ('a')\n",
            "  - while evaluating this:x\n",
            "  - within           latest(parameter:a == this:x)"),

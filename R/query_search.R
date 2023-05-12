@@ -8,15 +8,6 @@
 ##' @param pars Optionally, a named list of parameters to substitute
 ##'   into the query (using the `this:` prefix)
 ##'
-##' @param scope Optionally, a scope query to limit the packets
-##'   searched by `pars`
-##'
-##' @param name Optionally, the name of the packet to scope the query on. This
-##'   will be intersected with `scope` arg and is a shorthand way of running
-##'   `scope = list(name = "name")`
-##'
-##' @param subquery Optionally, named list of subqueries which can be
-##'   referenced by name from the `expr`.
 ##'
 ##' @param require_unpacked Logical, indicating if we should require
 ##'   that the packets are unpacked. If `FALSE` (the default) we
@@ -29,31 +20,20 @@
 ##'
 ##' @return A character vector of matching ids
 ##' @export
-outpack_search <- function(expr, pars = NULL, scope = NULL,
-                           name = NULL, subquery = NULL,
-                           require_unpacked = FALSE,
-                           root = NULL) {
-  root <- outpack_root_open(root, locate = TRUE)
-  subquery_env <- make_subquery_env(subquery)
-  expr_parsed <- query_parse(expr, expr, subquery_env)
+outpack_search <- function(..., parameters = NULL, require_unpacked = FALSE,
+                           root = NULL, locate = TRUE) {
+  root <- outpack_root_open(root, locate)
+  query <- as_outpack_query(...)
+  outpack_query_eval(query, parameters, require_unpacked, root)
+}
 
-  if (!is.null(name)) {
-    name_call <- call("==", quote(name), name)
-    if (is.null(scope)) {
-      scope <- name_call
-    } else {
-      scope <- call("&&", name_call, scope)
-    }
-  }
 
-  if (!is.null(scope)) {
-    expr_parsed <- query_parse_add_scope(expr, expr_parsed, scope)
-  }
-
-  validate_parameters(pars)
+outpack_query_eval <- function(query, parameters, require_unpacked, root) {
+  assert_is(query, "outpack_query")
+  assert_is(root, "outpack_root")
+  validate_parameters(parameters) # against query soon
   index <- new_query_index(root, require_unpacked)
-
-  query_eval(expr_parsed, index, pars, subquery_env)
+  query_eval(query$value, index, parameters, list2env(query$subquery))
 }
 
 

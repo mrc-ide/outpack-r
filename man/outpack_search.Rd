@@ -5,31 +5,14 @@
 \title{Query outpack's database}
 \usage{
 outpack_search(
-  expr,
-  pars = NULL,
-  scope = NULL,
-  name = NULL,
-  subquery = NULL,
+  ...,
+  parameters = NULL,
   require_unpacked = FALSE,
-  root = NULL
+  root = NULL,
+  locate = TRUE
 )
 }
 \arguments{
-\item{expr}{The query expression}
-
-\item{pars}{Optionally, a named list of parameters to substitute
-into the query (using the \verb{this:} prefix)}
-
-\item{scope}{Optionally, a scope query to limit the packets
-searched by \code{pars}}
-
-\item{name}{Optionally, the name of the packet to scope the query on. This
-will be intersected with \code{scope} arg and is a shorthand way of running
-\code{scope = list(name = "name")}}
-
-\item{subquery}{Optionally, named list of subqueries which can be
-referenced by name from the \code{expr}.}
-
 \item{require_unpacked}{Logical, indicating if we should require
 that the packets are unpacked. If \code{FALSE} (the default) we
 search through all packets known to this outpack root,
@@ -38,6 +21,11 @@ unpacked packets will be considered.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
+
+\item{expr}{The query expression}
+
+\item{pars}{Optionally, a named list of parameters to substitute
+into the query (using the \verb{this:} prefix)}
 }
 \value{
 A character vector of matching ids
