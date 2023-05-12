@@ -9,9 +9,6 @@ outpack_checksum(hash_algorithm = NULL, root = NULL)
 \arguments{
 \item{hash_algorithm}{The hash algorithm to use, defaulting to the
 root's hash algorithm.}
-
-\item{root}{The outpack root. Will be searched for from the
-current directory if not given.}
 }
 \value{
 A hash string
