@@ -198,3 +198,14 @@ test_that("Queries can only be name and parameter", {
                 emptyenv()),
     "Invalid lookup 'custom:orderly'")
 })
+
+
+test_that("construct a query", {
+  obj <- outpack_query("latest")
+  expect_s3_class(obj, "outpack_query")
+  ## TODO: single_value, parameters
+  expect_setequal(names(obj), c("value", "subquery"))
+  expect_s3_class(obj$value, "outpack_query_component")
+  expect_equal(obj$value, query_parse("latest", "latest", emptyenv()))
+  expect_equal(obj$subquery, list())
+})

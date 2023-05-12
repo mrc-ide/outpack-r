@@ -93,7 +93,7 @@ query_functions <- list(
 query_component <- function(type, expr, context, args, ...) {
   structure(
     list(type = type, expr = expr, context = context, args = args, ...),
-    class = "outpack_query")
+    class = "outpack_query_component")
 }
 
 
