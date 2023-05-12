@@ -25,7 +25,7 @@ create_deterministic_packet <- function(root, name = "data",
 
 
 mock_metadata_depends <- function(id, depends = character(0)) {
-  ret <- list(list(id = id, depends = data_frame(id = depends)))
+  ret <- list(list(id = id, depends = data_frame(packet = depends)))
   names(ret) <- id
   ret
 }

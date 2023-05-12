@@ -67,7 +67,7 @@
             "items": {
                 "type": "object",
                 "properties": {
-                    "id": {
+                    "packet": {
                         "$ref": "id.json"
                     },
                     "name": {
@@ -95,7 +95,7 @@
                         }
                     }
                 },
-                "required": ["id", "name", "query", "files"]
+                "required": ["packet", "name", "query", "files"]
             }
         },
 

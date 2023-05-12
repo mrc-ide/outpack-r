@@ -55,7 +55,7 @@ test_that("Can run a basic packet", {
   expect_equal(meta$id, id)
   expect_null(meta$parameters)
   expect_equal(meta$depends,
-               data_frame(id = character(),
+               data_frame(packet = character(),
                           name = character(),
                           query = character(),
                           files = I(list())))
@@ -133,7 +133,7 @@ test_that("Can handle dependencies", {
   expect_equal(
     meta$depends,
     data_frame(
-      id = id1,
+      packet = id1,
       name = "a",
       query = sprintf('single(id == "%s" && name == "a")', id1),
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
@@ -240,7 +240,7 @@ test_that("Can use dependency from outpack without file store", {
   expect_equal(
     meta$depends,
     data_frame(
-      id = id1,
+      packet = id1,
       name = "a",
       ## TODO: replace this with something better by recognising literals
       query = sprintf('single(id == "%s" && name == "a")', id1),
@@ -614,7 +614,7 @@ test_that("can depend based on a simple query", {
 
   expect_mapequal(
     p$depends[[1]],
-    list(id = id[[3]],
+    list(packet = id[[3]],
          name = "a",
          query = "latest()",
          files = data.frame(here = "1.rds", there = "data.rds")))
@@ -624,7 +624,7 @@ test_that("can depend based on a simple query", {
 
   expect_mapequal(
     p$depends[[2]],
-    list(id = id[[2]],
+    list(packet = id[[2]],
          name = "a",
          query = 'latest(parameter:i < 3 && name == "a")',
          files = data.frame(here = "2.rds", there = "data.rds")))
@@ -660,7 +660,7 @@ test_that("can depend based on a query with subqueries", {
                                 files = c("new.rds" = "data.rds"))
   outpack_packet_end(p)
   expect_length(p$depends, 1)
-  expect_equal(p$depends[[1]]$id, id$a[[2]])
+  expect_equal(p$depends[[1]]$packet, id$a[[2]])
   expect_equal(p$depends[[1]]$name, "a")
   expect_equal(p$depends[[1]]$query,
                sprintf('latest(usedby({"%s"}) && name == "a")', id$b))

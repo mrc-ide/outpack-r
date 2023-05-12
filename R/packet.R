@@ -224,7 +224,7 @@ outpack_packet_use_dependency <- function(packet, query, name, files,
   ## Only update packet information after success, to reflect new
   ## metadata
   depends <- list(
-    id = id,
+    packet = id,
     name = name,
     query = query_str,
     files = data_frame(here = names(files), there = unname(files)))

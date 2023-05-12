@@ -78,7 +78,7 @@ outpack_metadata_create <- function(path, name, id, time, files,
     depends <- list()
   } else {
     for (i in seq_along(depends)) {
-      depends[[i]]$id <- scalar(depends[[i]]$id)
+      depends[[i]]$packet <- scalar(depends[[i]]$packet)
       depends[[i]]$name <- scalar(depends[[i]]$name)
       depends[[i]]$query <- scalar(depends[[i]]$query)
     }
@@ -148,7 +148,7 @@ outpack_metadata_load <- function(json) {
                            size = vnapply(data$files, "[[", "size"),
                            hash = vcapply(data$files, "[[", "hash"))
   data$depends <- data_frame(
-    id = vcapply(data$depends, "[[", "id"),
+    packet = vcapply(data$depends, "[[", "packet"),
     name = vcapply(data$depends, "[[", "name"),
     query = vcapply(data$depends, "[[", "query"),
     files = I(lapply(data$depends, function(x) {
