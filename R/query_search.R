@@ -3,11 +3,11 @@
 ##'
 ##' @title Query outpack's database
 ##'
-##' @param expr The query expression
+##' @param ... Arguments passed through to [outpack_query], perhaps
+##'   just a query expression
 ##'
-##' @param pars Optionally, a named list of parameters to substitute
+##' @param parameters Optionally, a named list of parameters to substitute
 ##'   into the query (using the `this:` prefix)
-##'
 ##'
 ##' @param require_unpacked Logical, indicating if we should require
 ##'   that the packets are unpacked. If `FALSE` (the default) we

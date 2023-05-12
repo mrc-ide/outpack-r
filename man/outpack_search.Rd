@@ -13,6 +13,12 @@ outpack_search(
 )
 }
 \arguments{
+\item{...}{Arguments passed through to \link{outpack_query}, perhaps
+just a query expression}
+
+\item{parameters}{Optionally, a named list of parameters to substitute
+into the query (using the \verb{this:} prefix)}
+
 \item{require_unpacked}{Logical, indicating if we should require
 that the packets are unpacked. If \code{FALSE} (the default) we
 search through all packets known to this outpack root,
@@ -21,11 +27,6 @@ unpacked packets will be considered.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
-
-\item{expr}{The query expression}
-
-\item{pars}{Optionally, a named list of parameters to substitute
-into the query (using the \verb{this:} prefix)}
 }
 \value{
 A character vector of matching ids
