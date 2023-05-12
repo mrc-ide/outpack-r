@@ -29,30 +29,13 @@
 ##'
 ##' @return A character vector of matching ids
 ##' @export
-outpack_query <- function(expr, pars = NULL, scope = NULL,
-                          name = NULL, subquery = NULL,
-                          require_unpacked = FALSE,
-                          root = NULL) {
-  ## TODO: pars -> parameters for consistency
-  ## TODO: add locate arg for consistency?
-  expr_parsed <- query_process(expr, scope, name, subquery)
-  outpack_query_eval(expr_parsed, pars, require_unpacked, root)
-}
-
-
-outpack_query_eval <- function(expr, parameters, require_unpacked, root) {
-  assert_is(expr, "outpack_query_processed")
-  root <- outpack_root_open(root, locate = TRUE)
-  validate_parameters(parameters)
-  index <- new_query_index(root, require_unpacked)
-  query_eval(expr$value, index, parameters, expr$subquery)
-}
-
-
-query_process <- function(expr, scope, name, subquery) {
+outpack_query_thing <- function(expr, scope = NULL, name = NULL,
+                                subquery = NULL) {
   subquery_env <- make_subquery_env(subquery)
-  expr_parsed <- query_parse(expr, expr, subquery_env)
+  expr_parsed <- query_parse(expr, NULL, subquery_env)
 
+  ## TODO: don't add 'name' (or even scope) in the case where we have
+  ## a literal id given I think?
   if (!is.null(name)) {
     name_call <- call("==", quote(name), name)
     if (is.null(scope)) {
@@ -62,18 +45,101 @@ query_process <- function(expr, scope, name, subquery) {
     }
   }
 
+  ## TODO: subqueries should go into scope!
   if (!is.null(scope)) {
     expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
 
   single_value <- is_expr_single_value(expr_parsed, subquery_env)
 
-  structure(list(value = expr_parsed,
-                 single_value = single_value,
-                 subquery = subquery_env),
-            ## Stupid class name, will fix later
-            class = "outpack_query_processed")
+  ## This would be useful; let's get it added later...
+  ## parameters <- identify_parameters(expr_parsed)
+  ret <- list(value = expr_parsed,
+              scope = scope,
+              name = name,
+              subquery = as.list(subquery_env))
+  class(ret) <- "outpack_query_thing"
+  ret
 }
+
+
+## This is the previous interface essentially; might be nice to keep
+## it like this though?
+outpack_query <- function(..., parameters = NULL, require_unpacked = FALSE,
+                          root = NULL, locate = TRUE) {
+  root <- outpack_root_open(root, locate)
+  query <- as_outpack_query_thing(...)
+  outpack_query_eval(query, parameters, require_unpacked, root)
+}
+
+
+outpack_query_eval <- function(query, parameters, require_unpacked, root) {
+  assert_is(query, "outpack_query_thing")
+  assert_is(root, "outpack_root")
+  validate_parameters(parameters) # against query soon
+  index <- new_query_index(root, require_unpacked)
+  query_eval(query$value, index, parameters, list2env(query$subquery))
+}
+
+
+as_outpack_query_thing <- function(x) {
+  if (inherits(x, "outpack_query_thing")) {
+    x
+  } else if (is.language(x)) {
+    outpack_query_thing(x)
+  } else if (is.character(x) && length(x) == 1) {
+    browser()
+  } else {
+    stop("Invalid input for a query thing")
+  }
+}
+
+
+
+
+
+
+
+##' Evaluate a query against the outpack database, returning a vector
+##' of matching packet ids.
+##'
+##' @title Query outpack's database
+##'
+##' @param expr The query expression
+##'
+##' @param pars Optionally, a named list of parameters to substitute
+##'   into the query (using the `this:` prefix)
+##'
+##' @param scope Optionally, a scope query to limit the packets
+##'   searched by `pars`
+##'
+##' @param name Optionally, the name of the packet to scope the query on. This
+##'   will be intersected with `scope` arg and is a shorthand way of running
+##'   `scope = list(name = "name")`
+##'
+##' @param subquery Optionally, named list of subqueries which can be
+##'   referenced by name from the `expr`.
+##'
+##' @param require_unpacked Logical, indicating if we should require
+##'   that the packets are unpacked. If `FALSE` (the default) we
+##'   search through all packets known to this outpack root,
+##'   regardless of if they are locally available, but if `TRUE`, only
+##'   unpacked packets will be considered.
+##'
+##' @param root The outpack root. Will be searched for from the
+##'   current directory if not given.
+##'
+##' @return A character vector of matching ids
+##' @export
+## outpack_query <- function(expr, pars = NULL, scope = NULL,
+##                           name = NULL, subquery = NULL,
+##                           require_unpacked = FALSE,
+##                           root = NULL) {
+##   ## TODO: pars -> parameters for consistency
+##   ## TODO: add locate arg for consistency?
+##   expr_parsed <- query_process(expr, scope, name, subquery)
+##   outpack_query_eval(expr_parsed, pars, require_unpacked, root)
+## }
 
 
 query_parse <- function(expr, context, subquery_env) {
@@ -455,6 +521,7 @@ add_subquery <- function(name, expr, context, subquery_env) {
   invisible(name)
 }
 
+## ------------------------ TODO: split file here ----------------------------
 
 query_eval <- function(query, index, pars, subquery_env) {
   switch(query$type,
@@ -579,6 +646,7 @@ query_eval_test_binary <- function(op, a, b) {
 }
 
 
+## TODO: rename to query_eval_lookup_this
 query_lookup_this <- function(name, pars, expr, context) {
   if (!(name %in% names(pars))) {
     msg <- sprintf("Did not find '%s' within given pars (%s)",

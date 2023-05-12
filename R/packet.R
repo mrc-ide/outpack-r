@@ -178,9 +178,8 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##' @export
 ##' @rdname outpack_packet
 ##'
-##' @param query The id of an existing packet to use files from, or a
-##'   query to find such a packet. If a query, then this query *must*
-##'   return exactly one packet.
+##' @param query An [outpack_query_thing] object, or something (e.g. a
+##'   string) that can be trivially converted into one.
 ##'
 ##' @param name Either a string (the packet name to restrict to) or
 ##'   `NULL`
@@ -194,24 +193,20 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##'   error
 ##'
 ##' @param subquery Optionally, a named list of subqueries
-outpack_packet_use_dependency <- function(packet, query, name, files,
-                                          parameters = NULL,
-                                          subquery = NULL,
-                                          scope = NULL) {
+outpack_packet_use_dependency <- function(packet, query, files) {
   packet <- check_current_packet(packet)
+  query <- as_outpack_query_thing(query)
 
-  query_parsed <- query_process(query, scope, name, subquery)
-
-  if (!query_parsed$single_value) {
+  if (!query$single_value) {
     stop(paste(
       "The provided query is not guaranteed to return a single value:",
-      squote(deparse_query(query)),
+      squote(deparse_query(query$value)),
       "Did you forget latest(...)?"))
   }
 
   ## TODO: here - check that the query will return just a scalar, then
   ## that it does actually return a scalar.
-  id <- outpack_query_eval(query_parsed, parameters, TRUE, packet$root)
+  id <- outpack_query_eval(query, parameters, TRUE, packet$root)
 
   if (is.null(name)) {
     name <- packet$root$metadata(id)$name

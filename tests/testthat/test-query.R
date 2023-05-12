@@ -1,5 +1,4 @@
 test_that("Parse basic query", {
-  res <- query_parse("latest(name == 'data')", NULL, emptyenv())
   expect_identical(query_parse(quote(latest(name == "data")), NULL, emptyenv()),
                    res)
   expect_equal(res$type, "latest")
