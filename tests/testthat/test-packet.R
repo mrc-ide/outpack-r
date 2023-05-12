@@ -54,8 +54,11 @@ test_that("Can run a basic packet", {
   expect_equal(meta$name, "example")
   expect_equal(meta$id, id)
   expect_null(meta$parameters)
-  expect_equal(meta$depends, data_frame(packet = character(),
-                                        files = I(list())))
+  expect_equal(meta$depends,
+               data_frame(id = character(),
+                          name = character(),
+                          query = character(),
+                          files = I(list())))
   expect_setequal(meta$files$path,
                   c("data.csv", "myplot.png", "script.R", "log.json"))
   expect_equal(meta$files$size,
@@ -130,7 +133,9 @@ test_that("Can handle dependencies", {
   expect_equal(
     meta$depends,
     data_frame(
-      packet = id1,
+      id = id1,
+      name = "a",
+      query = sprintf('single(id == "%s" && name == "a")', id1),
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 
@@ -235,7 +240,10 @@ test_that("Can use dependency from outpack without file store", {
   expect_equal(
     meta$depends,
     data_frame(
-      packet = id1,
+      id = id1,
+      name = "a",
+      ## TODO: replace this with something better by recognising literals
+      query = sprintf('single(id == "%s" && name == "a")', id1),
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 

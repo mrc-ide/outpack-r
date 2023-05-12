@@ -119,9 +119,9 @@ build_packet_uses <- function(dependencies) {
   for (id in ids) {
     for (packet in dependencies[[id]]$id) {
       if (is.null(uses[[packet]])) {
-        uses[[packet]] <- list(packet = id)
+        uses[[packet]] <- list(id = id)
       } else {
-        uses[[packet]]$packet <- unique(c(uses[[packet]]$packet, id))
+        uses[[packet]]$id <- unique(c(uses[[packet]]$id, id))
       }
     }
   }

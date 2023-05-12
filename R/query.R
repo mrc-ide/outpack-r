@@ -45,7 +45,7 @@ outpack_query_eval <- function(expr, parameters, require_unpacked, root) {
   root <- outpack_root_open(root, locate = TRUE)
   validate_parameters(parameters)
   index <- new_query_index(root, require_unpacked)
-  query_eval(expr$value, index, parsed, expr$subquery)
+  query_eval(expr$value, index, parameters, expr$subquery)
 }
 
 
@@ -66,7 +66,7 @@ query_process <- function(expr, scope, name, subquery) {
     expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
 
-  single_value <- is_expr_single_value(expr_parsed, subqery_env)
+  single_value <- is_expr_single_value(expr_parsed, subquery_env)
 
   structure(list(value = expr_parsed,
                  single_value = single_value,
