@@ -12,7 +12,7 @@
 ##' @param hash_algorithm The hash algorithm to use, defaulting to the
 ##'   root's hash algorithm.
 ##'
-##' @inheritParams outpack_query
+##' @inheritParams outpack_search
 ##'
 ##' @return A hash string
 ##' @export
