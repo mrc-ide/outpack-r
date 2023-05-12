@@ -7,7 +7,8 @@
 outpack_copy_files(id, files, dest, root = NULL)
 }
 \arguments{
-\item{id}{The id of an existing packet to use files from}
+\item{id}{Optionally, an outpack id via \link{outpack_id}. If
+not given a new id will be generated.}
 
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the

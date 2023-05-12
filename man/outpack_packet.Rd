@@ -25,20 +25,30 @@ outpack_packet_end(packet)
 
 outpack_packet_run(packet, script, envir = .GlobalEnv)
 
-outpack_packet_use_dependency(packet, id, files)
+outpack_packet_use_dependency(
+  packet,
+  query,
+  name,
+  files,
+  parameters = NULL,
+  subquery = NULL,
+  scope = NULL
+)
 
 outpack_packet_add_custom(packet, application, data, schema = NULL)
 }
 \arguments{
 \item{path}{Path to the build / output directory.}
 
-\item{name}{The name of the packet}
+\item{name}{Either a string (the packet name to restrict to) or
+\code{NULL}}
 
-\item{parameters}{Optionally, a named list of parameters.  The
-names must be unique, and the values must all be non-NA scalar
-atomics (logical, integer, numeric, character)}
+\item{parameters}{Optionally, parameters to pass through to the
+query; if parameters are referenced but found we will throw an
+error}
 
-\item{id}{The id of an existing packet to use files from}
+\item{id}{Optionally, an outpack id via \link{outpack_id}. If
+not given a new id will be generated.}
 
 \item{logging_console}{Optional logical, indicating if we should
 override the root's default in logging to the console. A value
@@ -62,9 +72,15 @@ times within a single packet run (or zero times!) as needed.}
 
 \item{envir}{Environment in which to run the script}
 
+\item{query}{The id of an existing packet to use files from, or a
+query to find such a packet. If a query, then this query \emph{must}
+return exactly one packet.}
+
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the
 value corresponds to the name within the upstream packet}
+
+\item{subquery}{Optionally, a named list of subqueries}
 
 \item{application}{The name of the application (used to organise
 the data and query it later, see Details)}
