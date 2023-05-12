@@ -44,7 +44,7 @@ outpack_query <- function(expr, name = NULL, scope = NULL, subquery = NULL) {
 as_outpack_query <- function(expr, ...) {
   if (inherits(expr, "outpack_query")) {
     if (...length() > 0) {
-      stop("Invalid, unconsumed dots.")
+      stop("If 'expr' is an 'outpack_query', no additional arguments allowed")
     }
     expr
   } else {

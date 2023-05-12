@@ -209,3 +209,16 @@ test_that("construct a query", {
   expect_equal(obj$value, query_parse("latest", "latest", emptyenv()))
   expect_equal(obj$subquery, list())
 })
+
+
+test_that("convert to a query", {
+  expect_identical(as_outpack_query("latest"),
+                   outpack_query("latest"))
+  expect_identical(as_outpack_query("latest", name = "a"),
+                   outpack_query("latest", name = "a"))
+  expect_identical(as_outpack_query(outpack_query("latest", name = "a")),
+                   outpack_query("latest", name = "a"))
+  expect_error(
+    as_outpack_query(outpack_query("latest"), name = "a"),
+    "If 'expr' is an 'outpack_query', no additional arguments allowed")
+})
