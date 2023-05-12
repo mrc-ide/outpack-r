@@ -37,34 +37,34 @@ outpack_query_eval <- function(query, parameters, require_unpacked, root) {
 }
 
 
-query_eval <- function(query, index, pars, subquery_env) {
+query_eval <- function(query, index, parameters, subquery) {
   switch(query$type,
          literal = query$value,
-         lookup = query_eval_lookup(query, index, pars),
-         group = query_eval_group(query, index, pars, subquery_env),
-         test = query_eval_test(query, index, pars, subquery_env),
-         latest = query_eval_latest(query, index, pars, subquery_env),
-         single = query_eval_single(query, index, pars, subquery_env),
-         at_location = query_eval_at_location(query, index, pars),
-         subquery = query_eval_subquery(query, index, pars, subquery_env),
-         dependency = query_eval_dependency(query, index, pars, subquery_env),
+         lookup = query_eval_lookup(query, index, parameters),
+         group = query_eval_group(query, index, parameters, subquery),
+         test = query_eval_test(query, index, parameters, subquery),
+         latest = query_eval_latest(query, index, parameters, subquery),
+         single = query_eval_single(query, index, parameters, subquery),
+         at_location = query_eval_at_location(query, index, parameters),
+         subquery = query_eval_subquery(query, index, parameters, subquery),
+         dependency = query_eval_dependency(query, index, parameters, subquery),
          ## Normally unreachable
          stop("Unhandled expression [outpack bug - please report]"))
 }
 
 
-query_eval_latest <- function(query, index, pars, subquery_env) {
+query_eval_latest <- function(query, index, parameters, subquery) {
   if (length(query$args) == 0) {
     candidates <- index$index$id
   } else {
-    candidates <- query_eval(query$args[[1]], index, pars, subquery_env)
+    candidates <- query_eval(query$args[[1]], index, parameters, subquery)
   }
   if (length(candidates) == 0) NA_character_ else last(candidates)
 }
 
 
-query_eval_single <- function(query, index, pars, subquery_env) {
-  candidates <- query_eval(query$args[[1]], index, pars, subquery_env)
+query_eval_single <- function(query, index, parameters, subquery) {
+  candidates <- query_eval(query$args[[1]], index, parameters, subquery)
   len <- length(candidates)
   if (len == 0) {
     query_eval_error("Query did not find any packets",
@@ -78,7 +78,7 @@ query_eval_single <- function(query, index, pars, subquery_env) {
 }
 
 
-query_eval_at_location <- function(query, index, pars) {
+query_eval_at_location <- function(query, index, parameters) {
   location <- vcapply(query$args, "[[", "value")
   i <- vlapply(index$index$location, function(x) any(x %in% location))
   index$index$id[i]
@@ -88,25 +88,25 @@ query_eval_at_location <- function(query, index, pars) {
 ## TODO: we probably also need to make sure that none of this is
 ## recursive (e.g., subquery A referencing B etc; do that in the parse
 ## phase; things are now set up to support this).
-query_eval_subquery <- function(query, index, pars, subquery_env) {
+query_eval_subquery <- function(query, index, parameters, subquery) {
   name <- query$args$name
-  if (!subquery_env[[name]]$evaluated) {
+  if (!subquery[[name]]$evaluated) {
     ## TODO: should we really not allow parameters here? Feels like
     ## they might be relevant?
-    result <- query_eval(subquery_env[[name]]$parsed, index, pars = NULL,
-                         subquery_env)
-    subquery_env[[name]]$result <- result
-    subquery_env[[name]]$evaluated <- TRUE
+    result <- query_eval(subquery[[name]]$parsed, index, parameters = NULL,
+                         subquery)
+    subquery[[name]]$result <- result
+    subquery[[name]]$evaluated <- TRUE
   }
-  subquery_env[[name]]$result
+  subquery[[name]]$result
 }
 
 
-query_eval_dependency <- function(query, index, pars, subquery_env) {
+query_eval_dependency <- function(query, index, parameters, subquery) {
   ## Eval dependency arg without scope, we need to find all packets which
   ## were usedby or used in this one, so find parents/children without scope
   ## and apply scope later when finding the results of the main query.
-  id <- query_eval(query$args[[1]], index, pars, subquery_env)
+  id <- query_eval(query$args[[1]], index, parameters, subquery)
   len <- length(id)
   if (len == 0) {
     return(character(0))
@@ -117,19 +117,20 @@ query_eval_dependency <- function(query, index, pars, subquery_env) {
 }
 
 
-query_eval_lookup <- function(query, index, pars) {
+query_eval_lookup <- function(query, index, parameters) {
   switch(query$name,
          name = index$index$name,
          id = index$index$id,
          parameter = lapply(index$index$parameters, "[[", query$query),
-         this = query_eval_this(query$query, pars, query$expr, query$context),
+         this = query_eval_this(query$query, parameters, query$expr,
+                                query$context),
          ## Normally unreachable
          stop("Unhandled lookup [outpack bug - please report]"))
 }
 
 
-query_eval_group <- function(query, index, pars, subquery_env) {
-  args <- lapply(query$args, query_eval, index, pars, subquery_env)
+query_eval_group <- function(query, index, parameters, subquery) {
+  args <- lapply(query$args, query_eval, index, parameters, subquery)
   switch(query$name,
          "&&" = intersect(args[[1]], args[[2]]),
          "||" = union(args[[1]], args[[2]]),
@@ -140,8 +141,8 @@ query_eval_group <- function(query, index, pars, subquery_env) {
 }
 
 
-query_eval_test <- function(query, index, pars, subquery_env) {
-  args <- lapply(query$args, query_eval, index, pars, subquery_env)
+query_eval_test <- function(query, index, parameters, subquery) {
+  args <- lapply(query$args, query_eval, index, parameters, subquery)
   i <- query_eval_test_binary(query$name, args[[1]], args[[2]])
   index$index$id[i]
 }
@@ -160,11 +161,11 @@ query_eval_test_binary <- function(op, a, b) {
 }
 
 
-query_eval_this <- function(name, pars, expr, context) {
-  if (!(name %in% names(pars))) {
-    msg <- sprintf("Did not find '%s' within given pars (%s)",
-                   name, paste(squote(names(pars)), collapse = ", "))
+query_eval_this <- function(name, parameters, expr, context) {
+  if (!(name %in% names(parameters))) {
+    msg <- sprintf("Did not find '%s' within given parameters (%s)",
+                   name, paste(squote(names(parameters)), collapse = ", "))
     query_eval_error(msg, expr, context)
   }
-  pars[[name]]
+  parameters[[name]]
 }
