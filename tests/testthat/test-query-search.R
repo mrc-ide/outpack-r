@@ -649,8 +649,9 @@ test_that("usedby depth works as expected", {
 test_that("useful errors returned when scope is invalid type", {
   root <- create_temporary_root(use_file_store = TRUE)
 
-  expect_error(outpack_search(quote(latest()), scope = "the scope", root = root),
-               "Invalid input for `scope`, it must be a language expression.")
+  expect_error(
+    outpack_search(quote(latest()), scope = "the scope", root = root),
+    "Invalid input for `scope`, it must be a language expression.")
 })
 
 
