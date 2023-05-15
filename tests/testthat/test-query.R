@@ -198,3 +198,46 @@ test_that("Queries can only be name and parameter", {
                 emptyenv()),
     "Invalid lookup 'custom:orderly'")
 })
+
+
+test_that("construct a query", {
+  obj <- outpack_query("latest")
+  expect_s3_class(obj, "outpack_query")
+  ## TODO: single_value, parameters
+  expect_setequal(names(obj), c("value", "info", "subquery"))
+  expect_s3_class(obj$value, "outpack_query_component")
+  expect_equal(obj$value, query_parse("latest", "latest", emptyenv()))
+  expect_equal(obj$info, list(single = TRUE, parameters = character()))
+  expect_equal(obj$subquery, list())
+})
+
+
+test_that("convert to a query", {
+  expect_identical(as_outpack_query("latest"),
+                   outpack_query("latest"))
+  expect_identical(as_outpack_query("latest", name = "a"),
+                   outpack_query("latest", name = "a"))
+  expect_identical(as_outpack_query(outpack_query("latest", name = "a")),
+                   outpack_query("latest", name = "a"))
+  expect_error(
+    as_outpack_query(outpack_query("latest"), name = "a"),
+    "If 'expr' is an 'outpack_query', no additional arguments allowed")
+})
+
+
+test_that("report on parameters used in the query", {
+  f <- function(x) {
+    outpack_query(x)$info$parameters
+  }
+  expect_equal(f(quote(latest())), character())
+  expect_equal(f(quote(parameter:a < this:a)), "a")
+  expect_equal(f(quote(parameter:a < this:a && this:a > this:b)),
+               c("a", "b"))
+})
+
+
+test_that("include parameters from subqueries too", {
+  obj <- outpack_query("latest({B})",
+                       subquery = list(B = quote(parameter:x < this:y)))
+  expect_equal(obj$info$parameters, "y")
+})

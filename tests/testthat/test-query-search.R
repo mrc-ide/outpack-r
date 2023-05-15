@@ -51,7 +51,7 @@ test_that("Scope queries", {
     c(x1, y1))
   expect_equal(
     outpack_search(quote(parameter:a == 1), scope = quote(name == "x"),
-                  root = root),
+                   root = root),
     x1)
 })
 
@@ -96,20 +96,20 @@ test_that("Can filter based on given values", {
 
   expect_equal(
     outpack_search(quote(latest(parameter:a == this:a)),
-                  pars = list(a = 1), root = root),
+                  parameters = list(a = 1), root = root),
     last(x1))
   expect_equal(
     outpack_search(quote(latest(parameter:a == this:a)),
-                  pars = list(a = 2), root = root),
+                  parameters = list(a = 2), root = root),
     last(x2))
   expect_equal(
     outpack_search(quote(latest(parameter:a == this:a)),
-                  pars = list(a = 3), root = root),
+                  parameters = list(a = 3), root = root),
     NA_character_)
   expect_error(
     outpack_search(quote(latest(parameter:a == this:x)),
-                  pars = list(a = 3), root = root),
-    paste0("Did not find 'x' within given pars ('a')\n",
+                  parameters = list(a = 3), root = root),
+    paste0("Did not find 'x' within given parameters ('a')\n",
            "  - while evaluating this:x\n",
            "  - within           latest(parameter:a == this:x)"),
     fixed = TRUE)
@@ -762,4 +762,56 @@ test_that("uses and usedby can be used together", {
         a = quote(single(usedby(latest(name == "c")) && name == "a"))),
       root = root),
     ids["d"])
+})
+
+
+test_that("adding scope filters queries", {
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+
+  src <- withr::local_tempdir()
+  id <- list(a = character(), b = character())
+  for (i in 1:3) {
+    for (name in  c("a", "b")) {
+      p <- outpack_packet_start(src, name, parameters = list(i = i),
+                                root = root)
+      outpack_packet_end(p)
+      id[[name]] <- c(id[[name]], p$id)
+    }
+  }
+
+  expect_equal(
+    outpack_search("latest(parameter:i < 3)", root = root),
+    id$b[[2]])
+  expect_equal(
+    outpack_search("latest(parameter:i < 3)", name = "a", root = root),
+    id$a[[2]])
+  expect_equal(
+    outpack_search("latest(parameter:i < 3 && name == 'a')", root = root),
+    id$a[[2]])
+  expect_equal(
+    outpack_search(outpack_query("latest(parameter:i < 3)",
+                                 scope = quote(name == "a")), root = root),
+    id$a[[2]])
+})
+
+
+## This test exercises a bunch of options that should all produce the
+## same result, but did not once.
+test_that("Same result with either strings/expressions, named or not", {
+  root <- create_temporary_root(use_file_store = TRUE)
+
+  ids <- vcapply(1:5, function(i) {
+    create_random_packet(root, "x", list(a = i, b = 1))
+  })
+
+  dat <- list(list(query = quote(parameter:b == 1), result = ids),
+              list(query = quote(parameter:a < 3), result = ids[1:2]),
+              list(query = quote(latest(parameter:a < 3)), result = ids[[2]]))
+  for (x in dat) {
+    for (string in c(TRUE, FALSE)) {
+      query <- if (string) deparse(x$query) else x$query
+      expect_setequal(outpack_search(query, root = root), x$result)
+      expect_setequal(outpack_search(query, root = root, name = "x"), x$result)
+    }
+  }
 })

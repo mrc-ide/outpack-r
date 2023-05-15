@@ -1,3 +1,63 @@
+##' Construct an outpack query, typically then passed through to
+##' [outpack_search]
+##'
+##' @title Construct outpack query
+##'
+##' @param expr The query expression
+##'
+##' @param name Optionally, the name of the packet to scope the query on. This
+##'   will be intersected with `scope` arg and is a shorthand way of running
+##'   `scope = list(name = "name")`
+##'
+##' @param scope Optionally, a scope query to limit the packets
+##'   searched by `pars`
+##'
+##' @param subquery Optionally, named list of subqueries which can be
+##'   referenced by name from the `expr`.
+##'
+##' @return An `outpack_query` object, which should not be modified,
+##'   but which can be passed to [outpack::outpack_search()]
+##'
+##' @export
+outpack_query <- function(expr, name = NULL, scope = NULL, subquery = NULL) {
+  subquery_env <- make_subquery_env(subquery)
+  expr_parsed <- query_parse(expr, expr, subquery_env)
+  if (!is.null(name)) {
+    name_call <- call("==", quote(name), name)
+    if (is.null(scope)) {
+      scope <- name_call
+    } else {
+      scope <- call("&&", name_call, scope)
+    }
+  }
+  if (!is.null(scope)) {
+    expr_parsed <- query_parse_add_scope(expr_parsed, scope)
+  }
+
+  info <- list(
+    single = is_expr_single_value(expr_parsed, subquery_env),
+    parameters = query_parameters(expr_parsed, subquery_env))
+
+  ret <- list(value = expr_parsed,
+              subquery = as.list(subquery_env),
+              info = info)
+  class(ret) <- "outpack_query"
+  ret
+}
+
+
+as_outpack_query <- function(expr, ...) {
+  if (inherits(expr, "outpack_query")) {
+    if (...length() > 0) {
+      stop("If 'expr' is an 'outpack_query', no additional arguments allowed")
+    }
+    expr
+  } else {
+    outpack_query(expr, ...)
+  }
+}
+
+
 query_parse <- function(expr, context, subquery_env) {
   if (is.character(expr)) {
     if (length(expr) == 1 && grepl(re_id, expr)) {
@@ -38,7 +98,7 @@ query_functions <- list(
 query_component <- function(type, expr, context, args, ...) {
   structure(
     list(type = type, expr = expr, context = context, args = args, ...),
-    class = "outpack_query")
+    class = "outpack_query_component")
 }
 
 
@@ -96,29 +156,35 @@ query_parse_at_location <- function(expr, context, subquery_env) {
 }
 
 
-query_parse_add_scope <- function(expr, expr_parsed, scope) {
+query_parse_add_scope <- function(expr_parsed, scope) {
   if (!is.language(scope)) {
+    ## I don't think this is correct:
     stop("Invalid input for `scope`, it must be a language expression.")
   }
 
+  ## Can the scope not access subqueries?
   parsed_scope <- query_parse(scope, scope, emptyenv())
   scoped_functions <- list("latest", "single")
+  expr <- expr_parsed$expr
+
   if (expr_parsed$type %in% scoped_functions) {
+    fn <- deparse(expr[[1]])
     ## Include scope inside the top level function call
-    if (length(expr) == 1) {
+    if (length(expr_parsed$args) == 0) {
       ## e.g. latest()
-      expr_parsed$args <-  list(parsed_scope)
+      expr_parsed$expr <- call(fn, scope)
+      expr_parsed$args <- list(parsed_scope)
     } else {
       ## e.g. latest(name == "x")
-      scoped_expr <- call(deparse(expr[[1]]), call("&&", expr[[-1]], scope))
+      expr_parsed$expr <- call(fn, call("&&", expr[[-1]], scope))
       expr_parsed$args[[1]] <- query_component(
-        "group", scoped_expr, scoped_expr,
+        "group", expr_parsed$expr, expr_parsed$expr,
         list(expr_parsed$args[[1]], parsed_scope), name = "&&")
     }
   } else {
     ## Include scope at end of expression
-    scoped_expr <- call("&&", expr, scope)
-    expr_parsed <- query_component("group", scoped_expr, scoped_expr,
+    expr_parsed$expr <- call("&&", expr, scope)
+    expr_parsed <- query_component("group", expr_parsed$expr, expr_parsed$expr,
                                    list(expr_parsed, parsed_scope),
                                    name = "&&")
   }
@@ -362,4 +428,26 @@ add_subquery <- function(name, expr, context, subquery_env) {
     evaluated = FALSE,
     result = NULL)
   invisible(name)
+}
+
+
+query_parameters <- function(expr_parsed, subquery_env) {
+  env <- new.env(parent = emptyenv())
+  env$seen <- character()
+  f <- function(x) {
+    if (is.recursive(x) && x$type == "lookup" && x$name == "this") {
+      env$seen <- c(env$seen, x$query)
+    } else if (x$type == "subquery") {
+      sub <- subquery_env[[x$args$name]]
+      if (!is.null(sub)) {
+        f(sub$parsed)
+      }
+    } else {
+      for (el in x$args) {
+        f(el)
+      }
+    }
+  }
+  f(expr_parsed)
+  unique(env$seen)
 }
