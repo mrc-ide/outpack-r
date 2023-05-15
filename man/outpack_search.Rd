@@ -4,13 +4,7 @@
 \alias{outpack_search}
 \title{Query outpack's database}
 \usage{
-outpack_search(
-  ...,
-  parameters = NULL,
-  require_unpacked = FALSE,
-  root = NULL,
-  locate = TRUE
-)
+outpack_search(..., parameters = NULL, require_unpacked = FALSE, root = NULL)
 }
 \arguments{
 \item{...}{Arguments passed through to \link{outpack_query}, perhaps

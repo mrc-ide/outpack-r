@@ -21,8 +21,8 @@
 ##' @return A character vector of matching ids
 ##' @export
 outpack_search <- function(..., parameters = NULL, require_unpacked = FALSE,
-                           root = NULL, locate = TRUE) {
-  root <- outpack_root_open(root, locate)
+                           root = NULL) {
+  root <- outpack_root_open(root, locate = TRUE)
   query <- as_outpack_query(...)
   outpack_query_eval(query, parameters, require_unpacked, root)
 }
