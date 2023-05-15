@@ -227,13 +227,25 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##' @export
 ##' @rdname outpack_packet
 ##'
-##' @param id The id of an existing packet to use files from
+##' @param query An [outpack::outpack_query] object, or something
+##'   (e.g., a string) that can be trivially converted into one.
 ##'
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
-outpack_packet_use_dependency <- function(packet, id, files) {
+outpack_packet_use_dependency <- function(packet, query, files) {
   packet <- check_current_packet(packet)
+  query <- as_outpack_query(query)
+
+  ## if (!query$single_value) {
+  ##   stop(paste(
+  ##     "The provided query is not guaranteed to return a single value:",
+  ##     squote(deparse_query(query$value)),
+  ##     "Did you forget latest(...)?"))
+  ## }
+
+  id <- outpack_search(query, parameters = packet$parameters,
+                       require_unpacked = TRUE, root = packet$root)
 
   ## TODO: currently no capacity here for *querying* to find the id
   ## (e.g., latest(name) or something more complex).  Any progress on
@@ -242,12 +254,18 @@ outpack_packet_use_dependency <- function(packet, id, files) {
   ## used?  Or should we allow a query here?
   outpack_copy_files(id, files, packet$path, packet$root)
 
+  query_str <- deparse_query(query$value$expr,
+                             lapply(query$subquery, "[[", "expr"))
+
   ## Only update packet information after success, to reflect new
   ## metadata
   depends <- list(
     packet = id,
+    query = query_str,
     files = data_frame(here = names(files), there = unname(files)))
   packet$depends <- c(packet$depends, list(depends))
+
+  outpack_packet_file_mark(packet, names(files), "immutable")
 
   invisible()
 }

@@ -70,6 +70,9 @@
                     "packet": {
                         "$ref": "id.json"
                     },
+                    "query": {
+                        "type": "string"
+                    },
                     "files": {
                         "type": "array",
                         "minItems": 1,
@@ -89,7 +92,7 @@
                         }
                     }
                 },
-                "required": ["packet", "files"]
+                "required": ["packet", "query", "files"]
             }
         },
 
