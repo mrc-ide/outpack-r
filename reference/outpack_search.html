@@ -62,42 +62,19 @@ of matching packet ids.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_search</span><span class="op">(</span></span>
-<span>  <span class="va">expr</span>,</span>
-<span>  pars <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  scope <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  name <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  subquery <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  require_unpacked <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  root <span class="op">=</span> <span class="cn">NULL</span></span>
-<span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_search</span><span class="op">(</span><span class="va">...</span>, parameters <span class="op">=</span> <span class="cn">NULL</span>, require_unpacked <span class="op">=</span> <span class="cn">FALSE</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
     <h2>Arguments</h2>
-    <dl><dt>expr</dt>
-<dd><p>The query expression</p></dd>
+    <dl><dt>...</dt>
+<dd><p>Arguments passed through to <a href="outpack_query.html">outpack_query</a>, perhaps
+just a query expression</p></dd>
 
 
-<dt>pars</dt>
+<dt>parameters</dt>
 <dd><p>Optionally, a named list of parameters to substitute
 into the query (using the <code>this:</code> prefix)</p></dd>
-
-
-<dt>scope</dt>
-<dd><p>Optionally, a scope query to limit the packets
-searched by <code>pars</code></p></dd>
-
-
-<dt>name</dt>
-<dd><p>Optionally, the name of the packet to scope the query on. This
-will be intersected with <code>scope</code> arg and is a shorthand way of running
-<code>scope = list(name = "name")</code></p></dd>
-
-
-<dt>subquery</dt>
-<dd><p>Optionally, named list of subqueries which can be
-referenced by name from the <code>expr</code>.</p></dd>
 
 
 <dt>require_unpacked</dt>
