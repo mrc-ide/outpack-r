@@ -763,3 +763,33 @@ test_that("uses and usedby can be used together", {
       root = root),
     ids["d"])
 })
+
+
+test_that("adding scope filters queries", {
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+
+  src <- withr::local_tempdir()
+  id <- list(a = character(), b = character())
+  for (i in 1:3) {
+    for (name in  c("a", "b")) {
+      p <- outpack_packet_start(src, name, parameters = list(i = i),
+                                root = root)
+      outpack_packet_end(p)
+      id[[name]] <- c(id[[name]], p$id)
+    }
+  }
+
+  expect_equal(
+    outpack_search("latest(parameter:i < 3)", root = root),
+    id$b[[2]])
+  expect_equal(
+    outpack_search("latest(parameter:i < 3)", name = "a", root = root),
+    id$a[[2]])
+  expect_equal(
+    outpack_search("latest(parameter:i < 3 && name == 'a')", root = root),
+    id$a[[2]])
+  expect_equal(
+    outpack_search(outpack_query("latest(parameter:i < 3)",
+                                 scope = quote(name == "a")), root = root),
+    id$a[[2]])
+})

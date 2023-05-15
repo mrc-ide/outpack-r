@@ -31,7 +31,7 @@ outpack_query <- function(expr, name = NULL, scope = NULL, subquery = NULL) {
     }
   }
   if (!is.null(scope)) {
-    expr_parsed <- query_parse_add_scope(expr, expr_parsed, scope)
+    expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
 
   ret <- list(value = expr_parsed,
@@ -151,29 +151,35 @@ query_parse_at_location <- function(expr, context, subquery_env) {
 }
 
 
-query_parse_add_scope <- function(expr, expr_parsed, scope) {
+query_parse_add_scope <- function(expr_parsed, scope) {
   if (!is.language(scope)) {
+    ## I don't think this is correct:
     stop("Invalid input for `scope`, it must be a language expression.")
   }
 
+  ## Can the scope not access subqueries?
   parsed_scope <- query_parse(scope, scope, emptyenv())
   scoped_functions <- list("latest", "single")
+  expr <- expr_parsed$expr
+
   if (expr_parsed$type %in% scoped_functions) {
+    fn <- deparse(expr[[1]])
     ## Include scope inside the top level function call
-    if (length(expr) == 1) {
+    if (length(expr_parsed$args) == 0) {
       ## e.g. latest()
-      expr_parsed$args <-  list(parsed_scope)
+      expr_parsed$expr <- call(fn, scope)
+      expr_parsed$args <- list(parsed_scope)
     } else {
       ## e.g. latest(name == "x")
-      scoped_expr <- call(deparse(expr[[1]]), call("&&", expr[[-1]], scope))
+      expr_parsed$expr <- call(fn, call("&&", expr[[-1]], scope))
       expr_parsed$args[[1]] <- query_component(
-        "group", scoped_expr, scoped_expr,
+        "group", expr_parsed$expr, expr_parsed$expr,
         list(expr_parsed$args[[1]], parsed_scope), name = "&&")
     }
   } else {
     ## Include scope at end of expression
-    scoped_expr <- call("&&", expr, scope)
-    expr_parsed <- query_component("group", scoped_expr, scoped_expr,
+    expr_parsed$expr <- call("&&", expr, scope)
+    expr_parsed <- query_component("group", expr_parsed$expr, expr_parsed$expr,
                                    list(expr_parsed, parsed_scope),
                                    name = "&&")
   }
