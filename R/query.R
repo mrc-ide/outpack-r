@@ -34,8 +34,13 @@ outpack_query <- function(expr, name = NULL, scope = NULL, subquery = NULL) {
     expr_parsed <- query_parse_add_scope(expr_parsed, scope)
   }
 
+  info <- list(
+    single = is_expr_single_value(expr_parsed, subquery_env),
+    parameters = query_parameters(expr_parsed, subquery_env))
+
   ret <- list(value = expr_parsed,
-              subquery = as.list(subquery_env))
+              subquery = as.list(subquery_env),
+              info = info)
   class(ret) <- "outpack_query"
   ret
 }
@@ -423,4 +428,26 @@ add_subquery <- function(name, expr, context, subquery_env) {
     evaluated = FALSE,
     result = NULL)
   invisible(name)
+}
+
+
+query_parameters <- function(expr_parsed, subquery_env) {
+  env <- new.env(parent = emptyenv())
+  env$seen <- character()
+  f <- function(x) {
+    if (is.recursive(x) && x$type == "lookup" && x$name == "this") {
+      env$seen <- c(env$seen, x$query)
+    } else if (x$type == "subquery") {
+      sub <- subquery_env[[x$args$name]]
+      if (!is.null(sub)) {
+        f(sub$parsed)
+      }
+    } else {
+      for (el in x$args) {
+        f(el)
+      }
+    }
+  }
+  f(expr_parsed)
+  unique(env$seen)
 }

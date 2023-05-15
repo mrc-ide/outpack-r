@@ -20,7 +20,7 @@ outpack_query_format <- function(query, subquery = NULL) {
     stop("Cannot format query, it must be a language object or be length 1.")
   }
 
-  if (!is.null(subquery)) {
+  if (length(subquery) > 0) {
     assert_named(subquery)
     ok <- vlapply(subquery, is_deparseable_query)
     if (!all(ok)) {
@@ -95,7 +95,7 @@ deparse_brackets <- function(fn, args, subquery, closing) {
     func <- ""
   }
 
-  if (fn == "{" && !is.null(subquery)) {
+  if (fn == "{" && length(subquery) > 0) {
     if (length(args[[1]]) == 1 && is.name(args[[1]])) {
       sub <- subquery[[as.character(args[[1]])]]
       if (!is.null(sub)) {

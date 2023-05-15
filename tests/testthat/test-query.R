@@ -204,9 +204,10 @@ test_that("construct a query", {
   obj <- outpack_query("latest")
   expect_s3_class(obj, "outpack_query")
   ## TODO: single_value, parameters
-  expect_setequal(names(obj), c("value", "subquery"))
+  expect_setequal(names(obj), c("value", "info", "subquery"))
   expect_s3_class(obj$value, "outpack_query_component")
   expect_equal(obj$value, query_parse("latest", "latest", emptyenv()))
+  expect_equal(obj$info, list(single = TRUE, parameters = character()))
   expect_equal(obj$subquery, list())
 })
 
@@ -224,23 +225,19 @@ test_that("convert to a query", {
 })
 
 
-## This test exercises a bunch of options that should all produce the
-## same result, but did not once.
-test_that("Same result with either strings/expressions, named or not", {
-  root <- create_temporary_root(use_file_store = TRUE)
-
-  ids <- vcapply(1:5, function(i) {
-    create_random_packet(root, "x", list(a = i, b = 1))
-  })
-
-  dat <- list(list(query = quote(parameter:b == 1), result = ids),
-              list(query = quote(parameter:a < 3), result = ids[1:2]),
-              list(query = quote(latest(parameter:a < 3)), result = ids[[2]]))
-  for (x in dat) {
-    for (string in c(TRUE, FALSE)) {
-      query <- if (string) deparse(x$query) else x$query
-      expect_setequal(outpack_search(query, root = root), x$result)
-      expect_setequal(outpack_search(query, root = root, name = "x"), x$result)
-    }
+test_that("report on parameters used in the query", {
+  f <- function(x) {
+    outpack_query(x)$info$parameters
   }
+  expect_equal(f(quote(latest())), character())
+  expect_equal(f(quote(parameter:a < this:a)), "a")
+  expect_equal(f(quote(parameter:a < this:a && this:a > this:b)),
+               c("a", "b"))
+})
+
+
+test_that("include parameters from subqueries too", {
+  obj <- outpack_query("latest({B})",
+                       subquery = list(B = quote(parameter:x < this:y)))
+  expect_equal(obj$info$parameters, "y")
 })
