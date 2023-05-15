@@ -109,7 +109,7 @@ test_that("Can filter based on given values", {
   expect_error(
     outpack_search(quote(latest(parameter:a == this:x)),
                   parameters = list(a = 3), root = root),
-    paste0("Did not find 'x' within given pars ('a')\n",
+    paste0("Did not find 'x' within given parameters ('a')\n",
            "  - while evaluating this:x\n",
            "  - within           latest(parameter:a == this:x)"),
     fixed = TRUE)
