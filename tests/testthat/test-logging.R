@@ -59,7 +59,8 @@ test_that("can log basic packet running", {
 
   res <- evaluate_promise(
     outpack_packet_run(p, "script.R", env))
-  expect_equal(res$messages, "[ script     ]  script.R\n")
+  expect_equal(res$messages,
+               c("[ script     ]  script.R\n", "[ result     ]  success\n"))
 
   expect_match(res$output, "read.csv('data.csv')", fixed = TRUE)
 
@@ -72,19 +73,19 @@ test_that("can log basic packet running", {
   expect_true(file.exists(file.path(path_src, "log.json")))
   dat <- log_read(file.path(path_src, "log.json"))
 
-  expect_equal(nrow(dat), 7)
+  expect_equal(nrow(dat), 8)
   expect_equal(
     dat$topic,
-    c("name", "id", "start", "script", "output", "end", "elapsed"))
+    c("name", "id", "start", "script", "result", "output", "end", "elapsed"))
   expect_equal(
     dat$caller,
     paste0("outpack::outpack_packet_",
-           rep(c("start", "run", "end"), c(3, 2, 2))))
-  expect_equal(dat$log_level, rep("info", 7))
+           rep(c("start", "run", "end"), c(3, 3, 2))))
+  expect_equal(dat$log_level, rep("info", 8))
   expect_s3_class(dat$time, "POSIXct")
   expect_true(is.list(dat$detail))
   expect_match(
-    dat$detail[[5]][[1]],
+    dat$detail[[6]][[1]],
     "read.csv('data.csv')",
     fixed = TRUE)
 })

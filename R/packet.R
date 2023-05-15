@@ -95,8 +95,20 @@ outpack_packet_cancel <- function(packet) {
 
 
 ##' @export
+##'
+##' @param insert Logical, indicating if we should insert the packet
+##'   into the store. This is the default and generally what you
+##'   want. The use-case we have for `insert = FALSE` is where you
+##'   want to write out all metadata after a failure, and in this case
+##'   you would not want to do a final insertion into the outpack
+##'   archive. When `insert = FALSE`, we write out the json metadata
+##'   that would have been written as `outpack.json` within the packet
+##'   working directory.  Note that this skips a lot of validation
+##'   (for example, validating that all files exist and that files
+##'   marked immutable have not been changed)
+##'
 ##' @rdname outpack_packet
-outpack_packet_end <- function(packet) {
+outpack_packet_end <- function(packet, insert = TRUE) {
   packet <- check_current_packet(packet)
   packet$time$end <- Sys.time()
   hash_algorithm <- packet$root$config$core$hash_algorithm
@@ -116,11 +128,58 @@ outpack_packet_end <- function(packet) {
                                   file_hash = packet$files$immutable,
                                   file_ignore = packet$files$ignored,
                                   hash_algorithm = hash_algorithm)
-  outpack_insert_packet(packet$path, json, packet$root)
+  if (insert) {
+    outpack_insert_packet(packet$path, json, packet$root)
+  } else {
+    ## TODO: I am not sure what the best filename to use here is -
+    ## good options feel like 'outpack.json' (like we do with
+    ## 'log.json') and `<id>` or '<id>.json' (totally collision
+    ## resistant)
+    writeLines(json, file.path(packet$path, "outpack.json"))
+  }
   outpack_packet_finish(packet)
 }
 
 
+##' @section Running scripts:
+##'
+##' R does not make it extremely easy to "run" a script while
+##'   collecting output and warnings in a nice way; this is something
+##'   you may be familiar with when running scripts through things
+##'   like knitr where differences in behaviour between running from
+##'   within knitr and R are not uncommon.  If you see any behaviour
+##'   which feels very different to what you expect please let us
+##'   know.
+##'
+##' One area of known difference is that of warnings; what R does with
+##'   warnings depends on a number of options - both global and to
+##'   `warning` itself. We do not try very hard currently to get the
+##'   same behaviour with warnings as you might see running directly
+##'   with `source` and observing your terminal, partly because we
+##'   hope that in practice your code will produce very few warnings.
+##'
+##' On failure in the script, `outpack_packet_run` will throw, forcing
+##'   any function that calls `outpack_packet_run` to explicitly cope
+##'   with error. The error that is generated will have class
+##'   `outpack_packet_run_error` allowing this error to be easily
+##'   distinguished from other R errors. It will have, in addition to
+##'   a `message` field, additional data fields containing information
+##'   about the error:
+##'
+##' * `error`: the original error object, as thrown and caught by `outpack`
+##' * `trace`: the backtrace for the above error, currently just as a
+##'   character vector, though this may change in future versions
+##' * `output`: a character vector of interleaved stdout and stderr as
+##'   the script ran
+##' * `warnings`: a list of warnings raised by the script
+##'
+##' The other reason why the script may fail is that it fails to
+##'   balance one of the global resource stacks - either connections
+##'   (rare) or graphics devices (easy to do). In this case, we still
+##'   throw a (classed) error, but the `error` field in the final
+##'   error will be `NULL`, with an informative message explaining
+##'   what was not balanced.
+##'
 ##' @export
 ##' @rdname outpack_packet
 ##'
@@ -137,41 +196,31 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 
   outpack_log_info(packet, "script", script, caller)
 
-  ## TODO: not sure that this is the correct environment; should it be
-  ## parent.frame() perhaps (see default args to new.env)
-
-  ## TODO: Logging; if we are logging then should we also echo to log
-  ## too? In addition to the console or instead, and what controls
-  ## that?
-
-  ## TODO: Control over running in separate process (if we do that,
-  ## the process should return session, too). This is probably a bit
-  ## hard to get right as we'd need to know what bits of the session
-  ## need replaying into the second session - I suspect it should be
-  ## an entirely different function. More likely we'll run the whole
-  ## packet setup in a new process as we currently do in orderly.
-
-  ## TODO: What should we do/store on error?
-
   ## TODO: be careful with nesting; as that complicates the logs and
   ## in particular the sinks.
-  info <- outpack_packet_run_global_state()
+  result <- evaluate_script(packet$path, script, envir, packet$logger$console)
 
-  ## It's important to do the global state check in the packet working
-  ## directory (not the calling working directory) otherwise we might
-  ## write out files in unexpected places when flushing devices.
-  echo <- packet$logger$console
-  with_dir(packet$path, {
-    output <- source_and_capture(script, envir, echo)
-    outpack_packet_run_check_global_state(info)
-  })
-
-  outpack_log_info(packet, "output", I(output), caller)
+  status <- if (result$success) "success" else "failure"
+  outpack_log_info(packet, "result", status, caller)
+  outpack_log_info(packet, "output", I(result$output), caller)
+  if (length(result$trace) > 0) {
+    outpack_log_info(packet, "trace", I(result$trace), caller)
+  }
+  if (length(result$warnings) > 0) {
+    warnings_str <- vcapply(result$warnings, conditionMessage)
+    outpack_log_info(packet, "warning", I(warnings_str), caller)
+  }
 
   packet$script <- c(packet$script, script)
 
-  ## What is a good return value here?
-  invisible()
+  if (!result$success) {
+    class(result) <- c("outpack_packet_run_error", "error", "condition")
+    stop(result)
+  }
+
+  ## At this point we can only have success so we don't want some
+  ## fields; do we even want this though?
+  invisible(result[c("output", "warnings")])
 }
 
 
@@ -396,16 +445,4 @@ check_current_packet <- function(packet) { # TODO: rename
     stop(sprintf("Packet '%s' is complete", packet$id))
   }
   packet
-}
-
-
-outpack_packet_run_global_state <- function() {
-  list(n_open_devices = length(grDevices::dev.list()),
-       n_open_sinks = sink.number())
-}
-
-
-outpack_packet_run_check_global_state <- function(info) {
-  check_device_stack(info$n_open_devices)
-  check_sink_stack(info$n_open_sinks)
 }

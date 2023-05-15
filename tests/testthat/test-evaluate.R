@@ -7,19 +7,21 @@ test_that("can alert to device stack imbalance", {
   mockery::stub(check_device_stack, "grDevices::dev.off", mock_dev_off)
 
   ## correct balance
-  expect_silent(check_device_stack(2))
+  expect_equal(check_device_stack(2),
+               list(success = TRUE, message = NULL))
   mockery::expect_called(mock_dev_list, 1)
   mockery::expect_called(mock_dev_off, 0)
 
   ## Too many open
-  expect_error(check_device_stack(0),
-               "Script left 2 devices open")
+  expect_equal(check_device_stack(0),
+               list(success = FALSE, message = "Script left 2 devices open"))
   mockery::expect_called(mock_dev_list, 2)
   mockery::expect_called(mock_dev_off, 2)
 
   ## Too many closed
-  expect_error(check_device_stack(4),
-               "Script closed 2 more devices than it opened!")
+  expect_equal(check_device_stack(4),
+               list(success = FALSE,
+                    message = "Script closed 2 more devices than it opened!"))
   mockery::expect_called(mock_dev_list, 3)
   mockery::expect_called(mock_dev_off, 2)
 })
@@ -34,19 +36,22 @@ test_that("can alert to sink stack imbalance", {
   mockery::stub(check_sink_stack, "sink", mock_sink)
 
   ## correct balance
-  expect_silent(check_sink_stack(2))
+  expect_equal(check_sink_stack(2),
+               list(success = TRUE, message = NULL))
   mockery::expect_called(mock_sink_number, 1)
   mockery::expect_called(mock_sink, 0)
 
   ## Too many open
-  expect_error(check_sink_stack(0),
-               "Script left 2 sinks open")
+  expect_equal(check_sink_stack(0),
+               list(success = FALSE,
+                    message = "Script left 2 sinks open"))
   mockery::expect_called(mock_sink_number, 2)
   mockery::expect_called(mock_sink, 2)
 
   ## Too many closed
-  expect_error(check_sink_stack(4),
-               "Script closed 2 more sinks than it opened!")
+  expect_equal(check_sink_stack(4),
+               list(success = FALSE,
+                    message = "Script closed 2 more sinks than it opened!"))
   mockery::expect_called(mock_sink_number, 3)
   mockery::expect_called(mock_sink, 2)
 })

@@ -149,18 +149,15 @@ last <- function(x) {
 }
 
 
-source_and_capture <- function(path, envir, echo) {
-  tmp <- tempfile()
-  con <- file(tmp, "w")
-  on.exit({
-    close(con)
-    unlink(tmp)
-  })
-  withr::with_output_sink(
-    new = con, split = echo,
-    withr::with_message_sink(
-      stdout(),
-      source(path, local = envir, echo = TRUE, # nolint
-             max.deparse.length = Inf, keep.source = TRUE, spaced = FALSE)))
-  readLines(tmp)
+collector <- function() {
+  env <- new.env(parent = emptyenv())
+  env$data <- list()
+  list(
+    add = function(x) {
+      env$data <- c(env$data, list(x))
+    },
+    get = function() {
+      env$data
+    }
+  )
 }

@@ -21,7 +21,7 @@ outpack_packet_start(
 
 outpack_packet_cancel(packet)
 
-outpack_packet_end(packet)
+outpack_packet_end(packet, insert = TRUE)
 
 outpack_packet_run(packet, script, envir = .GlobalEnv)
 
@@ -56,6 +56,17 @@ current directory if not given.}
 
 \item{packet}{A packet object}
 
+\item{insert}{Logical, indicating if we should insert the packet
+into the store. This is the default and generally what you
+want. The use-case we have for \code{insert = FALSE} is where you
+want to write out all metadata after a failure, and in this case
+you would not want to do a final insertion into the outpack
+archive. When \code{insert = FALSE}, we write out the json metadata
+that would have been written as \code{outpack.json} within the packet
+working directory.  Note that this skips a lot of validation
+(for example, validating that all files exist and that files
+marked immutable have not been changed)}
+
 \item{script}{Path to the script within the packet directory (a
 relative path).  This function can be safely called multiple
 times within a single packet run (or zero times!) as needed.}
@@ -88,6 +99,48 @@ Start a packet build (\code{outpack_packet_start}), end one
 one (\code{outpack_packet_use_dependency},
 \code{outpack_packet_run})
 }
+\section{Running scripts}{
+
+
+R does not make it extremely easy to "run" a script while
+collecting output and warnings in a nice way; this is something
+you may be familiar with when running scripts through things
+like knitr where differences in behaviour between running from
+within knitr and R are not uncommon.  If you see any behaviour
+which feels very different to what you expect please let us
+know.
+
+One area of known difference is that of warnings; what R does with
+warnings depends on a number of options - both global and to
+\code{warning} itself. We do not try very hard currently to get the
+same behaviour with warnings as you might see running directly
+with \code{source} and observing your terminal, partly because we
+hope that in practice your code will produce very few warnings.
+
+On failure in the script, \code{outpack_packet_run} will throw, forcing
+any function that calls \code{outpack_packet_run} to explicitly cope
+with error. The error that is generated will have class
+\code{outpack_packet_run_error} allowing this error to be easily
+distinguished from other R errors. It will have, in addition to
+a \code{message} field, additional data fields containing information
+about the error:
+\itemize{
+\item \code{error}: the original error object, as thrown and caught by \code{outpack}
+\item \code{trace}: the backtrace for the above error, currently just as a
+character vector, though this may change in future versions
+\item \code{output}: a character vector of interleaved stdout and stderr as
+the script ran
+\item \code{warnings}: a list of warnings raised by the script
+}
+
+The other reason why the script may fail is that it fails to
+balance one of the global resource stacks - either connections
+(rare) or graphics devices (easy to do). In this case, we still
+throw a (classed) error, but the \code{error} field in the final
+error will be \code{NULL}, with an informative message explaining
+what was not balanced.
+}
+
 \section{Custom metadata}{
 
 
