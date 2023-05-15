@@ -815,3 +815,27 @@ test_that("Same result with either strings/expressions, named or not", {
     }
   }
 })
+
+
+test_that("error early if parameters not provided", {
+  root <- create_temporary_root(use_file_store = TRUE)
+  expect_error(
+    outpack_search("latest(parameter:a > this:v)", root = root),
+    "Missing parameters required for query: 'v'")
+  expect_error(
+    outpack_search("latest(parameter:a > this:v && parameter:b == this:y)",
+                   root = root),
+    "Missing parameters required for query: 'v', 'y'")
+  expect_error(
+    outpack_search("latest(parameter:a > this:v && parameter:b == this:v)",
+                   root = root),
+    "Missing parameters required for query: 'v'")
+  expect_error(
+    outpack_search("latest(parameter:a > this:v && parameter:b == this:v)",
+                   parameters = list(a = 1, b = 2), root = root),
+    "Missing parameters required for query: 'v'")
+  expect_error(
+    outpack_search("latest(parameter:a > this:x && parameter:b == this:y)",
+                   parameters = list(x = 1, b = 2), root = root),
+    "Missing parameters required for query: 'y'")
+})

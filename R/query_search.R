@@ -31,7 +31,12 @@ outpack_search <- function(..., parameters = NULL, require_unpacked = FALSE,
 outpack_query_eval <- function(query, parameters, require_unpacked, root) {
   assert_is(query, "outpack_query")
   assert_is(root, "outpack_root")
-  validate_parameters(parameters) # against query soon
+  validate_parameters(parameters)
+  msg <- setdiff(query$info$parameters, names(parameters))
+  if (length(msg) > 0) {
+    stop(sprintf("Missing parameters required for query: %s",
+                 paste(squote(msg), collapse = ", ")))
+  }
   index <- new_query_index(root, require_unpacked)
   query_eval(query$value, index, parameters, list2env(query$subquery))
 }
