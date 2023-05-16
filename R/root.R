@@ -454,6 +454,10 @@ root_unknown_files <- function(hashes, root) {
     if (length(idx$unpacked$packet) == 0) {
       return(hashes)
     }
-    stop("This operation not supported")
+    ## We could just be lazy here and return the full set of files,
+    ## but that is not great for users as this is a situation they'll
+    ## be in quite often. Instead, we work out what files we might
+    ## have and then validate them.
+    hashes[vlapply(hashes, function(h) is.null(find_file_by_hash(root, h)))]
   }
 }

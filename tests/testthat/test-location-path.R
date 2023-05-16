@@ -255,3 +255,29 @@ test_that("Import partial tree via push into server with file store only", {
   expect_setequal(idx_s$location$packet, idx_c$location$packet)
   expect_setequal(idx_s$location$hash, idx_c$location$hash)
 })
+
+
+test_that("Import partial tree via push into archive without store", {
+  client <- create_temporary_root()
+  server <- create_temporary_root()
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  ## Create a packet on server
+  id_base <- create_random_packet(server)
+
+  ## Pull that into the client:
+  outpack_location_pull_metadata(root = client)
+  outpack_location_pull_packet(id_base, "server", root = client)
+
+  ids <- create_random_packet_chain(client, 3, id_base)
+  outpack_location_push(ids[[3]], "server", client)
+
+  idx_c <- client$index()
+  idx_s <- server$index()
+
+  expect_mapequal(idx_s$metadata, idx_c$metadata)
+  expect_setequal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_setequal(idx_s$location$packet, idx_c$location$packet)
+  expect_setequal(idx_s$location$hash, idx_c$location$hash)
+})

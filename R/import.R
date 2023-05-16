@@ -29,10 +29,12 @@ import_zip <- function(zip, root) {
         files$get(res$unpack$hash[i], dst[i])
       }
       if (any(!i)) {
-        browser()
-        foo <- vcapply(res$unpack$hash[!i], find_file_by_hash, root = root)
+        src <- vcapply(res$unpack$hash[!i], function(h) {
+          find_file_by_hash(root, h) %||% NA_character_
+        })
+        stopifnot(!any(is.na(src)))
         fs::dir_create(unique(dirname(dst[!i])))
-        fs::file_copy(foo, dst[!i])
+        fs::file_copy(src, dst[!i])
       }
     }
   }
