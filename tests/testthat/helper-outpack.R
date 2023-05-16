@@ -51,9 +51,8 @@ create_random_packet_chain <- function(root, length, base = NULL) {
       code <- sprintf("saveRDS(readRDS('input.rds') * %d, 'data.rds')",
                       i + !is.null(base))
       writeLines(code, file.path(p, "script.R"))
-      outpack_packet_use_dependency(
-        packet, if (i > 1) id[[letters[i - 1]]] else base,
-        c("input.rds" = "data.rds"))
+      id_use <- if (i > 1) id[[letters[i - 1]]] else base
+      outpack_packet_use_dependency(packet, id_use, c("input.rds" = "data.rds"))
       outpack_packet_run(packet, "script.R")
     }
     outpack_packet_end(packet)

@@ -13,7 +13,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
                 index$location$location == location_id)
   if (exists) {
     stop(sprintf("'%s' has already been added for '%s'",
-                 packet_id, location_name))
+                 packet_id, local))
   }
 
   for (i in seq_len(nrow(meta$depends))) {
