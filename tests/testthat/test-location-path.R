@@ -231,53 +231,63 @@ test_that("Import complete tree via push into server only archive", {
 
 ## Here, we import a partial tree and check that it all behaves as
 ## expected.
-test_that("Import partial tree via push into server with file store only", {
-  client <- create_temporary_root()
-  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
-  outpack_location_add("server", "path", list(path = server$path),
-                       root = client)
+test_that("Import partial tree via push into server", {
+  temporary_root <- function(store) {
+    path <- tempfile()
+    withr::defer_parent(unlink(path, recursive = TRUE))
+    if (store) {
+      outpack_init(path, use_file_store = TRUE, path_archive = NULL,
+                   logging_console = FALSE)
+    } else {
+      outpack_init(path, logging_console = FALSE)
+    }
+  }
 
-  ## Create a packet on server
-  id_base <- create_random_packet(server)
+  for (store_client in c(TRUE, FALSE)) {
+    for (store_server in c(TRUE, FALSE)) {
+      client <- temporary_root(store_client)
+      server <- temporary_root(store_server)
+      outpack_location_add("server", "path", list(path = server$path),
+                           root = client)
 
-  ## Pull that into the client:
-  outpack_location_pull_metadata(root = client)
-  outpack_location_pull_packet(id_base, "server", root = client)
+      ## Create a packet on server
+      id_base <- create_random_packet(server)
 
-  ids <- create_random_packet_chain(client, 3, id_base)
-  outpack_location_push(ids[[3]], "server", client)
+      ## Pull that into the client:
+      outpack_location_pull_metadata(root = client)
+      outpack_location_pull_packet(id_base, "server", root = client)
 
-  idx_c <- client$index()
-  idx_s <- server$index()
+      ids <- create_random_packet_chain(client, 3, id_base)
+      outpack_location_push(ids[[3]], "server", client)
 
-  expect_mapequal(idx_s$metadata, idx_c$metadata)
-  expect_setequal(idx_s$unpacked$packet, idx_c$unpacked$packet)
-  expect_setequal(idx_s$location$packet, idx_c$location$packet)
-  expect_setequal(idx_s$location$hash, idx_c$location$hash)
+      idx_c <- client$index()
+      idx_s <- server$index()
+
+      expect_mapequal(idx_s$metadata, idx_c$metadata)
+      expect_setequal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+      expect_setequal(idx_s$location$packet, idx_c$location$packet)
+      expect_setequal(idx_s$location$hash, idx_c$location$hash)
+    }
+  }
 })
 
 
-test_that("Import partial tree via push into archive without store", {
-  client <- create_temporary_root()
-  server <- create_temporary_root()
-  outpack_location_add("server", "path", list(path = server$path),
-                       root = client)
-
-  ## Create a packet on server
-  id_base <- create_random_packet(server)
-
-  ## Pull that into the client:
-  outpack_location_pull_metadata(root = client)
-  outpack_location_pull_packet(id_base, "server", root = client)
-
-  ids <- create_random_packet_chain(client, 3, id_base)
-  outpack_location_push(ids[[3]], "server", client)
-
-  idx_c <- client$index()
-  idx_s <- server$index()
-
-  expect_mapequal(idx_s$metadata, idx_c$metadata)
-  expect_setequal(idx_s$unpacked$packet, idx_c$unpacked$packet)
-  expect_setequal(idx_s$location$packet, idx_c$location$packet)
-  expect_setequal(idx_s$location$hash, idx_c$location$hash)
+test_that("sensible error given if import zip is not valid", {
+  paths <- c("outpack/contents.json",
+             "outpack/files/",
+             "outpack/files/hash/value",
+             "outpack/metadata/",
+             "outpack/metadata/id")
+  expect_silent(
+    import_zip_validate(paths))
+  expect_error(
+    import_zip_validate("a/b"),
+    "Invalid import zip: expected all paths to start with 'outpack/'")
+  expect_error(
+    import_zip_validate(c("a/b", paths)),
+    "Invalid import zip: expected all paths to start with 'outpack/'")
+  expect_error(
+    import_zip_validate(paths[1]),
+    paste("Invalid import zip: expected",
+          "'outpack/files/', 'outpack/metadata/' to exist"))
 })

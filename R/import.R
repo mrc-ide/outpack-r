@@ -1,5 +1,5 @@
 import_zip <- function(zip, root) {
-  import_zip_validate(zip)
+  import_zip_validate(zip::zip_list(zip)$filename)
 
   tmp <- tempfile()
   zip::unzip(zip, exdir = tmp)
@@ -46,16 +46,15 @@ import_zip <- function(zip, root) {
 }
 
 
-import_zip_validate <- function(file) {
-  files <- zip::zip_list(file)$filename
-  if (!all(vcapply(fs::path_split(files), "[[", 1) == "outpack")) {
+import_zip_validate <- function(file_list) {
+  if (!all(vcapply(fs::path_split(file_list), "[[", 1) == "outpack")) {
     stop("Invalid import zip: expected all paths to start with 'outpack/'")
   }
   expected <- c("outpack/contents.json", "outpack/files/", "outpack/metadata/")
-  for (f in expected) {
-    if (!(f %in% files)) {
-      stop(sprintf("Invalid import zip: expected '%s' to exist", f))
-    }
+  msg <- setdiff(expected, file_list)
+  if (length(msg) > 0) {
+    stop(sprintf("Invalid import zip: expected %s to exist",
+                 paste(squote(msg), collapse = ", ")))
   }
 }
 
