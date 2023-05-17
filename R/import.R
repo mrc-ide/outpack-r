@@ -5,7 +5,8 @@ import_zip <- function(zip, root) {
   zip::unzip(zip, exdir = tmp)
   path <- file.path(tmp, "outpack")
 
-  res <- import_dir_validate(path, root)
+  contents <- jsonlite::fromJSON(file.path(path, "contents.json"))
+  res <- import_dir_validate(path, contents, root)
 
   has_archive <- !is.null(root$config$core$path_archive)
   files <- file_store$new(file.path(path, "files"))
@@ -59,11 +60,15 @@ import_zip_validate <- function(file_list) {
 }
 
 
-import_dir_validate <- function(path, root) {
-  contents <- jsonlite::fromJSON(file.path(path, "contents.json"))
+import_dir_validate <- function(path, contents, root) {
   ids <- contents$metadata$id
   json <- vcapply(file.path(path, "metadata", ids), read_string,
                   USE.NAMES = FALSE)
+
+  ## There is some validation here that hopefully will never surface
+  ## to the user. There's more that could be done (are all declared
+  ## files actually present) but by the time we're testing that we
+  ## have a perhaps unhealthy level of paranoia.
 
   ## Validate the hashes here first, then validate that we have a
   ## complete tree
@@ -73,7 +78,7 @@ import_dir_validate <- function(path, root) {
   hash <- list_to_character(Map(rehash, json, contents$metadata$hash))
   err <- contents$metadata$hash != hash
   if (any(err)) {
-    stop("hash failure")
+    stop("Incorrect contents; hash of metadata does not agree (outpack bug?)")
   }
 
   ## Next up, validate that we have a complete tree here:
@@ -82,14 +87,14 @@ import_dir_validate <- function(path, root) {
   deps <- unique(unlist(lapply(dat, function(x) x$depends$packet)))
   msg <- setdiff(root_unknown_packets(deps, root), ids)
   if (length(msg) > 0) {
-    stop("dependents failure")
+    stop("Incorrect contents: required packets missing from zip (outpack bug?)")
   }
 
   ## Then that we have all the files:
   files <- unique(unlist(lapply(dat, function(x) x$files$hash)))
   msg <- setdiff(root_unknown_files(files, root), contents$files)
   if (length(msg) > 0) {
-    stop("files failure")
+    stop("Incorrect contents: required files missing from zip (outpack bug?)")
   }
 
   metadata <- set_names(json, ids)[order(ids)]
