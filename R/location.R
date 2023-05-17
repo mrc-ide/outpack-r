@@ -346,11 +346,12 @@ outpack_location_push <- function(packet_ids, location, root) {
                                         allow_no_locations = FALSE)
   plan <- location_build_push_plan(packet_ids, location_id, root)
 
-  zipfile <- tempfile(fileext = ".zip")
-  on.exit(unlink(zipfile))
-  create_export_zip(plan, root, zipfile)
-
-  location_driver(location_id, root)$import(zipfile)
+  if (length(plan$packet_id) > 0 || length(plan$files) > 0) {
+    zipfile <- tempfile(fileext = ".zip")
+    on.exit(unlink(zipfile))
+    create_export_zip(plan, root, zipfile)
+    location_driver(location_id, root)$import(zipfile)
+  }
 
   invisible(plan)
 }
