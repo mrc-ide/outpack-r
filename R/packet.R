@@ -167,7 +167,7 @@ outpack_packet_end <- function(packet, insert = TRUE) {
 ##'   about the error:
 ##'
 ##' * `error`: the original error object, as thrown and caught by `outpack`
-##' * `trace`: the backtrace for the above error, currently just as a
+##' * `traceback`: the backtrace for the above error, currently just as a
 ##'   character vector, though this may change in future versions
 ##' * `output`: a character vector of interleaved stdout and stderr as
 ##'   the script ran
@@ -203,8 +203,8 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
   status <- if (result$success) "success" else "failure"
   outpack_log_info(packet, "result", status, caller)
   outpack_log_info(packet, "output", I(result$output), caller)
-  if (length(result$trace) > 0) {
-    outpack_log_info(packet, "trace", I(result$trace), caller)
+  if (length(result$traceback) > 0) {
+    outpack_log_info(packet, "traceback", I(result$traceback), caller)
   }
   if (length(result$warnings) > 0) {
     warnings_str <- vcapply(result$warnings, conditionMessage)
