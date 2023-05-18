@@ -23,6 +23,7 @@ outpack_query <- function(expr, name = NULL, scope = NULL, subquery = NULL) {
   subquery_env <- make_subquery_env(subquery)
   expr_parsed <- query_parse(expr, expr, subquery_env)
   if (!is.null(name)) {
+    assert_scalar_character(name)
     name_call <- call("==", quote(name), name)
     if (is.null(scope)) {
       scope <- name_call
