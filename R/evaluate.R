@@ -64,13 +64,13 @@ source_and_capture <- function(path, envir, echo) {
           error = function(e) {
             try(stop(e))
             env$error <- e
-            env$trace <- utils::limitedLabels(sys.calls())
+            env$traceback <- utils::limitedLabels(sys.calls())
           }))),
     error = identity)
 
   list(success = is.null(env$error),
        error = env$error,
-       trace = env$trace,
+       traceback = env$traceback,
        warnings = env$warnings$get(),
        output = readLines(tmp))
 }

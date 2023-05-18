@@ -607,14 +607,15 @@ f(5)',
     "Script failed with error: x became negative",
     class = "outpack_packet_run_error")
   outpack_packet_end(p, FALSE)
-  expect_setequal(
+  setequal(
     names(err),
-    c("success", "message", "error", "trace", "output", "warnings"))
+    c("success", "message", "error", "traceback", "output", "warnings",
+      "trace")) # last trace added by testthat!
 
   expect_false(err$success)
   expect_equal(err$message, "Script failed with error: x became negative")
-  expect_type(err$trace, "character")
-  expect_true(length(err$trace) > 5)
+  expect_type(err$traceback, "character")
+  expect_true(length(err$traceback) > 5)
   expect_match(err$output,
                "Error in f(x - 1) : x became negative",
                fixed = TRUE, all = FALSE)
@@ -622,9 +623,9 @@ f(5)',
   expect_true(file.exists(file.path(path_src, "log.json")))
   d <- log_read(file.path(path_src, "log.json"))
 
-  i_trace <- which(d$topic == "trace")
-  expect_length(i_trace, 1)
-  expect_equal(d$detail[[i_trace]], err$trace)
+  i_traceback <- which(d$topic == "traceback")
+  expect_length(i_traceback, 1)
+  expect_equal(d$detail[[i_traceback]], err$traceback)
 })
 
 

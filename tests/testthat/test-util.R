@@ -15,7 +15,7 @@ test_that("Descend failure", {
 })
 
 
-test_that("can source script that fails with error, reporting trace", {
+test_that("can source script that fails with error, reporting traceback", {
   path <- withr::local_tempfile(fileext = ".R")
   code <- 'f <- function(x) {
   message("calling with x = ", x)
@@ -31,11 +31,11 @@ f(5)'
   res <- source_and_capture(path, envir, FALSE)
 
   expect_setequal(names(res),
-                  c("success", "error", "trace", "warnings", "output"))
+                  c("success", "error", "traceback", "warnings", "output"))
   expect_false(res$success)
   expect_s3_class(res$error, "error")
   expect_equal(res$warnings, list())
-  expect_type(res$trace, "character")
+  expect_type(res$traceback, "character")
 
   skip_on_cran() # depends on details
   output <- strsplit(code, "\n")[[1]]
