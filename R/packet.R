@@ -237,12 +237,12 @@ outpack_packet_use_dependency <- function(packet, query, files) {
   packet <- check_current_packet(packet)
   query <- as_outpack_query(query)
 
-  ## if (!query$single_value) {
-  ##   stop(paste(
-  ##     "The provided query is not guaranteed to return a single value:",
-  ##     squote(deparse_query(query$value)),
-  ##     "Did you forget latest(...)?"))
-  ## }
+  if (!query$info$single) {
+    stop(paste(
+      "The provided query is not guaranteed to return a single value:",
+      squote(deparse_query(query$value$expr)),
+      "Did you forget latest(...)?"))
+  }
 
   id <- outpack_search(query, parameters = packet$parameters,
                        require_unpacked = TRUE, root = packet$root)

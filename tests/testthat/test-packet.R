@@ -728,3 +728,23 @@ test_that("can depend based on a query with subqueries", {
   expect_equal(p2$depends[[1]]$query,
                sprintf('latest(usedby({"%s"}) && name == "a")', id$b))
 })
+
+
+test_that("validate that dependencies must evaluate to a single id", {
+  path_src1 <- withr::local_tempdir()
+  path_src2 <- withr::local_tempdir()
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+
+  p1 <- outpack_packet_start(path_src1, "a", parameters = list(x = 1),
+                             root = root)
+  saveRDS(runif(5), file.path(path_src1, "data.rds"))
+  outpack_packet_end(p1)
+
+  p2 <- outpack_packet_start(path_src2, "b", root = root)
+  expect_error(
+    outpack_packet_use_dependency(p2, "parameter:x == 1",
+                                  c("incoming.rds" = "data.rds")),
+    paste("The provided query is not guaranteed to return a single value:",
+          "'parameter:x == 1' Did you forget latest(...)?"),
+    fixed = TRUE)
+})
