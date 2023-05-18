@@ -53,5 +53,13 @@ outpack_location_path <- R6::R6Class(
       }
       fs::file_copy(path, dest)
       dest
+    },
+
+    unknown_packets = function(ids, unpacked) {
+      root_unknown_packets(ids, unpacked, private$root)
+    },
+
+    unknown_files = function(hashes) {
+      root_unknown_files(hashes, private$root)
     }
   ))

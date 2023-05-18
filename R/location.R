@@ -487,6 +487,29 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
 }
 
 
+location_build_push_plan <- function(packet_id, location_id, root) {
+  driver <- location_driver(location_id, root)
+
+  packet_id <- recursive_dependencies(packet_id, root)
+  packet_id_msg <- driver$unknown_packets(packet_id, unpacked = TRUE)
+
+  if (length(packet_id_msg) == 0) {
+    files_msg <- character(0)
+  } else {
+    packet_id_msg <- sort(packet_id_msg)
+    metadata <- root$index()$metadata
+    ## All files across all missing ids:
+    files <- unique(unlist(
+      lapply(packet_id_msg, function(i) metadata[[i]]$files$hash)))
+
+    ## Which of these does the server not know about:
+    files_msg <- driver$unknown_files(files)
+  }
+
+  list(packet_id = packet_id_msg, files = files_msg)
+}
+
+
 ## This validation probably will need generalising in future as we add
 ## new types. The trick is going to be making sure that we can support
 ## different location types in different target languages effectively.

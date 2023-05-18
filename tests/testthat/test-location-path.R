@@ -143,3 +143,37 @@ test_that("sensible error if file not found in archive", {
     "Hash 'md5:c7be9a2c3cd8f71210d9097e128da316' not found at location")
   expect_false(file.exists(dest))
 })
+
+
+that_that("can detect differences between locations when destination empty", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  files <- lapply(ids, function(id) client$metadata(id)$files$hash)
+
+  location_id <- lookup_location_id("server", client)
+
+  ## Simplest case; leaf node not known to the server.
+  plan1 <- location_build_push_plan(ids[[1]], location_id, client)
+  expect_setequal(names(plan1), c("packet_id", "files"))
+  expect_equal(plan1$packet_id, ids[[1]])
+  expect_setequal(plan1$files, files[[1]])
+
+  ## Whole tree:
+  plan2 <- location_build_push_plan(ids[[4]], location_id, client)
+  expect_setequal(names(plan2), c("packet_id", "files"))
+  expect_setequal(plan2$packet_id, ids)
+  expect_setequal(plan2$files, unique(unlist(files, FALSE, FALSE)))
+
+  ## Same if we use any of our ids explicitly:
+  expect_equal(
+    location_build_push_plan(ids, location_id, client),
+    location_build_push_plan(ids[[4]], location_id, client))
+  expect_equal(
+    location_build_push_plan(ids[c(1, 4)], location_id, client),
+    location_build_push_plan(ids[[4]], location_id, client))
+})
