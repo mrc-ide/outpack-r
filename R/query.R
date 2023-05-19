@@ -96,6 +96,7 @@ query_functions <- list(
 
 
 query_component <- function(type, expr, context, args, ...) {
+  stopifnot(is.character(type) && length(type) == 1)
   structure(
     list(type = type, expr = expr, context = context, args = args, ...),
     class = "outpack_query_component")

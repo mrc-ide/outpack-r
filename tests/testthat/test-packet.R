@@ -55,6 +55,7 @@ test_that("Can run a basic packet", {
   expect_equal(meta$id, id)
   expect_null(meta$parameters)
   expect_equal(meta$depends, data_frame(packet = character(),
+                                        query = character(),
                                         files = I(list())))
   expect_setequal(meta$files$path,
                   c("data.csv", "myplot.png", "script.R", "log.json"))
@@ -131,6 +132,7 @@ test_that("Can handle dependencies", {
     meta$depends,
     data_frame(
       packet = id1,
+      query = sprintf('single(id == "%s")', id1),
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 
@@ -235,6 +237,7 @@ test_that("Can use dependency from outpack without file store", {
     meta$depends,
     data_frame(
       packet = id1,
+      query = sprintf('single(id == "%s")', id1),
       files = I(list(data_frame(here = "incoming.csv", there = "data.csv")))))
 })
 
@@ -652,4 +655,97 @@ saveRDS(f(5), "result.rds")',
   expect_length(i_warning, 1)
   expect_equal(d$detail[[i_warning]],
                sprintf("x too large: %d", 5:1))
+})
+
+
+test_that("can depend based on a simple query", {
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+
+  src <- withr::local_tempdir()
+  src1 <- file.path(src, "1")
+  src2 <- file.path(src, "2")
+  fs::dir_create(c(src1, src2))
+
+  id <- list(a = character(), b = character())
+  for (i in 1:3) {
+    for (name in  c("a", "b")) {
+      saveRDS(runif(10), file.path(src1, "data.rds"))
+      p <- outpack_packet_start(src1, name, parameters = list(i = i),
+                                root = root)
+      outpack_packet_end(p)
+      id[[name]] <- c(id[[name]], p$id)
+    }
+  }
+
+  p <- outpack_packet_start(src2, "x", root = root)
+  outpack_packet_use_dependency(p, "latest", c("1.rds" = "data.rds"))
+
+  expect_mapequal(
+    p$depends[[1]],
+    list(packet = id$b[[3]],
+         query = "latest()",
+         files = data.frame(here = "1.rds", there = "data.rds")))
+
+  query <- outpack_query("latest(parameter:i < 3)", name = "a")
+  outpack_packet_use_dependency(p, query, c("2.rds" = "data.rds"))
+  expect_mapequal(
+    p$depends[[2]],
+    list(packet = id$a[[2]],
+         query = 'latest(parameter:i < 3 && name == "a")',
+         files = data.frame(here = "2.rds", there = "data.rds")))
+})
+
+
+test_that("can depend based on a query with subqueries", {
+  root <- create_temporary_root(path_archive = NULL, use_file_store = TRUE)
+
+  src <- withr::local_tempdir()
+  src_a <- file.path(src, "a")
+  src_b <- file.path(src, "b")
+  src_c <- file.path(src, "c")
+  fs::dir_create(c(src_a, src_b, src_c))
+
+  id <- list(a = character())
+  for (i in 1:3) {
+    saveRDS(runif(10), file.path(src_a, "data.rds"))
+    p <- outpack_packet_start(src_a, "a", parameters = list(i = i), root = root)
+    outpack_packet_end(p)
+    id$a <- c(id$a, p$id)
+  }
+
+  p1 <- outpack_packet_start(src_b, "b", root = root)
+  query1 <- outpack_query("latest(parameter:i < 3)", name = "a")
+  outpack_packet_use_dependency(p1, query1, c("2.rds" = "data.rds"))
+  outpack_packet_end(p1)
+  id$b <- p1$id
+
+  p2 <- outpack_packet_start(src_c, "c", root = root)
+  query2 <- outpack_query("latest(usedby({B}))", name = "a",
+                          subquery = list(B = id$b))
+  outpack_packet_use_dependency(p2, query2, files = c("new.rds" = "data.rds"))
+  outpack_packet_end(p2)
+  expect_length(p2$depends, 1)
+  expect_equal(p2$depends[[1]]$packet, id$a[[2]])
+  expect_equal(p2$depends[[1]]$query,
+               sprintf('latest(usedby({"%s"}) && name == "a")', id$b))
+})
+
+
+test_that("validate that dependencies must evaluate to a single id", {
+  path_src1 <- withr::local_tempdir()
+  path_src2 <- withr::local_tempdir()
+  root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
+
+  p1 <- outpack_packet_start(path_src1, "a", parameters = list(x = 1),
+                             root = root)
+  saveRDS(runif(5), file.path(path_src1, "data.rds"))
+  outpack_packet_end(p1)
+
+  p2 <- outpack_packet_start(path_src2, "b", root = root)
+  expect_error(
+    outpack_packet_use_dependency(p2, "parameter:x == 1",
+                                  c("incoming.rds" = "data.rds")),
+    paste("The provided query is not guaranteed to return a single value:",
+          "'parameter:x == 1' Did you forget latest(...)?"),
+    fixed = TRUE)
 })
