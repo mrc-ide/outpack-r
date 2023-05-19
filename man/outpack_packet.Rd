@@ -25,7 +25,7 @@ outpack_packet_end(packet, insert = TRUE)
 
 outpack_packet_run(packet, script, envir = .GlobalEnv)
 
-outpack_packet_use_dependency(packet, id, files)
+outpack_packet_use_dependency(packet, query, files)
 
 outpack_packet_add_custom(packet, application, data, schema = NULL)
 }
@@ -38,7 +38,8 @@ outpack_packet_add_custom(packet, application, data, schema = NULL)
 names must be unique, and the values must all be non-NA scalar
 atomics (logical, integer, numeric, character)}
 
-\item{id}{The id of an existing packet to use files from}
+\item{id}{Optionally, an outpack id via \link{outpack_id}. If
+not given a new id will be generated.}
 
 \item{logging_console}{Optional logical, indicating if we should
 override the root's default in logging to the console. A value
@@ -72,6 +73,9 @@ relative path).  This function can be safely called multiple
 times within a single packet run (or zero times!) as needed.}
 
 \item{envir}{Environment in which to run the script}
+
+\item{query}{An \link{outpack_query} object, or something
+(e.g., a string) that can be trivially converted into one.}
 
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the
