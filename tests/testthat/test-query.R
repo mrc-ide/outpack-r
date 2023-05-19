@@ -241,3 +241,10 @@ test_that("include parameters from subqueries too", {
                        subquery = list(B = quote(parameter:x < this:y)))
   expect_equal(obj$info$parameters, "y")
 })
+
+
+test_that("validate inputs to outpack_query", {
+  expect_error(
+    outpack_query("latest", list(a = 1)),
+    "'name' must be character")
+})
