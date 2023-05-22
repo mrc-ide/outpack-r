@@ -178,7 +178,8 @@ outpack_root <- R6::R6Class(
 ##' @title Open outpack root
 ##'
 ##' @param path The path to look for the root; must be an existing
-##'   directory. Use `.` or `getwd()` for the current directory.
+##'   directory. Use `NULL` (or `.` or `getwd()`) for the current
+##'   directory.
 ##'
 ##' @param locate Logical, indicating if we should look in parent
 ##'   directories until the root is found (similar behaviour to how
@@ -192,6 +193,9 @@ outpack_root <- R6::R6Class(
 outpack_root_open <- function(path, locate = TRUE) {
   if (inherits(path, "outpack_root")) {
     return(path)
+  }
+  if (is.null(path)) {
+    path <- getwd()
   }
   assert_scalar_character(path)
   assert_directory(path)
