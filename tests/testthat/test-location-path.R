@@ -145,7 +145,7 @@ test_that("sensible error if file not found in archive", {
 })
 
 
-that_that("can detect differences between locations when destination empty", {
+test_that("can detect differences between locations when destination empty", {
   client <- create_temporary_root()
   ids <- create_random_packet_chain(client, 4)
 
