@@ -357,7 +357,7 @@ file_export <- function(root, id, path, dest) {
     ## using branch, so typically would affect users running "draft"
     ## type analyses
     for (i in seq_along(dest)) {
-      hash_validate(src[[i]], hash[[i]])
+      hash_validate_file(src[[i]], hash[[i]])
     }
     fs::file_copy(src, dest)
   }
