@@ -546,6 +546,11 @@ lookup_location_id <- function(name, root) {
 }
 
 
+local_location_id <- function(root) {
+  lookup_location_id(local, root)
+}
+
+
 lookup_location_name <- function(id, root) {
   root$config$location$name[match(id, root$config$location$id)]
 }

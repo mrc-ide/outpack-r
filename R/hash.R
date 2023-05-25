@@ -36,3 +36,15 @@ hash_validate <- function(path, expected) {
   }
   invisible(found)
 }
+
+
+hash_validate_data <- function(data, expected, name = deparse(substitute(x))) {
+  algorithm <- hash_parse(expected)$algorithm
+  found <- hash_data(data, algorithm)
+  if (found != expected) {
+    stop(sprintf(
+      "Hash of %s does not match:\n - expected: %s\n - found:    %s",
+      name, expected, found))
+  }
+  invisible(found)
+}

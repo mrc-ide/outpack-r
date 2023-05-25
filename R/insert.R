@@ -5,12 +5,7 @@ outpack_insert_packet <- function(path, json, root = NULL) {
 
   assert_directory(path)
 
-  ## TODO(RFC): Is 'local' really the only valid choice here?  It feels
-  ## like we could allow for temporary locations and implement
-  ## transactions this way.
-  location_name <- local
-  location_id <- root$config$location$id[
-    root$config$location$name == location_name]
+  location_id <- local_location_id(root)
 
   hash_algorithm <- root$config$core$hash_algorithm
 
@@ -50,8 +45,9 @@ outpack_insert_packet <- function(path, json, root = NULL) {
   ## TODO: once we get more flexible remotes, this will get moved into
   ## its own thing.
   hash <- hash_data(json, hash_algorithm)
-  mark_packet_known(id, location_id, hash, Sys.time(), root)
-  mark_packet_unpacked(id, location_id, root)
+  time <- Sys.time()
+  mark_packet_known(id, location_id, hash, time, root)
+  mark_packet_unpacked(id, location_id, time, root)
 
   ## If we were going to add a number in quick succession we could
   ## avoid churn here by not rewriting at every point.
@@ -70,10 +66,10 @@ mark_packet_known <- function(packet_id, location_id, hash, time, root) {
 }
 
 
-mark_packet_unpacked <- function(packet_id, location_id, root) {
+mark_packet_unpacked <- function(packet_id, location_id, time, root) {
   dat <- list(schema_version = scalar(outpack_schema_version()),
               packet = scalar(packet_id),
-              time = scalar(time_to_num()),
+              time = scalar(time_to_num(time)),
               location = scalar(location_id))
   dest <- file.path(root$path, ".outpack", "unpacked", packet_id)
   fs::dir_create(dirname(dest))

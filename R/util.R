@@ -161,3 +161,9 @@ collector <- function() {
     }
   )
 }
+
+
+as_json <- function(str) {
+  assert_scalar_character(str)
+  structure(str, class = "json")
+}
