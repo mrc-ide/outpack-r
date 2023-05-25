@@ -201,3 +201,51 @@ test_that("Import complete tree via push into server", {
   files_used <- lapply(ids, function(id) client$metadata(id)$files$hash)
   expect_setequal(plan$files, unique(unlist(files_used, FALSE, FALSE)))
 })
+
+
+test_that("Prevent pushing things that would corrupt the store", {
+  ## This can't actually happen without some deletion on the server I
+  ## believe, which is going to require some race condition. But bugs
+  ## could result in an incorrect plan being generated and these are
+  ## the errors that would prevent the import going astray.
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  id <- ids[[3]]
+  str <- read_string(file.path(client$path, ".outpack", "metadata", id))
+  hash <- hash_data(str, "sha256")
+
+  expect_error(
+    location_path_import_metadata(str, chartr("bcdef", "cdefa", hash), server),
+    sprintf("Hash of metadata for '%s' does not match", id))
+  expect_error(
+    location_path_import_metadata(str, hash, server),
+    sprintf("Can't import metadata for '%s', as files missing", id))
+
+  ## Manually import the files:
+  for (h in client$metadata(id)$files$hash) {
+    location_path_import_file(find_file_by_hash(client, h), h, server)
+  }
+  expect_error(
+    location_path_import_metadata(str, hash, server),
+    sprintf("Can't import metadata for '%s', as dependencies missing", id))
+})
+
+
+test_that("Can only push into a root with a file store", {
+  ## This could possibly be relaxed, but it's hard to stash files
+  ## somewhere without the store. Really in this condition the
+  ## "server" should be pulling.
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 2)
+  server <- create_temporary_root()
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+  expect_error(
+    outpack_location_push(ids[[2]], "server", client),
+    "Can't push files into this server, as it does not have a file store")
+})
