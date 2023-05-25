@@ -177,3 +177,27 @@ that_that("can detect differences between locations when destination empty", {
     location_build_push_plan(ids[c(1, 4)], location_id, client),
     location_build_push_plan(ids[[4]], location_id, client))
 })
+
+
+test_that("Import complete tree via push into server", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  plan <- outpack_location_push(ids[[4]], "server", client)
+
+  idx_c <- client$index()
+  idx_s <- server$index()
+
+  expect_equal(idx_s$metadata, idx_c$metadata)
+  expect_equal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_equal(idx_s$location$packet, idx_c$location$packet)
+  expect_equal(idx_s$location$hash, idx_c$location$hash)
+
+  expect_setequal(plan$packet_id, ids)
+  files_used <- lapply(ids, function(id) client$metadata(id)$files$hash)
+  expect_setequal(plan$files, unique(unlist(files_used, FALSE, FALSE)))
+})

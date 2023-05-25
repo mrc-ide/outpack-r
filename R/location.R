@@ -312,10 +312,53 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
     driver <- location_driver(plan$location_id[i], root)
     location_pull_files_store(root, driver, plan$packet[i])
     location_pull_files_archive(root, driver, plan$packet[i])
-    mark_packet_unpacked(plan$packet[i], plan$location_id[i], root)
+    mark_packet_unpacked(plan$packet[i], plan$location_id[i], Sys.time(), root)
   }
 
   invisible(id)
+}
+
+
+##' Push tree to location. This function works out what packets are
+##' not known at the location and then what files are required to
+##' create them. It then pushes all the files required to build all
+##' packets and then pushes the missing metadata to the server. If the
+##' process is interrupted it is safe to resume and will only transfer
+##' files and packets that were missed on a previous call.
+##'
+##' @title Push tree to location
+##'
+##' @param packet_id One or more packets to push to the server
+##'
+##' @param location The name of a location to push to (see
+##' [outpack::outpack_location_list] for possible values).
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Invisibly, details on the information that was actually
+##'   moved (which might be more or less than what was requested,
+##'   depending on the dependencies of packets and what was already
+##'   known on the other location).
+##'
+##' @export
+outpack_location_push <- function(packet_id, location, root = NULL) {
+  root <- outpack_root_open(root, locate = TRUE)
+  location_id <- location_resolve_valid(location, root,
+                                        include_local = FALSE,
+                                        allow_no_locations = FALSE)
+  plan <- location_build_push_plan(packet_id, location_id, root)
+
+  if (length(plan$files) > 0 || length(plan$packet_id) > 0) {
+    driver <- location_driver(location_id, root)
+    for (hash in plan$files) {
+      driver$push_file(find_file_by_hash(root, hash), hash)
+    }
+    for (id in plan$packet_id) {
+      driver$push_metadata(id, root)
+    }
+  }
+
+  invisible(plan)
 }
 
 
