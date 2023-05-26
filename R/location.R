@@ -312,7 +312,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
     driver <- location_driver(plan$location_id[i], root)
     location_pull_files_store(root, driver, plan$packet[i])
     location_pull_files_archive(root, driver, plan$packet[i])
-    mark_packet_unpacked(plan$packet[i], plan$location_id[i], root)
+    mark_packet_unpacked(plan$packet[i], plan$location_id[i], Sys.time(), root)
   }
 
   invisible(id)
@@ -520,6 +520,11 @@ new_location_entry <- function(name, priority, type, args) {
 
 lookup_location_id <- function(name, root) {
   root$config$location$id[match(name, root$config$location$name)]
+}
+
+
+local_location_id <- function(root) {
+  lookup_location_id(local, root)
 }
 
 
