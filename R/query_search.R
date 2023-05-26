@@ -111,10 +111,6 @@ query_eval_dependency <- function(query, index, parameters, subquery) {
   ## were usedby or used in this one, so find parents/children without scope
   ## and apply scope later when finding the results of the main query.
   id <- query_eval(query$args[[1]], index, parameters, subquery)
-  len <- length(id)
-  if (len == 0) {
-    return(character(0))
-  }
   switch(query$name,
          usedby = index$get_packet_depends(id, query$args[[2]]$value),
          uses = index$get_packet_uses(id, query$args[[2]]$value))
