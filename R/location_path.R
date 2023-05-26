@@ -55,11 +55,11 @@ outpack_location_path <- R6::R6Class(
       dest
     },
 
-    unknown_packets = function(ids, unpacked) {
+    list_unknown_packets = function(ids, unpacked) {
       root_list_unknown_packets(ids, unpacked, private$root)
     },
 
-    unknown_files = function(hashes) {
+    list_unknown_files = function(hashes) {
       root_list_unknown_files(hashes, private$root)
     },
 
@@ -68,9 +68,7 @@ outpack_location_path <- R6::R6Class(
     },
 
     push_metadata = function(packet_id, root) {
-      ## TODO: make this easier to do:
-      index <- root$index()$location
-      hash <- index$hash[index$packet == packet_id][[1]]
+      hash <- get_metadata_hash(packet_id, root)
       path <- file.path(root$path, ".outpack", "metadata", packet_id)
       location_path_import_metadata(read_string(path), hash, private$root)
     }

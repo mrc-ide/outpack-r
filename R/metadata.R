@@ -213,3 +213,13 @@ recursive_dependencies <- function(ids, root) {
   }
   ret
 }
+
+
+get_metadata_hash <- function(packet_id, root) {
+  index <- root$index()$location
+  location_id <- local_location_id(root)
+  i <- index$packet == packet_id & index$location == location_id
+  hash <- index$hash[i]
+  stopifnot(length(hash) == 1)
+  hash
+}
