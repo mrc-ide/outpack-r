@@ -139,7 +139,7 @@ test_that("control logging threshold", {
   expect_silent(
     outpack_log_debug(object, "hello", "debug", "test"))
   expect_silent(
-    outpack_log_debug(object, "hello", "trace", "test"))
+    outpack_log_trace(object, "hello", "trace", "test"))
 
   object <- structure(
     list(logger = list(console = TRUE, threshold = "debug")),
@@ -150,7 +150,25 @@ test_that("control logging threshold", {
   expect_message(
     outpack_log_debug(object, "hello", "debug", "test"),
     "[ hello      ]  debug", fixed = TRUE)
+  expect_silent(
+    outpack_log_trace(object, "hello", "trace", "test"))
+
+  object <- structure(
+    list(logger = list(console = TRUE, threshold = "trace")),
+    class = "outpack_root")
   expect_message(
-    outpack_log_debug(object, "hello", "trace", "test"),
+    outpack_log_info(object, "hello", "info", "test"),
+    "[ hello      ]  info", fixed = TRUE)
+  expect_message(
+    outpack_log_debug(object, "hello", "debug", "test"),
+    "[ hello      ]  debug", fixed = TRUE)
+  expect_message(
+    outpack_log_trace(object, "hello", "trace", "test"),
     "[ hello      ]  trace", fixed = TRUE)
+})
+
+
+test_that("reject logging calls with invalid object", {
+  expect_error(outpack_log_info(NULL, "hello", "error", "test"),
+               "Invalid call to outpack_log")
 })
