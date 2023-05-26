@@ -130,7 +130,7 @@ a \code{message} field, additional data fields containing information
 about the error:
 \itemize{
 \item \code{error}: the original error object, as thrown and caught by \code{outpack}
-\item \code{trace}: the backtrace for the above error, currently just as a
+\item \code{traceback}: the backtrace for the above error, currently just as a
 character vector, though this may change in future versions
 \item \code{output}: a character vector of interleaved stdout and stderr as
 the script ran
