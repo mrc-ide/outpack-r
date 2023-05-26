@@ -135,3 +135,85 @@ test_that("can find appropriate root if in working directory with path NULL", {
     outpack_root_open(NULL, TRUE))
   expect_equal(res$path, root$path)
 })
+
+
+test_that("Can work out what packets are missing", {
+  root <- list()
+  for (name in c("a", "b")) {
+    root[[name]] <- create_temporary_root()
+  }
+  ids <- create_random_packet_chain(root$a, 3)
+  outpack_location_add("a", "path", list(path = root$a$path), root = root$b)
+  outpack_location_pull_metadata(root = root$b)
+
+  ## Nothing missing in this case:
+  expect_equal(root_list_unknown_packets(ids, TRUE, root$a),
+               character())
+  expect_equal(root_list_unknown_packets(ids[[1]], TRUE, root$a),
+               character())
+  expect_equal(root_list_unknown_packets(character(), TRUE, root$a),
+               character())
+
+  ids_fake <- replicate(4, outpack_id())
+  expect_equal(root_list_unknown_packets(ids_fake, TRUE, root$a),
+               ids_fake)
+  expect_equal(root_list_unknown_packets(rev(ids_fake), TRUE, root$a),
+               rev(ids_fake))
+
+  ids_all <- sample(c(unname(ids), ids_fake))
+  expect_equal(root_list_unknown_packets(ids_all, TRUE, root$a),
+               setdiff(ids_all, ids))
+  expect_equal(root_list_unknown_packets(ids_all, TRUE, root$b),
+               ids_all)
+  expect_equal(root_list_unknown_packets(ids_all, FALSE, root$b),
+               setdiff(ids_all, ids))
+})
+
+
+test_that("Can work out what files are missing", {
+  root <- create_temporary_root(use_file_store = TRUE)
+  ids <- create_random_packet_chain(root, 3)
+
+  files <- root$files$list()
+  files_msg <- hash_data(files, "sha256")
+
+  expect_equal(root_list_unknown_files(files, root), character())
+  expect_equal(root_list_unknown_files(files[[1]], root), character())
+  expect_equal(root_list_unknown_files(character(), root), character())
+
+  expect_equal(root_list_unknown_files(files_msg, root), files_msg)
+  expect_equal(root_list_unknown_files(rev(files_msg), root), rev(files_msg))
+
+  files_all <- sample(c(files, files_msg))
+  expect_equal(root_list_unknown_files(files_all, root),
+               setdiff(files_all, files))
+})
+
+
+test_that("Can work out what files are missing without file store", {
+  root <- create_temporary_root(use_file_store = FALSE)
+  ids <- create_random_packet_chain(root, 3)
+
+  files <- unique(
+    unlist(lapply(root$index()$metadata, function(x) x$files$hash),
+           FALSE, FALSE))
+  files_msg <- hash_data(files, "sha256")
+
+  expect_equal(root_list_unknown_files(files, root), character())
+  expect_equal(root_list_unknown_files(files[[1]], root), character())
+  expect_equal(root_list_unknown_files(character(), root), character())
+
+  expect_equal(root_list_unknown_files(files_msg, root), files_msg)
+  expect_equal(root_list_unknown_files(rev(files_msg), root), rev(files_msg))
+
+  files_all <- sample(c(files, files_msg))
+  expect_equal(root_list_unknown_files(files_all, root),
+               setdiff(files_all, files))
+})
+
+
+test_that("All files missing in empty archive", {
+  root <- create_temporary_root(use_file_store = FALSE)
+  files_msg <- hash_data(1:10, "sha256")
+  expect_equal(root_list_unknown_files(files_msg, root), files_msg)
+})

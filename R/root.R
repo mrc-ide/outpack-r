@@ -443,3 +443,27 @@ validate_packet_has_file <- function(root, id, path) {
                  id, paste(squote(err), collapse = ", ")))
   }
 }
+
+
+root_list_unknown_packets <- function(ids, unpacked, root) {
+  if (unpacked) {
+    setdiff(ids, root$index()$unpacked$packet)
+  } else {
+    setdiff(ids, names(root$index()$metadata))
+  }
+}
+
+
+root_list_unknown_files <- function(hashes, root) {
+  if (root$config$core$use_file_store) {
+    hashes[!root$files$exists(hashes)]
+  } else {
+    idx <- root$index()
+    if (length(idx$unpacked$packet) == 0) {
+      return(hashes)
+    }
+    ## This could be quite a slow operation, especially if we always
+    ## validate each file (as we currently do)
+    hashes[vlapply(hashes, function(h) is.null(find_file_by_hash(root, h)))]
+  }
+}
