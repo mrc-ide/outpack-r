@@ -205,3 +205,10 @@ test_that("Can work out what files are missing without file store", {
   expect_equal(root_unknown_files(files_all, root),
                setdiff(files_all, files))
 })
+
+
+test_that("All files missing in empty archive", {
+  root <- create_temporary_root(use_file_store = FALSE)
+  files_msg <- hash_data(1:10, "sha256")
+  expect_equal(root_unknown_files(files_msg, root), files_msg)
+})
