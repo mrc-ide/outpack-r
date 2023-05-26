@@ -80,21 +80,27 @@ outpack_location_path <- R6::R6Class(
 ## This split just acts to make the http one easier to think about -
 ## it's not the job of the driver to do validation, but the server.
 location_path_import_metadata <- function(str, hash, root) {
-  dat <- outpack_metadata_load(as_json(str))
-  id <- dat$id
+  meta <- outpack_metadata_load(as_json(str))
+  id <- meta$id
   hash_validate_data(str, hash, sprintf("metadata for '%s'", id))
 
-  unknown_files <- root_list_unknown_files(dat$files$hash, root)
+  unknown_files <- root_list_unknown_files(meta$files$hash, root)
   if (length(unknown_files) > 0) {
     stop(
       sprintf("Can't import metadata for '%s', as files missing:\n%s",
               id, paste(sprintf("  - %s", unknown_files), collapse = "\n")))
   }
-  unknown_packets <- root_list_unknown_packets(dat$depends$packet, TRUE, root)
+  unknown_packets <- root_list_unknown_packets(meta$depends$packet, TRUE, root)
   if (length(unknown_packets) > 0) {
     stop(sprintf(
       "Can't import metadata for '%s', as dependencies missing:\n%s",
       id, paste(sprintf("  - %s", unknown_packets), collapse = "\n")))
+  }
+
+  if (!is.null(root$config$core$path_archive)) {
+    dst <- file.path(root$path, root$config$core$path_archive,
+                     meta$name, id, meta$files$path)
+    root$files$get(meta$files$hash, dst)
   }
 
   writeLines(str, file.path(root$path, ".outpack", "metadata", id))

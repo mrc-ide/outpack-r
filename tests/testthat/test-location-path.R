@@ -203,6 +203,23 @@ test_that("Import complete tree via push into server", {
 })
 
 
+test_that("Import packets into root with archive as well as store", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+
+  server <- create_temporary_root(use_file_store = TRUE,
+                                  path_archive = "archive")
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  plan <- outpack_location_push(ids[[4]], "server", client)
+
+  expect_equal(
+    sort(withr::with_dir(server$path, fs::dir_ls("archive", recurse = TRUE))),
+    sort(withr::with_dir(client$path, fs::dir_ls("archive", recurse = TRUE))))
+})
+
+
 test_that("Prevent pushing things that would corrupt the store", {
   ## This can't actually happen without some deletion on the server I
   ## believe, which is going to require some race condition. But bugs
