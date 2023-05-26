@@ -125,3 +125,13 @@ test_that("Can read full metadata via root", {
   expect_equal(d1$script, list())
   expect_equal(d1$schema_version, outpack_schema_version())
 })
+
+
+## As used in orderly:
+test_that("can find appropriate root if in working directory with path NULL", {
+  root <- create_temporary_root()
+  res <- withr::with_dir(
+    root$path,
+    outpack_root_open(NULL, TRUE))
+  expect_equal(res$path, root$path)
+})
