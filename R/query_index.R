@@ -41,18 +41,6 @@ query_index <- R6::R6Class(
     },
 
     #' @description
-    #' Scope the index. This will filter the active index on the scope
-    #' and save the scoped index for use later
-    #'
-    #' @param ids The ids to scope the index on
-    #' @return Nothing, called for side effect
-    scope = function(ids) {
-      self$filter(ids)
-      private$index_scoped <- self$index
-      invisible(TRUE)
-    },
-
-    #' @description
     #' Get the ids of packets which this packet depends to a specified level
     #'
     #' @param id The id of the packet to get parents of

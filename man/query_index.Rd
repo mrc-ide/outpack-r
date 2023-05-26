@@ -26,7 +26,6 @@ are packets which are used by this packet id (i.e. its children).}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-query_index-new}{\code{query_index$new()}}
-\item \href{#method-query_index-scope}{\code{query_index$scope()}}
 \item \href{#method-query_index-get_packet_depends}{\code{query_index$get_packet_depends()}}
 \item \href{#method-query_index-get_packet_uses}{\code{query_index$get_packet_uses()}}
 }
@@ -56,27 +55,6 @@ the same data as \code{depends} but relationships flow in the other
 direction.}
 }
 \if{html}{\out{</div>}}
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-query_index-scope"></a>}}
-\if{latex}{\out{\hypertarget{method-query_index-scope}{}}}
-\subsection{Method \code{scope()}}{
-Scope the index. This will filter the active index on the scope
-and save the scoped index for use later
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{query_index$scope(ids)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{ids}}{The ids to scope the index on}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Nothing, called for side effect
 }
 }
 \if{html}{\out{<hr>}}
