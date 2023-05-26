@@ -445,7 +445,7 @@ validate_packet_has_file <- function(root, id, path) {
 }
 
 
-root_unknown_packets <- function(ids, unpacked, root) {
+root_list_unknown_packets <- function(ids, unpacked, root) {
   if (unpacked) {
     setdiff(ids, root$index()$unpacked$packet)
   } else {
@@ -454,7 +454,7 @@ root_unknown_packets <- function(ids, unpacked, root) {
 }
 
 
-root_unknown_files <- function(hashes, root) {
+root_list_unknown_files <- function(hashes, root) {
   if (root$config$core$use_file_store) {
     hashes[!root$files$exists(hashes)]
   } else {
