@@ -266,3 +266,33 @@ test_that("Can only push into a root with a file store", {
     outpack_location_push(ids[[2]], "server", client),
     "Can't push files into this server, as it does not have a file store")
 })
+
+
+test_that("pushing twice does nothing", {
+  client <- create_temporary_root()
+  ids <- create_random_packet_chain(client, 4)
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+  plan1 <- outpack_location_push(ids[[4]], "server", client)
+  plan2 <- outpack_location_push(ids[[4]], "server", client)
+  expect_equal(plan2, list(packet_id = character(), files = character()))
+})
+
+
+test_that("push overlapping tree", {
+  client <- create_temporary_root()
+  server <- create_temporary_root(use_file_store = TRUE, path_archive = NULL)
+  outpack_location_add("server", "path", list(path = server$path),
+                       root = client)
+
+  id_base <- create_random_packet(server)
+  outpack_location_pull_metadata(root = client) # TODO: should be automatic
+  outpack_location_pull_packet(id_base, "server", root = client)
+
+  ids <- create_random_packet_chain(client, 3, id_base)
+  plan <- outpack_location_push(ids[[3]], "server", client)
+
+  expect_setequal(plan$packet_id, ids)
+  expect_setequal(names(server$index()$metadata), c(id_base, ids))
+})
