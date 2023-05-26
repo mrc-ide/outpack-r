@@ -46,7 +46,7 @@ file_store <- R6::R6Class(
     ## Our current use knows the hash at the point of insertion and
     ## the validation is very useful!
     put = function(src, hash, move = FALSE) {
-      hash_validate(src, hash)
+      hash_validate_file(src, hash)
       dst <- self$filename(hash)
       if (!fs::file_exists(dst)) {
         fs::dir_create(dirname(dst))
