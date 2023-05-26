@@ -179,7 +179,29 @@ test_that("Can work out what files are missing", {
   expect_equal(root_unknown_files(files_msg, root), files_msg)
   expect_equal(root_unknown_files(rev(files_msg), root), rev(files_msg))
 
-  files_all <- sample(c(unname(files), files_msg))
+  files_all <- sample(c(files, files_msg))
+  expect_equal(root_unknown_files(files_all, root),
+               setdiff(files_all, files))
+})
+
+
+test_that("Can work out what files are missing without file store", {
+  root <- create_temporary_root(use_file_store = FALSE)
+  ids <- create_random_packet_chain(root, 3)
+
+  files <- unique(
+    unlist(lapply(root$index()$metadata, function(x) x$files$hash),
+           FALSE, FALSE))
+  files_msg <- hash_data(files, "sha256")
+
+  expect_equal(root_unknown_files(files, root), character())
+  expect_equal(root_unknown_files(files[[1]], root), character())
+  expect_equal(root_unknown_files(character(), root), character())
+
+  expect_equal(root_unknown_files(files_msg, root), files_msg)
+  expect_equal(root_unknown_files(rev(files_msg), root), rev(files_msg))
+
+  files_all <- sample(c(files, files_msg))
   expect_equal(root_unknown_files(files_all, root),
                setdiff(files_all, files))
 })
