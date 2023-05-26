@@ -533,7 +533,7 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
 location_build_push_plan <- function(packet_id, location_id, root) {
   driver <- location_driver(location_id, root)
 
-  packet_id <- recursive_dependencies(packet_id, root)
+  packet_id <- sort(find_all_dependencies(packet_id, root$index()$metadata))
   packet_id_msg <- driver$list_unknown_packets(packet_id, unpacked = TRUE)
 
   if (length(packet_id_msg) == 0) {

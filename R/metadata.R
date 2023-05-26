@@ -203,18 +203,6 @@ validate_hashes <- function(found, expected) {
 }
 
 
-recursive_dependencies <- function(ids, root) {
-  metadata <- root$index()$metadata
-  ids <- ret <- unname(unique(ids))
-  while (length(ids) > 0) {
-    ids_new <- lapply(ids, function(i) metadata[[i]]$depends$packet)
-    ids <- setdiff(unlist(ids_new, FALSE, FALSE), ids)
-    ret <- c(ret, ids)
-  }
-  ret
-}
-
-
 get_metadata_hash <- function(packet_id, root) {
   index <- root$index()$location
   location_id <- local_location_id(root)
