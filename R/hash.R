@@ -27,12 +27,12 @@ hash_parse <- function(hash) {
 
 
 hash_validate_file <- function(path, expected) {
-  hash_validate(rehash_file(path, expected), expected, squote(path))
+  hash_validate(rehash(path, hash_file, expected), expected, squote(path))
 }
 
 
 hash_validate_data <- function(data, expected, name = deparse(substitute(x))) {
-  hash_validate(rehash_data(data, expected), expected, name)
+  hash_validate(rehash(data, hash_data, expected), expected, name)
 }
 
 
@@ -46,13 +46,8 @@ hash_validate <- function(found, expected, name) {
 }
 
 
-rehash_data <- function(data, expected) {
+## hash function is (thing, algorithm) -> hash
+rehash <- function(data, hash_function, expected) {
   algorithm <- hash_parse(expected)$algorithm
-  hash_data(data, algorithm)
-}
-
-
-rehash_file <- function(data, expected) {
-  algorithm <- hash_parse(expected)$algorithm
-  hash_file(data, algorithm)
+  hash_function(data, algorithm)
 }
