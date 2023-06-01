@@ -53,5 +53,65 @@ outpack_location_path <- R6::R6Class(
       }
       fs::file_copy(path, dest)
       dest
+    },
+
+    list_unknown_packets = function(ids, unpacked) {
+      root_list_unknown_packets(ids, unpacked, private$root)
+    },
+
+    list_unknown_files = function(hashes) {
+      root_list_unknown_files(hashes, private$root)
+    },
+
+    push_file = function(src, hash) {
+      location_path_import_file(src, hash, private$root)
+    },
+
+    push_metadata = function(packet_id, root) {
+      hash <- get_metadata_hash(packet_id, root)
+      path <- file.path(root$path, ".outpack", "metadata", packet_id)
+      location_path_import_metadata(read_string(path), hash, private$root)
     }
   ))
+
+
+## This split just acts to make the http one easier to think about -
+## it's not the job of the driver to do validation, but the server.
+location_path_import_metadata <- function(str, hash, root) {
+  meta <- outpack_metadata_load(as_json(str))
+  id <- meta$id
+  hash_validate_data(str, hash, sprintf("metadata for '%s'", id))
+
+  unknown_files <- root_list_unknown_files(meta$files$hash, root)
+  if (length(unknown_files) > 0) {
+    stop(
+      sprintf("Can't import metadata for '%s', as files missing:\n%s",
+              id, paste(sprintf("  - %s", unknown_files), collapse = "\n")))
+  }
+  unknown_packets <- root_list_unknown_packets(meta$depends$packet, TRUE, root)
+  if (length(unknown_packets) > 0) {
+    stop(sprintf(
+      "Can't import metadata for '%s', as dependencies missing:\n%s",
+      id, paste(sprintf("  - %s", unknown_packets), collapse = "\n")))
+  }
+
+  if (!is.null(root$config$core$path_archive)) {
+    dst <- file.path(root$path, root$config$core$path_archive,
+                     meta$name, id, meta$files$path)
+    root$files$get(meta$files$hash, dst)
+  }
+
+  writeLines(str, file.path(root$path, ".outpack", "metadata", id))
+  location_id <- local_location_id(root)
+  time <- Sys.time()
+  mark_packet_known(id, location_id, hash, time, root)
+  mark_packet_unpacked(id, location_id, time, root)
+}
+
+
+location_path_import_file <- function(path, hash, root) {
+  if (!root$config$core$use_file_store) {
+    stop("Can't push files into this server, as it does not have a file store")
+  }
+  root$files$put(path, hash)
+}

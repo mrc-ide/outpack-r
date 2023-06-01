@@ -319,6 +319,49 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 }
 
 
+##' Push tree to location. This function works out what packets are
+##' not known at the location and then what files are required to
+##' create them. It then pushes all the files required to build all
+##' packets and then pushes the missing metadata to the server. If the
+##' process is interrupted it is safe to resume and will only transfer
+##' files and packets that were missed on a previous call.
+##'
+##' @title Push tree to location
+##'
+##' @param packet_id One or more packets to push to the server
+##'
+##' @param location The name of a location to push to (see
+##' [outpack::outpack_location_list] for possible values).
+##'
+##' @inheritParams outpack_location_list
+##'
+##' @return Invisibly, details on the information that was actually
+##'   moved (which might be more or less than what was requested,
+##'   depending on the dependencies of packets and what was already
+##'   known on the other location).
+##'
+##' @export
+outpack_location_push <- function(packet_id, location, root = NULL) {
+  root <- outpack_root_open(root, locate = TRUE)
+  location_id <- location_resolve_valid(location, root,
+                                        include_local = FALSE,
+                                        allow_no_locations = FALSE)
+  plan <- location_build_push_plan(packet_id, location_id, root)
+
+  if (length(plan$files) > 0 || length(plan$packet_id) > 0) {
+    driver <- location_driver(location_id, root)
+    for (hash in plan$files) {
+      driver$push_file(find_file_by_hash(root, hash), hash)
+    }
+    for (id in plan$packet_id) {
+      driver$push_metadata(id, root)
+    }
+  }
+
+  invisible(plan)
+}
+
+
 location_driver <- function(location_id, root) {
   i <- match(location_id, root$config$location$id)
   type <- root$config$location$type[[i]]
@@ -484,6 +527,29 @@ location_build_pull_plan <- function(packet_id, location_id, root) {
   }
 
   plan
+}
+
+
+location_build_push_plan <- function(packet_id, location_id, root) {
+  driver <- location_driver(location_id, root)
+
+  packet_id <- sort(find_all_dependencies(packet_id, root$index()$metadata))
+  packet_id_msg <- driver$list_unknown_packets(packet_id, unpacked = TRUE)
+
+  if (length(packet_id_msg) == 0) {
+    files_msg <- character(0)
+  } else {
+    packet_id_msg <- sort(packet_id_msg)
+    metadata <- root$index()$metadata
+    ## All files across all missing ids:
+    files <- unique(unlist(
+      lapply(packet_id_msg, function(i) metadata[[i]]$files$hash)))
+
+    ## Which of these does the server not know about:
+    files_msg <- driver$list_unknown_files(files)
+  }
+
+  list(packet_id = packet_id_msg, files = files_msg)
 }
 
 
