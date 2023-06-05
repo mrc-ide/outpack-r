@@ -1,4 +1,5 @@
-#' Format outpack query for displaying to users
+#' Format outpack query for displaying to users. It will typically be
+#' easier to use the [format] method of `outpack_query` objects.
 #'
 #' @param query The outpack query to print
 #'
@@ -15,6 +16,8 @@
 #' outpack::outpack_query_format(
 #'   quote(usedby({A})),
 #'   subquery = list(A = quote(latest(name == "a"))))
+#'
+#' format(outpack::outpack_query("latest", name = "a"))
 outpack_query_format <- function(query, subquery = NULL) {
   if (!is_deparseable_query(query)) {
     stop("Cannot format query, it must be a language object or be length 1.")
@@ -30,6 +33,12 @@ outpack_query_format <- function(query, subquery = NULL) {
   }
 
   deparse_query(query, subquery)
+}
+
+
+##' @export
+format.outpack_query <- function(x, ...) {
+  deparse_query(x$value$expr, lapply(x$subquery, "[[", "expr"))
 }
 
 

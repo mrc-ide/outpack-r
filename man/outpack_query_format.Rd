@@ -2,7 +2,8 @@
 % Please edit documentation in R/query_deparse.R
 \name{outpack_query_format}
 \alias{outpack_query_format}
-\title{Format outpack query for displaying to users}
+\title{Format outpack query for displaying to users. It will typically be
+easier to use the \link{format} method of \code{outpack_query} objects.}
 \usage{
 outpack_query_format(query, subquery = NULL)
 }
@@ -18,11 +19,14 @@ already-deparsed query here or it will get quoted!}
 Query expression as a string
 }
 \description{
-Format outpack query for displaying to users
+Format outpack query for displaying to users. It will typically be
+easier to use the \link{format} method of \code{outpack_query} objects.
 }
 \examples{
 outpack::outpack_query_format(quote(name == "example"))
 outpack::outpack_query_format(
   quote(usedby({A})),
   subquery = list(A = quote(latest(name == "a"))))
+
+format(outpack::outpack_query("latest", name = "a"))
 }

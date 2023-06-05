@@ -67,3 +67,14 @@ test_that("subqueries must be sensible", {
     outpack_query_format(quote(latest(usedby({A}))), list(A = list())), # nolint
     "Invalid subquery, it must be deparseable: error for 'A'")
 })
+
+
+test_that("format S3 method dispatches", {
+  expect_equal(format(outpack_query("latest", "foo")),
+               'latest(name == "foo")')
+  expect_equal(
+    format(outpack_query("latest(usedby({X}))",
+                         name = "analysis",
+                         subquery = list(X = 'latest(name == "data")'))),
+    'latest(usedby({"latest(name == "data")"}) && name == "analysis")')
+})
