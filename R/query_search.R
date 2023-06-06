@@ -15,20 +15,27 @@
 ##'   regardless of if they are locally available, but if `TRUE`, only
 ##'   unpacked packets will be considered.
 ##'
+##' @param location Optionally, information to limit the search to. If
+##'   `NULL`, all locations are considered. If non-`NULL`, this should
+##'   be either a character vector of locations to consider, or a
+##'   single numerical value indicating the minimum priority of th
+##'   location.
+##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
 ##' @return A character vector of matching ids
 ##' @export
 outpack_search <- function(..., parameters = NULL, require_unpacked = FALSE,
-                           root = NULL) {
+                           location = NULL, root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   query <- as_outpack_query(...)
-  outpack_query_eval(query, parameters, require_unpacked, root)
+  outpack_query_eval(query, parameters, require_unpacked, location, root)
 }
 
 
-outpack_query_eval <- function(query, parameters, require_unpacked, root) {
+outpack_query_eval <- function(query, parameters, require_unpacked, location,
+                               root) {
   assert_is(query, "outpack_query")
   assert_is(root, "outpack_root")
   validate_parameters(parameters)
@@ -36,7 +43,7 @@ outpack_query_eval <- function(query, parameters, require_unpacked, root) {
   ## with query$info$parameters, but we already have nicer error
   ## reporting at runtime that shows the context of where the
   ## parameter is used.
-  index <- new_query_index(root, require_unpacked)
+  index <- new_query_index(root, require_unpacked, location)
   query_eval(query$value, index, parameters, list2env(query$subquery))
 }
 

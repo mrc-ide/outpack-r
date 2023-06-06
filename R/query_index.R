@@ -80,26 +80,32 @@ query_index <- R6::R6Class(
 )
 
 
-new_query_index <- function(root, require_unpacked) {
+new_query_index <- function(root, require_unpacked, location) {
   root <- outpack_root_open(root, locate = TRUE)
   idx <- root$index()
-  i <- match(idx$location$location, root$config$location$id)
-  location <- split(root$config$location$name[i], idx$location$packet)
-  index <- data_frame(
-    id = names(idx$metadata) %||% character(0),
-    name = vcapply(idx$metadata, "[[", "name"),
-    ## Wrap these in I() because they're list columns
-    parameters = I(lapply(idx$metadata, "[[", "parameters")),
-    location = I(location))
-  depends <- lapply(idx$metadata, "[[", "depends")
-  uses <- build_packet_uses(depends)
-  if (require_unpacked) {
-    index <- index[index$id %in% idx$unpacked$packet, ]
-    depends <- depends[names(depends) %in% index$id]
-    uses <- uses[names(uses) %in% index$id]
+  metadata <- idx$metadata
+
+  if (!is.null(location)) {
+    location <- validate_query_location(location, root)
+    include <- idx$location$packet[idx$location$location %in% location]
+    metadata <- metadata[names(metadata) %in% include]
   }
+  if (require_unpacked) {
+    metadata <- metadata[names(metadata) %in% idx$unpacked$packet]
+  }
+
+  index <- data_frame(
+    id = names(metadata) %||% character(0),
+    name = vcapply(metadata, "[[", "name"),
+    ## Wrap this in I() because it is a list column
+    parameters = I(lapply(metadata, "[[", "parameters")))
+
+  depends <- lapply(metadata, "[[", "depends")
+  uses <- build_packet_uses(depends)
+
   query_index$new(root, index, depends, uses)
 }
+
 
 build_packet_uses <- function(dependencies) {
   ids <- names(dependencies)
@@ -114,4 +120,23 @@ build_packet_uses <- function(dependencies) {
     }
   }
   uses
+}
+
+
+validate_query_location <- function(location, root) {
+  if (is.null(location)) {
+    return(NULL)
+  }
+  if (is.numeric(location) && length(location) == 1) {
+    location <- names(which(outpack_location_priority(root) >= location))
+  }
+  if (!is.character(location)) {
+    stop("'location' must be NULL, a character vector, or a single number")
+  }
+  err <- setdiff(location, outpack_location_list(root))
+  if (length(err) > 0) {
+    stop(sprintf("Unknown location requested: %s",
+                 paste(squote(err), collapse = ", ")))
+  }
+  lookup_location_id(location, root)
 }
