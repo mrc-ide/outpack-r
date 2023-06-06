@@ -53,7 +53,6 @@ There are four other functions
 
 * `latest(expr)` finds the latest packet satifying `expr` - it always returns a length 1 character, but this is `NA_character_` if no suitable packet is found. If no `expr` is given then the latest of all packets is returned.
 * `single(expr)` is like `latest(expr)` except that it is an error if `expr` does not evaluate to exactly one packet id
-* `at_location("loc1", "loc2")` finds packets that are available at any of the locations provided (here, `"loc1"` or `"loc2"`; any number of locations can be provided, these must be string literals).
 * `usedby(expr, FALSE)` where `expr` is either a literal `id` or an expression which returns 1 `id`. This finds all packets which were used in generation of packet with `id` returned from `expr` (see dependencies section for more details).
 
 ## Special simple queries

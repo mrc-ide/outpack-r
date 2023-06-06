@@ -49,7 +49,6 @@ query_eval <- function(query, index, parameters, subquery) {
          test = query_eval_test(query, index, parameters, subquery),
          latest = query_eval_latest(query, index, parameters, subquery),
          single = query_eval_single(query, index, parameters, subquery),
-         at_location = query_eval_at_location(query, index, parameters),
          subquery = query_eval_subquery(query, index, parameters, subquery),
          dependency = query_eval_dependency(query, index, parameters, subquery),
          ## Normally unreachable
@@ -79,13 +78,6 @@ query_eval_single <- function(query, index, parameters, subquery) {
       query$expr, query$context)
   }
   candidates
-}
-
-
-query_eval_at_location <- function(query, index, parameters) {
-  location <- vcapply(query$args, "[[", "value")
-  i <- vlapply(index$index$location, function(x) any(x %in% location))
-  index$index$id[i]
 }
 
 

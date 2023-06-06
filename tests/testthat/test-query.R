@@ -61,27 +61,6 @@ test_that("validate argument numbers", {
     query_parse(quote(latest(a, b)), NULL, emptyenv()),
     "Invalid call to latest(); expected at most 1 args but received 2",
     fixed = TRUE)
-  expect_error(
-    query_parse(quote(latest(at_location())), NULL, emptyenv()),
-    "Invalid call to at_location(); expected at least 1 args but received 0",
-    fixed = TRUE)
-})
-
-
-test_that("at_location requires string literal arguments", {
-  expect_error(
-    query_parse(quote(latest(at_location(1, 2))), NULL, emptyenv()),
-    "All arguments to at_location() must be string literals",
-    fixed = TRUE)
-  expect_error(
-    query_parse(quote(latest(at_location("a", 2))), NULL, emptyenv()),
-    "All arguments to at_location() must be string literals",
-    fixed = TRUE)
-
-  res <- query_parse(quote(at_location("a", "b")), NULL, emptyenv())
-  expect_equal(res$type, "at_location")
-  expect_equal(res$args, list(list(type = "literal", value = "a"),
-                              list(type = "literal", value = "b")))
 })
 
 
