@@ -75,7 +75,7 @@ test_that("can apply a location filter to index", {
   for (name in c("x", "y", "z")) {
     root[[name]] <- create_temporary_root(use_file_store = TRUE)
     outpack_location_add(name, "path", list(path = root[[name]]$path),
-                         root = root$a)
+                         root = root$a, priority = match(name, letters))
   }
 
   ids <- list()
@@ -91,7 +91,10 @@ test_that("can apply a location filter to index", {
 
   expect_setequal(new_query_index(root$a, FALSE, "x")$index$id,
                   unlist(ids$x, FALSE, FALSE))
-
   expect_setequal(new_query_index(root$a, FALSE, c("x", "z"))$index$id,
                   unlist(ids[c("x", "z")], FALSE, FALSE))
+  expect_setequal(new_query_index(root$a, FALSE, 0)$index$id,
+                  unlist(ids[c("x", "y", "z")], FALSE, FALSE))
+  expect_setequal(new_query_index(root$a, FALSE, 25)$index$id,
+                  unlist(ids[c("y", "z")], FALSE, FALSE))
 })
