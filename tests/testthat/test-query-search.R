@@ -123,7 +123,6 @@ test_that("switch statements will prevent regressions", {
 
 
 test_that("Can filter query to packets that are locally available (unpacked)", {
-  testthat::skip("refactor in next PR")
   root <- list()
   root$a <- create_temporary_root(use_file_store = TRUE)
   for (name in c("x", "y", "z")) {
@@ -141,11 +140,12 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   outpack_location_pull_metadata(root = root$a)
 
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), root = root$a),
+    outpack_search(quote(name == "data"), root = root$a,
+                   location = c("x", "y")),
     c(ids$x, ids$y))
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), require_unpacked = TRUE,
-                  root = root$a),
+    outpack_search(quote(name == "data"), require_unpacked = TRUE,
+                   location = c("x", "y"), root = root$a),
     character())
 
   for (i in ids$x) {
@@ -153,11 +153,12 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   }
 
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), root = root$a),
+    outpack_search(quote(name == "data"), location = c("x", "y"),
+                   root = root$a),
     c(ids$x, ids$y))
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), require_unpacked = TRUE,
-                  root = root$a),
+    outpack_search(quote(name == "data"), require_unpacked = TRUE,
+                   location = c("x", "y"), root = root$a),
     ids$x)
 })
 
