@@ -4,7 +4,13 @@
 \alias{outpack_search}
 \title{Query outpack's database}
 \usage{
-outpack_search(..., parameters = NULL, require_unpacked = FALSE, root = NULL)
+outpack_search(
+  ...,
+  parameters = NULL,
+  require_unpacked = FALSE,
+  location = NULL,
+  root = NULL
+)
 }
 \arguments{
 \item{...}{Arguments passed through to \link{outpack_query}, perhaps
@@ -18,6 +24,12 @@ that the packets are unpacked. If \code{FALSE} (the default) we
 search through all packets known to this outpack root,
 regardless of if they are locally available, but if \code{TRUE}, only
 unpacked packets will be considered.}
+
+\item{location}{Optionally, information to limit the search to. If
+\code{NULL}, all locations are considered. If non-\code{NULL}, this should
+be either a character vector of locations to consider, or a
+single numerical value indicating the minimum priority of the
+location.}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}

@@ -18,7 +18,7 @@
 ##' @param location Optionally, information to limit the search to. If
 ##'   `NULL`, all locations are considered. If non-`NULL`, this should
 ##'   be either a character vector of locations to consider, or a
-##'   single numerical value indicating the minimum priority of th
+##'   single numerical value indicating the minimum priority of the
 ##'   location.
 ##'
 ##' @param root The outpack root. Will be searched for from the
