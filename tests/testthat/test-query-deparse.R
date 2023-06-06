@@ -19,8 +19,6 @@ test_that("queries can be deparsed", {
                "latest(parameter:x == this:x)")
   expect_equal(outpack_query_format(quote(latest({subquery}))), # nolint
                "latest({subquery})")
-  expect_equal(outpack_query_format(quote(at_location("x", "y"))),
-               'at_location("x", "y")')
   expect_equal(outpack_query_format(quote(latest(   ))), "latest()") # nolint
   expect_equal(outpack_query_format(quote(name    ==     "name")),
                'name == "name"')

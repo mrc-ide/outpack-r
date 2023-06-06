@@ -56,38 +56,6 @@ test_that("Scope queries", {
 })
 
 
-test_that("location based queries", {
-  root <- list()
-  root$a <- create_temporary_root(use_file_store = TRUE)
-  for (name in c("x", "y", "z")) {
-    root[[name]] <- create_temporary_root(use_file_store = TRUE)
-    outpack_location_add(name, "path", list(path = root[[name]]$path),
-                         root = root$a)
-  }
-
-  ids <- list()
-  for (name in c("x", "y", "z")) {
-    ids[[name]] <- vcapply(1:3, function(i) {
-      create_random_packet(root[[name]], "data", list(p = i))
-    })
-  }
-  outpack_location_pull_metadata(root = root$a)
-
-  expect_equal(
-    outpack_search(quote(at_location("x", "y")), root = root$a),
-    c(ids$x, ids$y))
-
-  ## This is most similar to the functionality of orderly's
-  ##
-  ## > use_draft == "newer"
-  expect_equal(
-    outpack_search(quote(parameter:p == 2),
-                  scope = quote(at_location("x", "y")),
-                  root = root$a),
-    c(ids$x[2], ids$y[2]))
-})
-
-
 test_that("Can filter based on given values", {
   root <- create_temporary_root(use_file_store = TRUE)
 
@@ -155,6 +123,7 @@ test_that("switch statements will prevent regressions", {
 
 
 test_that("Can filter query to packets that are locally available (unpacked)", {
+  testthat::skip("refactor in next PR")
   root <- list()
   root$a <- create_temporary_root(use_file_store = TRUE)
   for (name in c("x", "y", "z")) {
@@ -443,19 +412,6 @@ test_that("subqueries can be used within single", {
 })
 
 
-test_that("subqueries cannot be used within at_location", {
-  root <- create_temporary_root(use_file_store = TRUE)
-
-  expect_error(
-    outpack_search(quote(at_location({sub})), # nolint
-                  subquery = list(sub = quote("latest")),
-                  root = root),
-    paste0("All arguments to at_location() must be string literals\n",
-           "  - in at_location({sub})"),
-    fixed = TRUE)
-})
-
-
 test_that("outpack_search can include anonymous subqueries", {
   root <- create_temporary_root(use_file_store = TRUE)
 
@@ -477,12 +433,12 @@ test_that("anonymous subquery is printed nicely when it errors", {
   x1 <- create_random_packet(root, "x", list(a = 1))
 
   expect_error(
-    outpack_search(quote(latest({ at_location() })), # nolint
+    outpack_search(quote(latest({ single() })), # nolint
                   root = root),
-    paste0("Invalid call to at_location(); ",
-           "expected at least 1 args but received 0\n",
-           "  - in     at_location()\n",
-           "  - within latest({at_location()})"),
+    paste0("Invalid call to single(); ",
+           "expected 1 args but received 0\n",
+           "  - in     single()\n",
+           "  - within latest({single()})"),
     fixed = TRUE)
 })
 

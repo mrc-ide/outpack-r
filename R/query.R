@@ -93,7 +93,7 @@ query_functions <- list(
   test = list("==" = 2, "!=" = 2, "<" = 2, "<=" = 2, ">" = 2, ">=" = 2),
   subquery = list("{" = 1),
   dependency = list(usedby = c(1, 2), uses = c(1, 2)),
-  other = list(latest = c(0, 1), single = 1, at_location = c(1, Inf)))
+  other = list(latest = c(0, 1), single = 1))
 
 
 query_component <- function(type, expr, context, args, ...) {
@@ -111,7 +111,6 @@ query_parse_expr <- function(expr, context, subquery_env) {
                group = query_parse_group,
                latest = query_parse_latest,
                single = query_parse_single,
-               at_location = query_parse_at_location,
                subquery = query_parse_subquery,
                dependency = query_parse_dependency,
                ## normally unreachable
@@ -143,18 +142,6 @@ query_parse_latest <- function(expr, context, subquery_env) {
 query_parse_single <- function(expr, context, subquery_env) {
   args <- lapply(expr[-1], query_parse_expr, context, subquery_env)
   query_component("single", expr, context, args)
-}
-
-
-query_parse_at_location <- function(expr, context, subquery_env) {
-  args <- as.list(expr[-1])
-  if (!all(vlapply(args, is.character))) {
-    query_parse_error(
-      "All arguments to at_location() must be string literals",
-      expr, context)
-  }
-  args <- lapply(args, query_parse_value, context, subquery_env)
-  query_component("at_location", expr, context, args)
 }
 
 
