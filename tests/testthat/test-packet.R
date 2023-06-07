@@ -749,3 +749,61 @@ test_that("validate that dependencies must evaluate to a single id", {
           "'parameter:x == 1' Did you forget latest(...)?"),
     fixed = TRUE)
 })
+
+
+test_that("error if dependency cannot be resolved", {
+  root <- create_temporary_root()
+  path_src <- temp_file()
+  fs::dir_create(path_src)
+  p <- outpack_packet_start(path_src, "example", root = root)
+  expect_error(
+    outpack_packet_use_dependency(p, quote(latest(name == "data")),
+                                  c("data.rds" = "data.rds")),
+    'Failed to find packet for query:\n    latest(name == "data")',
+    fixed = TRUE)
+})
+
+
+test_that("can pull in dependency from specific location", {
+  root <- list()
+  ids <- list()
+  root$a <- create_temporary_root(use_file_store = TRUE)
+  for (name in c("x", "y", "z")) {
+    root[[name]] <- create_temporary_root(use_file_store = TRUE)
+    ids[[name]] <- vcapply(1:3, function(i) {
+      create_random_packet(root[[name]], "data", list(p = i))
+    })
+    outpack_location_add(name, "path", list(path = root[[name]]$path),
+                         root = root$a)
+  }
+  outpack_location_pull_metadata(root = root$a)
+  for (id in ids$z) {
+    outpack_location_pull_packet(id, root = root$a)
+  }
+
+  path_src <- temp_file()
+  fs::dir_create(path_src)
+
+  p <- outpack_packet_start(path_src, "example", root = root$a)
+  query <- quote(latest(name == "data" && parameter:p > 2))
+  expect_error(
+    outpack_packet_use_dependency(p, query, c("data.rds" = "data.rds"),
+                                  location = c("x", "y")),
+    paste0("Failed to find packet for query:\n    ",
+           'latest(name == "data" && parameter:p > 2)'),
+    fixed = TRUE)
+
+  for (id in ids$x) {
+    outpack_location_pull_packet(id, root = root$a)
+  }
+  outpack_packet_use_dependency(p, query, c("data1.rds" = "data.rds"),
+                                location = c("x", "y"))
+  expect_equal(p$depends[[1]]$packet, ids$x[[3]])
+
+  for (id in ids$y) {
+    outpack_location_pull_packet(id, root = root$a)
+  }
+  outpack_packet_use_dependency(p, query, c("data2.rds" = "data.rds"),
+                                location = c("x", "y"))
+  expect_equal(p$depends[[2]]$packet, ids$y[[3]])
+})

@@ -233,7 +233,11 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
-outpack_packet_use_dependency <- function(packet, query, files) {
+##'
+##' @param location Optional locations to restrict the search to (see
+##'   [outpack::outpack_search] for details)
+outpack_packet_use_dependency <- function(packet, query, files,
+                                          location = NULL) {
   packet <- check_current_packet(packet)
   query <- as_outpack_query(query)
 
@@ -245,7 +249,18 @@ outpack_packet_use_dependency <- function(packet, query, files) {
   }
 
   id <- outpack_search(query, parameters = packet$parameters,
-                       require_unpacked = TRUE, root = packet$root)
+                       require_unpacked = TRUE, location = location,
+                       root = packet$root)
+  if (is.na(id)) {
+    ## TODO: this is where we would want to consider explaining what
+    ## went wrong; because that comes with a cost we should probably
+    ## control this behind some options. We also would want to return
+    ## some classed error here to help with formatting and handling
+    ## the error. In particular we definitely want to allow for
+    ## cycling through require_unpacked and location in addition to
+    ## near misses on parameters etc.
+    stop(sprintf("Failed to find packet for query:\n    %s", format(query)))
+  }
 
   ## TODO: currently no capacity here for *querying* to find the id
   ## (e.g., latest(name) or something more complex).  Any progress on
