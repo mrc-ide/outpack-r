@@ -80,17 +80,24 @@ query_index <- R6::R6Class(
 )
 
 
-new_query_index <- function(root, require_unpacked, location) {
+## It would be interesting to know if we can cache this; that might
+## help with the pulling metadata issue (as we could then control only
+## pulling once in a session).
+new_query_index <- function(root, options) {
   root <- outpack_root_open(root, locate = TRUE)
+  location_name <- validate_query_location_name(options$location_name, root)
+
+  if (options$pull_metadata) {
+    outpack_location_pull_metadata(location_name, root)
+  }
   idx <- root$index()
   metadata <- idx$metadata
 
-  if (!is.null(location)) {
-    location <- validate_query_location(location, root)
+  if (!is.null(location_name)) {
     include <- idx$location$packet[idx$location$location %in% location]
     metadata <- metadata[names(metadata) %in% include]
   }
-  if (require_unpacked) {
+  if (options$require_unpacked) {
     metadata <- metadata[names(metadata) %in% idx$unpacked$packet]
   }
 
@@ -123,15 +130,9 @@ build_packet_uses <- function(dependencies) {
 }
 
 
-validate_query_location <- function(location, root) {
+validate_query_location_name <- function(location, root) {
   if (is.null(location)) {
     return(NULL)
-  }
-  if (is.numeric(location) && length(location) == 1) {
-    location <- names(which(outpack_location_priority(root) >= location))
-  }
-  if (!is.character(location)) {
-    stop("'location' must be NULL, a character vector, or a single number")
   }
   err <- setdiff(location, outpack_location_list(root))
   if (length(err) > 0) {

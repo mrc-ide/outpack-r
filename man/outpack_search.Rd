@@ -4,13 +4,7 @@
 \alias{outpack_search}
 \title{Query outpack's database}
 \usage{
-outpack_search(
-  ...,
-  parameters = NULL,
-  require_unpacked = FALSE,
-  location = NULL,
-  root = NULL
-)
+outpack_search(..., parameters = NULL, options = NULL, root = NULL)
 }
 \arguments{
 \item{...}{Arguments passed through to \link{outpack_query}, perhaps
@@ -19,25 +13,25 @@ just a query expression}
 \item{parameters}{Optionally, a named list of parameters to substitute
 into the query (using the \verb{this:} prefix)}
 
-\item{require_unpacked}{Logical, indicating if we should require
-that the packets are unpacked. If \code{FALSE} (the default) we
-search through all packets known to this outpack root,
-regardless of if they are locally available, but if \code{TRUE}, only
-unpacked packets will be considered.}
-
-\item{location}{Optionally, information to limit the search to. If
-\code{NULL}, all locations are considered. If non-\code{NULL}, this should
-be either a character vector of locations to consider, or a
-single numerical value indicating the minimum priority of the
-location.}
+\item{options}{Optionally, a \link{outpack_search_options}
+object for controlling how the search is performed, and which
+packets should be considered in scope. If not provided, default
+options are used (i.e., \code{outpack::outpack_search_options()})}
 
 \item{root}{The outpack root. Will be searched for from the
 current directory if not given.}
 }
 \value{
-A character vector of matching ids
+A character vector of matching ids. In the case of no
+match from a query returning a single value (e.g., \code{latest(...)}
+or \code{single(...)}) this will be a character missing value
+(\code{NA_character_})
 }
 \description{
 Evaluate a query against the outpack database, returning a vector
-of matching packet ids.
+of matching packet ids.  Note that by default this only searches
+through packets that are unpacked and available for direct use on
+this computer; to search within packets known to other locations
+(and that we might know about via their metadata) you will need to
+use the \code{options} argument.
 }
