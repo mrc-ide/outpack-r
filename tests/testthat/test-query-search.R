@@ -6,6 +6,39 @@ test_that("can construct search options", {
     list(location_name = NULL,
          require_unpacked = FALSE,
          pull_metadata = FALSE))
+
+  opts <- outpack_search_options(location_name = c("x", "y"),
+                                 require_unpacked = TRUE,
+                                 pull_metadata = TRUE)
+  expect_s3_class(opts, "outpack_search_options")
+  expect_mapequal(
+    unclass(opts),
+    list(location_name = c("x", "y"),
+         require_unpacked = TRUE,
+         pull_metadata = TRUE))
+})
+
+
+test_that("can convert into search options", {
+  opts <- outpack_search_options(location_name = "x",
+                                 require_unpacked = TRUE,
+                                 pull_metadata = FALSE)
+  expect_equal(as_outpack_search_options(NULL),
+               outpack_search_options())
+  expect_equal(as_outpack_search_options(list(location_name = "x")),
+               modifyList(outpack_search_options(), list(location_name = "x")))
+  expect_equal(as_outpack_search_options(unclass(opts)),
+               opts)
+})
+
+
+test_that("validate inputs to outpack search options", {
+  expect_error(
+    as_outpack_search_options(c(require_unpacked = TRUE)),
+    "Expected 'options' to be an 'outpack_search_options' or a list of options")
+  expect_error(
+    as_outpack_search_options(list(require_unpacked = TRUE, other = FALSE)),
+    "Invalid option passed to 'outpack_search_options': 'other'")
 })
 
 
@@ -194,7 +227,7 @@ test_that("scope and require_unpacked can be used together to filter query", {
   outpack_location_pull_metadata(root = root$dst)
 
   options_local <- outpack_search_options(require_unpacked = TRUE)
-  options_remote <- outpack_search_optionsrequire_unpacked = FALSE)
+  options_remote <- outpack_search_options(require_unpacked = FALSE)
 
   expect_equal(
     outpack_search(quote(latest(parameter:p == 1)), options = options_remote,
@@ -807,7 +840,7 @@ test_that("allow search before query", {
     character(0))
   expect_equal(
     outpack_search(quote(name == "data"), root = root$a,
-                   options = outpack_search_options(pull_metadata = TRUE)),
+                   options = list(pull_metadata = TRUE)),
     ids)
   expect_setequal(names(root$a$index()$metadata), ids)
 })

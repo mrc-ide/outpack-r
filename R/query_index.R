@@ -94,7 +94,7 @@ new_query_index <- function(root, options) {
   metadata <- idx$metadata
 
   if (!is.null(location_name)) {
-    include <- idx$location$packet[idx$location$location %in% location]
+    include <- idx$location$packet[idx$location$location %in% location_name]
     metadata <- metadata[names(metadata) %in% include]
   }
   if (options$require_unpacked) {

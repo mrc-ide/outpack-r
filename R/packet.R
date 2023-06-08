@@ -234,12 +234,13 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
 ##'
-##' @param location Optional locations to restrict the search to (see
-##'   [outpack::outpack_search] for details)
+##' @param search_options Optional search options for restricting the
+##'   search (see [outpack::outpack_search] for details)
 outpack_packet_use_dependency <- function(packet, query, files,
-                                          location = NULL) {
+                                          search_options = NULL) {
   packet <- check_current_packet(packet)
   query <- as_outpack_query(query)
+  search_options <- as_outpack_search_options(search_options)
 
   if (!query$info$single) {
     stop(paste(
@@ -249,8 +250,7 @@ outpack_packet_use_dependency <- function(packet, query, files,
   }
 
   id <- outpack_search(query, parameters = packet$parameters,
-                       require_unpacked = TRUE, location = location,
-                       root = packet$root)
+                       options = search_options, root = packet$root)
   if (is.na(id)) {
     ## TODO: this is where we would want to consider explaining what
     ## went wrong; because that comes with a cost we should probably
@@ -260,6 +260,14 @@ outpack_packet_use_dependency <- function(packet, query, files,
     ## cycling through require_unpacked and location in addition to
     ## near misses on parameters etc.
     stop(sprintf("Failed to find packet for query:\n    %s", format(query)))
+  }
+  needs_pull <- !search_options$require_unpacked &&
+    !(id %in% packet$root$index()$unpacked$packet)
+  if (needs_pull) {
+    ## NOTE: no control over recursion here, but that's fine really,
+    ## the default is good.
+    outpack::outpack_location_pull_packet(id, search_options$location_name,
+                                          root = packet$root)
   }
 
   ## TODO: currently no capacity here for *querying* to find the id

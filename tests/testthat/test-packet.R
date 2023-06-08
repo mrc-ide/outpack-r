@@ -786,9 +786,10 @@ test_that("can pull in dependency from specific location", {
 
   p <- outpack_packet_start(path_src, "example", root = root$a)
   query <- quote(latest(name == "data" && parameter:p > 2))
+  options <- list(location_name = c("x", "y"), require_unpacked = TRUE)
   expect_error(
     outpack_packet_use_dependency(p, query, c("data.rds" = "data.rds"),
-                                  location = c("x", "y")),
+                                  search_options = options),
     paste0("Failed to find packet for query:\n    ",
            'latest(name == "data" && parameter:p > 2)'),
     fixed = TRUE)
@@ -797,13 +798,13 @@ test_that("can pull in dependency from specific location", {
     outpack_location_pull_packet(id, root = root$a)
   }
   outpack_packet_use_dependency(p, query, c("data1.rds" = "data.rds"),
-                                location = c("x", "y"))
+                                search_options = options)
   expect_equal(p$depends[[1]]$packet, ids$x[[3]])
 
   for (id in ids$y) {
     outpack_location_pull_packet(id, root = root$a)
   }
   outpack_packet_use_dependency(p, query, c("data2.rds" = "data.rds"),
-                                location = c("x", "y"))
+                                search_options = options)
   expect_equal(p$depends[[2]]$packet, ids$y[[3]])
 })

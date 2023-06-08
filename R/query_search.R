@@ -31,9 +31,7 @@ outpack_search <- function(..., parameters = NULL, options = NULL,
                            root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   query <- as_outpack_query(...)
-  if (is.null(options)) {
-    options <- outpack_search_options()
-  }
+  options <- as_outpack_search_options(options)
   outpack_query_eval(query, parameters, options, root)
 }
 
@@ -85,6 +83,32 @@ outpack_search_options <- function(location_name = NULL,
               pull_metadata = pull_metadata)
   class(ret) <- "outpack_search_options"
   ret
+}
+
+
+as_outpack_search_options <- function(x, name = deparse(substitute(x))) {
+  if (!is.name(name)) {
+    name <- "options"
+  }
+  if (is.null(x)) {
+    return(outpack_search_options())
+  }
+  if (inherits(x, "outpack_search_options")) {
+    return(x)
+  }
+  if (!is.list(x)) {
+    stop(sprintf(
+      "Expected '%s' to be an 'outpack_search_options' or a list of options",
+      name),
+      call. = FALSE)
+  }
+  err <- setdiff(names(x), names(formals(outpack_search_options)))
+  if (length(err) > 0) {
+    stop(sprintf("Invalid option passed to 'outpack_search_options': %s",
+                 paste(squote(err), collapse = ", ")),
+         call. = FALSE)
+  }
+  do.call(outpack_search_options, x)
 }
 
 
