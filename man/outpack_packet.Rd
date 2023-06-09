@@ -25,7 +25,7 @@ outpack_packet_end(packet, insert = TRUE)
 
 outpack_packet_run(packet, script, envir = .GlobalEnv)
 
-outpack_packet_use_dependency(packet, query, files, location = NULL)
+outpack_packet_use_dependency(packet, query, files, search_options = NULL)
 
 outpack_packet_add_custom(packet, application, data, schema = NULL)
 }
@@ -81,8 +81,8 @@ times within a single packet run (or zero times!) as needed.}
 corresponds to the name within the current packet, while the
 value corresponds to the name within the upstream packet}
 
-\item{location}{Optional locations to restrict the search to (see
-\link{outpack_search} for details)}
+\item{search_options}{Optional search options for restricting the
+search (see \link{outpack_search} for details)}
 
 \item{application}{The name of the application (used to organise
 the data and query it later, see Details)}

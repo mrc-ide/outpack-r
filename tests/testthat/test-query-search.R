@@ -3,30 +3,30 @@ test_that("can construct search options", {
   expect_s3_class(defaults, "outpack_search_options")
   expect_mapequal(
     unclass(defaults),
-    list(location_name = NULL,
+    list(location = NULL,
          require_unpacked = FALSE,
          pull_metadata = FALSE))
 
-  opts <- outpack_search_options(location_name = c("x", "y"),
+  opts <- outpack_search_options(location = c("x", "y"),
                                  require_unpacked = TRUE,
                                  pull_metadata = TRUE)
   expect_s3_class(opts, "outpack_search_options")
   expect_mapequal(
     unclass(opts),
-    list(location_name = c("x", "y"),
+    list(location = c("x", "y"),
          require_unpacked = TRUE,
          pull_metadata = TRUE))
 })
 
 
 test_that("can convert into search options", {
-  opts <- outpack_search_options(location_name = "x",
+  opts <- outpack_search_options(location = "x",
                                  require_unpacked = TRUE,
                                  pull_metadata = FALSE)
   expect_equal(as_outpack_search_options(NULL),
                outpack_search_options())
-  expect_equal(as_outpack_search_options(list(location_name = "x")),
-               modifyList(outpack_search_options(), list(location_name = "x")))
+  expect_equal(as_outpack_search_options(list(location = "x")),
+               modifyList(outpack_search_options(), list(location = "x")))
   expect_equal(as_outpack_search_options(unclass(opts)),
                opts)
 })
@@ -183,9 +183,9 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   }
   outpack_location_pull_metadata(root = root$a)
 
-  options_local <- outpack_search_options(location_name = c("x", "y"),
+  options_local <- outpack_search_options(location = c("x", "y"),
                                           require_unpacked = TRUE)
-  options_remote <- outpack_search_options(location_name = c("x", "y"),
+  options_remote <- outpack_search_options(location = c("x", "y"),
                                           require_unpacked = FALSE)
 
   expect_equal(

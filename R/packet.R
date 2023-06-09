@@ -266,7 +266,7 @@ outpack_packet_use_dependency <- function(packet, query, files,
   if (needs_pull) {
     ## NOTE: no control over recursion here, but that's fine really,
     ## the default is good.
-    outpack::outpack_location_pull_packet(id, search_options$location_name,
+    outpack::outpack_location_pull_packet(id, search_options$location,
                                           root = packet$root)
   }
 

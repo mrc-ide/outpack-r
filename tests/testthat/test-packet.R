@@ -786,7 +786,7 @@ test_that("can pull in dependency from specific location", {
 
   p <- outpack_packet_start(path_src, "example", root = root$a)
   query <- quote(latest(name == "data" && parameter:p > 2))
-  options <- list(location_name = c("x", "y"), require_unpacked = TRUE)
+  options <- list(location = c("x", "y"), require_unpacked = TRUE)
   expect_error(
     outpack_packet_use_dependency(p, query, c("data.rds" = "data.rds"),
                                   search_options = options),

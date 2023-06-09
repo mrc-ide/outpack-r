@@ -89,9 +89,9 @@ test_that("can apply a location filter to index", {
   }
   outpack_location_pull_metadata(root = root$a)
 
-  idx_with_location <- function(location_name) {
+  idx_with_location <- function(location) {
     new_query_index(root$a,
-                    outpack_search_options(location_name = location_name))
+                    outpack_search_options(location = location))
   }
 
   expect_setequal(idx_with_location(NULL)$index$id, unlist(ids, FALSE, FALSE))

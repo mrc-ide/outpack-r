@@ -44,7 +44,7 @@ outpack_search <- function(..., parameters = NULL, options = NULL,
 ##'
 ##' @title Packet search options
 ##'
-##' @param location_name Optional vector of locations to pull from. We
+##' @param location Optional vector of locations to pull from. We
 ##'   might in future expand this to allow wildcards, exceptions, or
 ##'   numeric values corresponding to the location priority (and then
 ##'   it's possible we'll change the name).
@@ -58,7 +58,7 @@ outpack_search <- function(..., parameters = NULL, options = NULL,
 ##'   and it's possible that its polarity will also change.
 ##'
 ##' @param pull_metadata Logical, indicating if we should pull
-##'   metadata immediately before the search. If `location_name` is
+##'   metadata immediately before the search. If `location` is
 ##'   given, then we will pass this through to
 ##'   [outpack::outpack_location_pull_metadata] to filter locations to
 ##'   update.  If pulling many packets in sequence, you *will* want to
@@ -68,17 +68,17 @@ outpack_search <- function(..., parameters = NULL, options = NULL,
 ##'   not be modified after creation (but see note about `pull_metadata`)
 ##'
 ##' @export
-outpack_search_options <- function(location_name = NULL,
+outpack_search_options <- function(location = NULL,
                                    require_unpacked = FALSE,
                                    pull_metadata = FALSE) {
   ## TODO: Later, we might allow something like "before" here too to
   ## control searching against some previous time on a location.
-  if (!is.null(location_name)) {
-    assert_character(location_name)
+  if (!is.null(location)) {
+    assert_character(location)
   }
   assert_scalar_logical(require_unpacked)
   assert_scalar_logical(pull_metadata)
-  ret <- list(location_name = location_name,
+  ret <- list(location = location,
               require_unpacked = require_unpacked,
               pull_metadata = pull_metadata)
   class(ret) <- "outpack_search_options"

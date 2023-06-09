@@ -5,13 +5,13 @@
 \title{Packet search options}
 \usage{
 outpack_search_options(
-  location_name = NULL,
+  location = NULL,
   require_unpacked = FALSE,
   pull_metadata = FALSE
 )
 }
 \arguments{
-\item{location_name}{Optional vector of locations to pull from. We
+\item{location}{Optional vector of locations to pull from. We
 might in future expand this to allow wildcards, exceptions, or
 numeric values corresponding to the location priority (and then
 it's possible we'll change the name).}
@@ -25,7 +25,7 @@ quantity of data. The name of this option is likely to change,
 and it's possible that its polarity will also change.}
 
 \item{pull_metadata}{Logical, indicating if we should pull
-metadata immediately before the search. If \code{location_name} is
+metadata immediately before the search. If \code{location} is
 given, then we will pass this through to
 \link{outpack_location_pull_metadata} to filter locations to
 update.  If pulling many packets in sequence, you \emph{will} want to

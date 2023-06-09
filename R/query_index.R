@@ -85,16 +85,18 @@ query_index <- R6::R6Class(
 ## pulling once in a session).
 new_query_index <- function(root, options) {
   root <- outpack_root_open(root, locate = TRUE)
-  location_name <- validate_query_location_name(options$location_name, root)
 
   if (options$pull_metadata) {
-    outpack_location_pull_metadata(location_name, root)
+    outpack_location_pull_metadata(options$location, root)
   }
   idx <- root$index()
   metadata <- idx$metadata
 
-  if (!is.null(location_name)) {
-    include <- idx$location$packet[idx$location$location %in% location_name]
+  if (!is.null(options$location)) {
+    location_id <- location_resolve_valid(options$location, root,
+                                          include_local = TRUE,
+                                          allow_no_locations = FALSE)
+    include <- idx$location$packet[idx$location$location %in% location_id]
     metadata <- metadata[names(metadata) %in% include]
   }
   if (options$require_unpacked) {
@@ -127,17 +129,4 @@ build_packet_uses <- function(dependencies) {
     }
   }
   uses
-}
-
-
-validate_query_location_name <- function(location, root) {
-  if (is.null(location)) {
-    return(NULL)
-  }
-  err <- setdiff(location, outpack_location_list(root))
-  if (length(err) > 0) {
-    stop(sprintf("Unknown location requested: %s",
-                 paste(squote(err), collapse = ", ")))
-  }
-  lookup_location_id(location, root)
 }
