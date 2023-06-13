@@ -252,7 +252,7 @@ outpack_packet_use_dependency <- function(packet, query, files) {
   ## this will depend on the query interface.  It's probable that we
   ## might want to record the query here alongside the id, if one was
   ## used?  Or should we allow a query here?
-  outpack_copy_files(id, files, packet$path, packet$root)
+  outpack_copy_files(id, files, packet$path, root = packet$root)
 
   query_str <- deparse_query(query$value$expr,
                              lapply(query$subquery, "[[", "expr"))

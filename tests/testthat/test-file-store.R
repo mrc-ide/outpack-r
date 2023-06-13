@@ -4,7 +4,7 @@ test_that("Can create file store", {
   expect_equal(obj$list(), character(0))
   expect_error(
     obj$get("md5:abcde"),
-    "Hash 'md5:abcde' not found in store")
+    "Hash not found in store:\n  - md5:abcde")
 })
 
 

@@ -167,3 +167,8 @@ as_json <- function(str) {
   assert_scalar_character(str)
   structure(str, class = "json")
 }
+
+
+list_to_character <- function(x) {
+  vcapply(x, identity)
+}

@@ -260,9 +260,8 @@ test_that("Archive is not added if file store is corrupt", {
   id <- create_random_packet_chain(root, 3)
   hash <- root$metadata(id[["c"]])$files$hash
   fs::file_delete(root$files$filename(hash[[1]]))
-  e <- "Error adding 'path_archive': Hash 'sha256(.*)' not found in store"
   expect_error(outpack_config_set(core.path_archive = "archive", root = root),
-               e)
+               "Error adding 'path_archive': Hash not found in store:")
 
   expect_null(root$config$core$path_archive)
   expect_false(fs::dir_exists(file.path(root$path, "archive")))

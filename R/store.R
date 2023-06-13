@@ -27,8 +27,10 @@ file_store <- R6::R6Class(
     get = function(hash, dst) {
       src <- self$filename(hash)
       if (any(!file.exists(src))) {
-        stop(sprintf("Hash '%s' not found in store",
-                     hash[!file.exists(src)]))
+        missing <- hash[!file.exists(src)]
+        message <- sprintf("Hash not found in store:\n%s",
+                           paste(sprintf("  - %s", missing), collapse = "\n"))
+        stop(not_found_error(message, missing))
       }
       fs::dir_create(dirname(dst))
       fs::file_copy(src, dst)
