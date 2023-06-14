@@ -148,6 +148,27 @@ error will be \code{NULL}, with an informative message explaining
 what was not balanced.
 }
 
+\section{Dependency resolution}{
+
+
+The \code{search_options} argument controls where outpack searches for
+packets with the given query and if anything might be moved over
+the network (or from one outpack archive to another). By default
+everything is resolved locally only; that is we can only depend
+on packets that are unpacked within our current archive.  If you
+pass a \code{search_options} argument that contains \code{allow_remote = TRUE} (see \link{query_search_options} then packets that are
+known anywhere are candidates for using as dependencies and \emph{if
+needed} we will pull the resolved files from a remote
+location. Note that even if the packet is not locally present
+this might not be needed - if you have the same content anywhere
+else in an unpacked packet we will reuse the same content
+without refetching.
+
+If \code{pull_metadata = TRUE}, then we will refresh location metadata
+before pulling, and the \code{location} argument controls which
+locations are pulled from.
+}
+
 \section{Custom metadata}{
 
 

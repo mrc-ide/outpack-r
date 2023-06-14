@@ -6,7 +6,7 @@
 \usage{
 outpack_search_options(
   location = NULL,
-  require_unpacked = FALSE,
+  allow_remote = FALSE,
   pull_metadata = FALSE
 )
 }
@@ -16,13 +16,12 @@ might in future expand this to allow wildcards, exceptions, or
 numeric values corresponding to the location priority (and then
 it's possible we'll change the name).}
 
-\item{require_unpacked}{Logical, indicating if we should allow
+\item{allow_remote}{Logical, indicating if we should allow
 packets to be found that are not currently unpacked (i.e., are
 known only to a location that we have metadata from). If this is
 \code{TRUE}, then inconjunction with
 \link{outpack_packet_use_dependency} you might pull a large
-quantity of data. The name of this option is likely to change,
-and it's possible that its polarity will also change.}
+quantity of data.}
 
 \item{pull_metadata}{Logical, indicating if we should pull
 metadata immediately before the search. If \code{location} is

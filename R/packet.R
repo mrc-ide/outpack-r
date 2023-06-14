@@ -227,6 +227,26 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##' @export
 ##' @rdname outpack_packet
 ##'
+##' @section Dependency resolution:
+##'
+##' The `search_options` argument controls where outpack searches for
+##'   packets with the given query and if anything might be moved over
+##'   the network (or from one outpack archive to another). By default
+##'   everything is resolved locally only; that is we can only depend
+##'   on packets that are unpacked within our current archive.  If you
+##'   pass a `search_options` argument that contains `allow_remote =
+##'   TRUE` (see [outpack::query_search_options] then packets that are
+##'   known anywhere are candidates for using as dependencies and *if
+##'   needed* we will pull the resolved files from a remote
+##'   location. Note that even if the packet is not locally present
+##'   this might not be needed - if you have the same content anywhere
+##'   else in an unpacked packet we will reuse the same content
+##'   without refetching.
+##'
+##' If `pull_metadata = TRUE`, then we will refresh location metadata
+##'   before pulling, and the `location` argument controls which
+##'   locations are pulled from.
+##'
 ##' @param query An [outpack::outpack_query] object, or something
 ##'   (e.g., a string) that can be trivially converted into one.
 ##'
