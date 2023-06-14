@@ -257,11 +257,11 @@ outpack_packet_use_dependency <- function(packet, query, files,
     ## control this behind some options. We also would want to return
     ## some classed error here to help with formatting and handling
     ## the error. In particular we definitely want to allow for
-    ## cycling through require_unpacked and location in addition to
+    ## cycling through allow_remote and location in addition to
     ## near misses on parameters etc.
     stop(sprintf("Failed to find packet for query:\n    %s", format(query)))
   }
-  needs_pull <- !search_options$require_unpacked &&
+  needs_pull <- search_options$allow_remote &&
     !(id %in% packet$root$index()$unpacked$packet)
   if (needs_pull) {
     ## NOTE: no control over recursion here, but that's fine really,

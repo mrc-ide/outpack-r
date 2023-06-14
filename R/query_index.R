@@ -99,7 +99,7 @@ new_query_index <- function(root, options) {
     include <- idx$location$packet[idx$location$location %in% location_id]
     metadata <- metadata[names(metadata) %in% include]
   }
-  if (options$require_unpacked) {
+  if (!options$allow_remote) {
     metadata <- metadata[names(metadata) %in% idx$unpacked$packet]
   }
 

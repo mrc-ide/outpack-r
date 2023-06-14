@@ -10,8 +10,8 @@ test_that("index can include only unpacked packets", {
   x2 <- create_random_packet(root$src, "x")
   outpack_location_pull_metadata(root = root$dst)
 
-  opts_all <- outpack_search_options(require_unpacked = FALSE)
-  opts_unpacked <- outpack_search_options(require_unpacked = TRUE)
+  opts_all <- outpack_search_options(allow_remote = TRUE)
+  opts_unpacked <- outpack_search_options(allow_remote = FALSE)
 
   index <- new_query_index(root$dst, opts_all)
   index_unpacked <- new_query_index(root$dst, opts_unpacked)
@@ -90,8 +90,8 @@ test_that("can apply a location filter to index", {
   outpack_location_pull_metadata(root = root$a)
 
   idx_with_location <- function(location) {
-    new_query_index(root$a,
-                    outpack_search_options(location = location))
+    options <- outpack_search_options(location = location, allow_remote = TRUE)
+    new_query_index(root$a, options)
   }
 
   expect_setequal(idx_with_location(NULL)$index$id, unlist(ids, FALSE, FALSE))

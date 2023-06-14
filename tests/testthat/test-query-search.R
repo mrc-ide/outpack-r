@@ -4,24 +4,24 @@ test_that("can construct search options", {
   expect_mapequal(
     unclass(defaults),
     list(location = NULL,
-         require_unpacked = FALSE,
+         allow_remote = FALSE,
          pull_metadata = FALSE))
 
   opts <- outpack_search_options(location = c("x", "y"),
-                                 require_unpacked = TRUE,
+                                 allow_remote = TRUE,
                                  pull_metadata = TRUE)
   expect_s3_class(opts, "outpack_search_options")
   expect_mapequal(
     unclass(opts),
     list(location = c("x", "y"),
-         require_unpacked = TRUE,
+         allow_remote = TRUE,
          pull_metadata = TRUE))
 })
 
 
 test_that("can convert into search options", {
   opts <- outpack_search_options(location = "x",
-                                 require_unpacked = TRUE,
+                                 allow_remote = FALSE,
                                  pull_metadata = FALSE)
   expect_equal(as_outpack_search_options(NULL),
                outpack_search_options())
@@ -34,10 +34,10 @@ test_that("can convert into search options", {
 
 test_that("validate inputs to outpack search options", {
   expect_error(
-    as_outpack_search_options(c(require_unpacked = TRUE)),
+    as_outpack_search_options(c(allow_remote = FALSE)),
     "Expected 'options' to be an 'outpack_search_options' or a list of options")
   expect_error(
-    as_outpack_search_options(list(require_unpacked = TRUE, other = FALSE)),
+    as_outpack_search_options(list(allow_remote = FALSE, other = FALSE)),
     "Invalid option passed to 'outpack_search_options': 'other'")
 })
 
@@ -184,9 +184,9 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   outpack_location_pull_metadata(root = root$a)
 
   options_local <- outpack_search_options(location = c("x", "y"),
-                                          require_unpacked = TRUE)
+                                          allow_remote = FALSE)
   options_remote <- outpack_search_options(location = c("x", "y"),
-                                          require_unpacked = FALSE)
+                                          allow_remote = TRUE)
 
   expect_equal(
     outpack_search(quote(name == "data"), options = options_remote,
@@ -212,7 +212,7 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
 })
 
 
-test_that("scope and require_unpacked can be used together to filter query", {
+test_that("scope and allow_local can be used together to filter query", {
   root <- list()
   for (name in c("src", "dst")) {
     root[[name]] <- create_temporary_root(use_file_store = TRUE)
@@ -226,8 +226,8 @@ test_that("scope and require_unpacked can be used together to filter query", {
   y2 <- create_random_packet(root$src, "y", list(p = 1))
   outpack_location_pull_metadata(root = root$dst)
 
-  options_local <- outpack_search_options(require_unpacked = TRUE)
-  options_remote <- outpack_search_options(require_unpacked = FALSE)
+  options_local <- outpack_search_options(allow_remote = FALSE)
+  options_remote <- outpack_search_options(allow_remote = TRUE)
 
   expect_equal(
     outpack_search(quote(latest(parameter:p == 1)), options = options_remote,
@@ -840,7 +840,7 @@ test_that("allow search before query", {
     character(0))
   expect_equal(
     outpack_search(quote(name == "data"), root = root$a,
-                   options = list(pull_metadata = TRUE)),
+                   options = list(pull_metadata = TRUE, allow_remote = TRUE)),
     ids)
   expect_setequal(names(root$a$index()$metadata), ids)
 })

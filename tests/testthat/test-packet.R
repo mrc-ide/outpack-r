@@ -786,7 +786,7 @@ test_that("can pull in dependency from specific location", {
 
   p <- outpack_packet_start(path_src, "example", root = root$a)
   query <- quote(latest(name == "data" && parameter:p > 2))
-  options <- list(location = c("x", "y"), require_unpacked = TRUE)
+  options <- list(location = c("x", "y"), allow_remote = FALSE)
   expect_error(
     outpack_packet_use_dependency(p, query, c("data.rds" = "data.rds"),
                                   search_options = options),
@@ -838,7 +838,7 @@ test_that("can pull in dependency when not found, if requested", {
 
   outpack_packet_use_dependency(p, query, c("data.rds" = "data.rds"),
                                 search_options = list(pull_metadata = TRUE,
-                                                      require_unpacked = FALSE))
+                                                      allow_remote = TRUE))
 
   expect_length(root$a$index()$metadata, 3)
   expect_equal(nrow(root$a$index()$location), 3)

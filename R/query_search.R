@@ -49,13 +49,12 @@ outpack_search <- function(..., parameters = NULL, options = NULL,
 ##'   numeric values corresponding to the location priority (and then
 ##'   it's possible we'll change the name).
 ##'
-##' @param require_unpacked Logical, indicating if we should allow
+##' @param allow_remote Logical, indicating if we should allow
 ##'   packets to be found that are not currently unpacked (i.e., are
 ##'   known only to a location that we have metadata from). If this is
 ##'   `TRUE`, then inconjunction with
 ##'   [outpack::outpack_packet_use_dependency] you might pull a large
-##'   quantity of data. The name of this option is likely to change,
-##'   and it's possible that its polarity will also change.
+##'   quantity of data.
 ##'
 ##' @param pull_metadata Logical, indicating if we should pull
 ##'   metadata immediately before the search. If `location` is
@@ -69,17 +68,17 @@ outpack_search <- function(..., parameters = NULL, options = NULL,
 ##'
 ##' @export
 outpack_search_options <- function(location = NULL,
-                                   require_unpacked = FALSE,
+                                   allow_remote = FALSE,
                                    pull_metadata = FALSE) {
   ## TODO: Later, we might allow something like "before" here too to
   ## control searching against some previous time on a location.
   if (!is.null(location)) {
     assert_character(location)
   }
-  assert_scalar_logical(require_unpacked)
+  assert_scalar_logical(allow_remote)
   assert_scalar_logical(pull_metadata)
   ret <- list(location = location,
-              require_unpacked = require_unpacked,
+              allow_remote = allow_remote,
               pull_metadata = pull_metadata)
   class(ret) <- "outpack_search_options"
   ret
