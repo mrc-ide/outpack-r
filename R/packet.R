@@ -261,16 +261,18 @@ outpack_packet_use_dependency <- function(packet, query, files,
     ## near misses on parameters etc.
     stop(sprintf("Failed to find packet for query:\n    %s", format(query)))
   }
+
   needs_pull <- search_options$allow_remote &&
+    root$config$core$require_complete_tree &&
     !(id %in% packet$root$index()$unpacked$packet)
   if (needs_pull) {
-    ## NOTE: no control over recursion here, but that's fine really,
-    ## the default is good.
     outpack::outpack_location_pull_packet(id, search_options$location,
                                           root = packet$root)
   }
 
-  outpack_copy_files(id, files, packet$path, root = packet$root)
+  outpack_copy_files(id, files, packet$path,
+                     allow_remote = search_options$allow_remote,
+                     root = packet$root)
 
   query_str <- deparse_query(query$value$expr,
                              lapply(query$subquery, "[[", "expr"))
