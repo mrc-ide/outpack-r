@@ -235,9 +235,9 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##'   everything is resolved locally only; that is we can only depend
 ##'   on packets that are unpacked within our current archive.  If you
 ##'   pass a `search_options` argument that contains `allow_remote =
-##'   TRUE` (see [outpack::query_search_options] then packets that are
-##'   known anywhere are candidates for using as dependencies and *if
-##'   needed* we will pull the resolved files from a remote
+##'   TRUE` (see [outpack::outpack_search_options] then packets
+##'   that are known anywhere are candidates for using as dependencies
+##'   and *if needed* we will pull the resolved files from a remote
 ##'   location. Note that even if the packet is not locally present
 ##'   this might not be needed - if you have the same content anywhere
 ##'   else in an unpacked packet we will reuse the same content
