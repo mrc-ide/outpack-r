@@ -21,7 +21,7 @@ control of outpack, for example."><!-- mathjax --><script src="https://cdnjs.clo
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">outpack</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.4</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.3.5</span>
       </span>
     </div>
 
@@ -68,7 +68,7 @@ control of outpack, for example.</p>
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_copy_files</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span>, <span class="va">dest</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">outpack_copy_files</span><span class="op">(</span><span class="va">id</span>, <span class="va">files</span>, <span class="va">dest</span>, allow_remote <span class="op">=</span> <span class="cn">FALSE</span>, root <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -88,6 +88,16 @@ value corresponds to the name within the upstream packet</p></dd>
 <dd><p>The directory to copy into</p></dd>
 
 
+<dt>allow_remote</dt>
+<dd><p>Logical, indicating if we should attempt to
+retrieve the file from any remote location if it cannot be found
+locally. If the file is large, this may take some time depending
+on the speed of the connection. If you use a file store, note
+that this does add the downloaded file into your file store,
+though associated with no packet so that it is subject to
+garbage collection (once we write support for that).</p></dd>
+
+
 <dt>root</dt>
 <dd><p>The outpack root. Will be searched for from the
 current directory if not given.</p></dd>
@@ -101,6 +111,26 @@ current directory if not given.</p></dd>
 of copying files from a packet into the directory <code>dest</code></p>
 
 
+    </div>
+    <div id="details">
+    <h2>Details</h2>
+    <p>There are different ways that this might fail (or recover from
+failure):</p><ul><li><p>if <code>id</code> is not known in the metadata store (not known because
+it's not unpacked but also not known to be present in some other
+remote) then this will fail because it's impossible to resolve
+the files. Consider refreshing the metadata with
+<a href="outpack_location_pull_metadata.html">outpack_location_pull_metadata</a> to refresh this.</p></li>
+<li><p>if the <code>id</code> is not unpacked <em>and</em> no local copy of the files
+referred to can be found, we error by default (but see the next
+option). However, sometimes the file you refer to might also be
+present because you have downloaded a packet that depended on
+it, or because the content of the file is unchanged because from
+some other packet version you have locally.</p></li>
+<li><p>if the <code>id</code> is not unpacked, there is no local copy of the file
+and if <code>allow_remote</code> is <code>TRUE</code> we will try and request the file
+from whatever remote would be selected by
+<a href="outpack_location_pull_packet.html">outpack_location_pull_packet</a> for this packet.</p></li>
+</ul><p>Note that empty directories might be created on failure.</p>
     </div>
 
   </div>
