@@ -310,8 +310,12 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
   ## for a given file in any location at some point.
   for (i in seq_len(nrow(plan))) {
     driver <- location_driver(plan$location_id[i], root)
-    location_pull_files_store(root, driver, plan$packet[i])
-    location_pull_files_archive(root, driver, plan$packet[i])
+    if (root$config$core$use_file_store) {
+      location_pull_files_store(root, driver, plan$packet[i])
+    }
+    if (!is.null(root$config$core$path_archive)) {
+      location_pull_files_archive(root, driver, plan$packet[i])
+    }
     mark_packet_unpacked(plan$packet[i], plan$location_id[i], Sys.time(), root)
   }
 
@@ -402,44 +406,48 @@ location_pull_metadata <- function(location_id, root) {
 }
 
 
-## This will work across any number of packets at once with a small
-## amount of change.
+location_pull_hash_store <- function(root, driver, hash) {
+  hash_missing <- unique(hash[!root$files$exists(hash)])
+  for (h in hash_missing) {
+    tmp <- root$files$tmp()
+    root$files$put(driver$fetch_file(h, tmp), h, move = TRUE)
+  }
+}
+
+
 location_pull_files_store <- function(root, driver, packet_id) {
-  if (root$config$core$use_file_store) {
-    meta <- root$metadata(packet_id)
-    files_exist <- root$files$exists(meta$files$hash)
-    for (h in meta$files$hash[!files_exist]) {
-      ## TODO: Should we support bulk download? This might be more
-      ## efficient for some drivers (e.g., async http or streaming a
-      ## single zip)
-      dest <- root$files$tmp()
-      root$files$put(driver$fetch_file(h, dest), h, move = TRUE)
+  hash <- root$metadata(packet_id)$files$hash
+  location_pull_hash_store(root, driver, hash)
+}
+
+
+location_pull_hash_archive <- function(root, driver, hash, dest) {
+  ## TODO: some special care needed here if we want to avoid
+  ## downloading the same file twice from _this_ packet as we won't be
+  ## able to use find_file_by_hash function to resolve that; instead
+  ## this should loop over unique hashes ideally. Easy enough but
+  ## complicates the code.
+  fs::dir_create(dirname(dest))
+  for (i in seq_along(hash)) {
+    src <- find_file_by_hash(root, hash[[i]])
+    if (is.null(src)) {
+      driver$fetch_file(hash[[i]], dest[[i]])
+    } else {
+      fs::file_copy(src, dest[[i]])
     }
   }
 }
 
 location_pull_files_archive <- function(root, driver, packet_id) {
-  if (!is.null(root$config$core$path_archive)) {
-    meta <- root$metadata(packet_id)
-    dest <- file.path(root$path, root$config$core$path_archive, meta$name,
-                      packet_id, meta$files$path)
-    if (root$config$core$use_file_store) {
-      for (i in seq_len(nrow(meta$files))) {
-        root$files$get(meta$files$hash[[i]], dest[[i]])
-      }
-    } else {
-      ## TODO: some special care needed here if we want to avoid
-      ## downloading the same file twice from _this_ packet as we
-      ## won't be able to use find_file_by_hash function to resolve
-      ## that.
-      fs::dir_create(dirname(dest))
-      for (i in seq_len(nrow(meta$files))) {
-        hash <- meta$files$hash[[i]]
-        ## Again here a destination arg would be nice
-        src <- find_file_by_hash(root, hash) %||%
-          driver$fetch_file(hash, dest[[i]])
-      }
+  meta <- root$metadata(packet_id)
+  dest <- file.path(root$path, root$config$core$path_archive, meta$name,
+                    packet_id, meta$files$path)
+  if (root$config$core$use_file_store) {
+    for (i in seq_len(nrow(meta$files))) {
+      root$files$get(meta$files$hash[[i]], dest[[i]])
     }
+  } else {
+    location_pull_hash_archive(root, driver, meta$files$hash, dest)
   }
 }
 

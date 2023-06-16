@@ -354,14 +354,21 @@ file_export <- function(root, id, path, dest) {
   } else {
     src <- file.path(root$path, root$config$core$path_archive,
                      meta$name, meta$id, path)
-    assert_file_exists(src)
+    if (!all(file.exists(src))) {
+      missing <- hash[!file.exists(src)]
+      message <- paste("File not found in archive:\n%s",
+                       paste(sprintf("  - %s", missing), collapse = "\n"))
+      stop(not_found_error(message, missing))
+    }
     ## TODO: Ideally we would have an argument/option support a faster
     ## possibility here if requested (e.g., no validation validate just
     ## size, validate hash); this only applies to this non-file-store
     ## using branch, so typically would affect users running "draft"
     ## type analyses
     for (i in seq_along(dest)) {
-      hash_validate_file(src[[i]], hash[[i]])
+      tryCatch(
+        hash_validate_file(src[[i]], hash[[i]]),
+        error = function(e) stop(not_found_error(e$message, src[[i]])))
     }
     fs::file_copy(src, dest)
   }
