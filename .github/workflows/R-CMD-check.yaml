@@ -42,15 +42,18 @@ jobs:
       - uses: mxschmitt/action-tmate@v3
         if: runner.os == 'Linux'
 
-      # - name: setup server
-      #   run: |
-      #     cargo install --git https://github.com/mrc-ide/outpack_server --branch main
+      # This does take a minute or two to install, and we could cache
+      # it but that's not super easy while still allowing easy
+      # updating. Once things stabilise we might tag outpack server
+      # releases and then we can install and cache against that.
+      - name: setup server
+        run: |
+          cargo install --git https://github.com/mrc-ide/outpack_server --branch main
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
             any::rcmdcheck
-            github::reside-ic/porcelain
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2

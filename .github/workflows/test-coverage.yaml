@@ -25,8 +25,11 @@ jobs:
         with:
           extra-packages: |
             any::covr
-            github::reside-ic/porcelain
           needs: coverage
+
+      - name: setup server
+        run: |
+          cargo install --git https://github.com/mrc-ide/outpack_server --branch main
 
       - name: Test coverage
         run: |
