@@ -80,26 +80,41 @@ query_index <- R6::R6Class(
 )
 
 
-new_query_index <- function(root, require_unpacked) {
+## It would be interesting to know if we can cache this; that might
+## help with the pulling metadata issue (as we could then control only
+## pulling once in a session).
+new_query_index <- function(root, options) {
   root <- outpack_root_open(root, locate = TRUE)
-  idx <- root$index()
-  i <- match(idx$location$location, root$config$location$id)
-  location <- split(root$config$location$name[i], idx$location$packet)
-  index <- data_frame(
-    id = names(idx$metadata) %||% character(0),
-    name = vcapply(idx$metadata, "[[", "name"),
-    ## Wrap these in I() because they're list columns
-    parameters = I(lapply(idx$metadata, "[[", "parameters")),
-    location = I(location))
-  depends <- lapply(idx$metadata, "[[", "depends")
-  uses <- build_packet_uses(depends)
-  if (require_unpacked) {
-    index <- index[index$id %in% idx$unpacked$packet, ]
-    depends <- depends[names(depends) %in% index$id]
-    uses <- uses[names(uses) %in% index$id]
+
+  if (options$pull_metadata) {
+    outpack_location_pull_metadata(options$location, root)
   }
+  idx <- root$index()
+  metadata <- idx$metadata
+
+  if (!is.null(options$location)) {
+    location_id <- location_resolve_valid(options$location, root,
+                                          include_local = TRUE,
+                                          allow_no_locations = FALSE)
+    include <- idx$location$packet[idx$location$location %in% location_id]
+    metadata <- metadata[names(metadata) %in% include]
+  }
+  if (!options$allow_remote) {
+    metadata <- metadata[names(metadata) %in% idx$unpacked$packet]
+  }
+
+  index <- data_frame(
+    id = names(metadata) %||% character(0),
+    name = vcapply(metadata, "[[", "name"),
+    ## Wrap this in I() because it is a list column
+    parameters = I(lapply(metadata, "[[", "parameters")))
+
+  depends <- lapply(metadata, "[[", "depends")
+  uses <- build_packet_uses(depends)
+
   query_index$new(root, index, depends, uses)
 }
+
 
 build_packet_uses <- function(dependencies) {
   ids <- names(dependencies)

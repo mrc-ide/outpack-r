@@ -1,3 +1,47 @@
+test_that("can construct search options", {
+  defaults <- outpack_search_options()
+  expect_s3_class(defaults, "outpack_search_options")
+  expect_mapequal(
+    unclass(defaults),
+    list(location = NULL,
+         allow_remote = FALSE,
+         pull_metadata = FALSE))
+
+  opts <- outpack_search_options(location = c("x", "y"),
+                                 allow_remote = TRUE,
+                                 pull_metadata = TRUE)
+  expect_s3_class(opts, "outpack_search_options")
+  expect_mapequal(
+    unclass(opts),
+    list(location = c("x", "y"),
+         allow_remote = TRUE,
+         pull_metadata = TRUE))
+})
+
+
+test_that("can convert into search options", {
+  opts <- outpack_search_options(location = "x",
+                                 allow_remote = FALSE,
+                                 pull_metadata = FALSE)
+  expect_equal(as_outpack_search_options(NULL),
+               outpack_search_options())
+  expect_equal(as_outpack_search_options(list(location = "x")),
+               modifyList(outpack_search_options(), list(location = "x")))
+  expect_equal(as_outpack_search_options(unclass(opts)),
+               opts)
+})
+
+
+test_that("validate inputs to outpack search options", {
+  expect_error(
+    as_outpack_search_options(c(allow_remote = FALSE)),
+    "Expected 'options' to be an 'outpack_search_options' or a list of options")
+  expect_error(
+    as_outpack_search_options(list(allow_remote = FALSE, other = FALSE)),
+    "Invalid option passed to 'outpack_search_options': 'other'")
+})
+
+
 test_that("Can run very basic queries", {
   root <- create_temporary_root(use_file_store = TRUE)
   ids <- vcapply(1:3, function(i) create_random_packet(root))
@@ -123,7 +167,6 @@ test_that("switch statements will prevent regressions", {
 
 
 test_that("Can filter query to packets that are locally available (unpacked)", {
-  testthat::skip("refactor in next PR")
   root <- list()
   root$a <- create_temporary_root(use_file_store = TRUE)
   for (name in c("x", "y", "z")) {
@@ -140,12 +183,18 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   }
   outpack_location_pull_metadata(root = root$a)
 
+  options_local <- outpack_search_options(location = c("x", "y"),
+                                          allow_remote = FALSE)
+  options_remote <- outpack_search_options(location = c("x", "y"),
+                                          allow_remote = TRUE)
+
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), root = root$a),
+    outpack_search(quote(name == "data"), options = options_remote,
+                   root = root$a),
     c(ids$x, ids$y))
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), require_unpacked = TRUE,
-                  root = root$a),
+    outpack_search(quote(name == "data"), options = options_local,
+                   root = root$a),
     character())
 
   for (i in ids$x) {
@@ -153,16 +202,17 @@ test_that("Can filter query to packets that are locally available (unpacked)", {
   }
 
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), root = root$a),
+    outpack_search(quote(name == "data"), options = options_remote,
+                   root = root$a),
     c(ids$x, ids$y))
   expect_equal(
-    outpack_search(quote(at_location("x", "y")), require_unpacked = TRUE,
-                  root = root$a),
+    outpack_search(quote(name == "data"), options = options_local,
+                   root = root$a),
     ids$x)
 })
 
 
-test_that("scope and require_unpacked can be used together to filter query", {
+test_that("scope and allow_local can be used together to filter query", {
   root <- list()
   for (name in c("src", "dst")) {
     root[[name]] <- create_temporary_root(use_file_store = TRUE)
@@ -176,13 +226,16 @@ test_that("scope and require_unpacked can be used together to filter query", {
   y2 <- create_random_packet(root$src, "y", list(p = 1))
   outpack_location_pull_metadata(root = root$dst)
 
+  options_local <- outpack_search_options(allow_remote = FALSE)
+  options_remote <- outpack_search_options(allow_remote = TRUE)
+
   expect_equal(
-    outpack_search(quote(latest(parameter:p == 1)), require_unpacked = FALSE,
+    outpack_search(quote(latest(parameter:p == 1)), options = options_remote,
                   scope = quote(name == "x"),
                   root = root$dst),
     x2)
   expect_equal(
-    outpack_search(quote(latest(parameter:p == 1)), require_unpacked = TRUE,
+    outpack_search(quote(latest(parameter:p == 1)), options = options_local,
                   scope = quote(name == "x"),
                   root = root$dst),
     NA_character_)
@@ -192,12 +245,12 @@ test_that("scope and require_unpacked can be used together to filter query", {
   }
 
   expect_equal(
-    outpack_search(quote(latest(parameter:p == 1)), require_unpacked = FALSE,
+    outpack_search(quote(latest(parameter:p == 1)), options = options_remote,
                   scope = quote(name == "x"),
                   root = root$dst),
     x2)
   expect_equal(
-    outpack_search(quote(latest(parameter:p == 1)), require_unpacked = TRUE,
+    outpack_search(quote(latest(parameter:p == 1)), options = options_local,
                   scope = quote(name == "x"),
                   root = root$dst),
     x1)
@@ -770,4 +823,24 @@ test_that("Same result with either strings/expressions, named or not", {
       expect_setequal(outpack_search(query, root = root, name = "x"), x$result)
     }
   }
+})
+
+
+test_that("allow search before query", {
+  root <- list()
+  root$a <- create_temporary_root(use_file_store = TRUE)
+  root$b <- create_temporary_root(use_file_store = TRUE)
+  outpack_location_add("b", "path", list(path = root$b$path), root = root$a)
+  ids <- vcapply(1:3, function(i) {
+    create_random_packet(root$b, "data", list(p = i))
+  })
+
+  expect_equal(
+    outpack_search(quote(name == "data"), root = root$a),
+    character(0))
+  expect_equal(
+    outpack_search(quote(name == "data"), root = root$a,
+                   options = list(pull_metadata = TRUE, allow_remote = TRUE)),
+    ids)
+  expect_setequal(names(root$a$index()$metadata), ids)
 })

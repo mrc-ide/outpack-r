@@ -25,7 +25,7 @@ outpack_packet_end(packet, insert = TRUE)
 
 outpack_packet_run(packet, script, envir = .GlobalEnv)
 
-outpack_packet_use_dependency(packet, query, files)
+outpack_packet_use_dependency(packet, query, files, search_options = NULL)
 
 outpack_packet_add_custom(packet, application, data, schema = NULL)
 }
@@ -80,6 +80,9 @@ times within a single packet run (or zero times!) as needed.}
 \item{files}{A named character vector of files; the name
 corresponds to the name within the current packet, while the
 value corresponds to the name within the upstream packet}
+
+\item{search_options}{Optional search options for restricting the
+search (see \link{outpack_search} for details)}
 
 \item{application}{The name of the application (used to organise
 the data and query it later, see Details)}
@@ -143,6 +146,27 @@ balance one of the global resource stacks - either connections
 throw a (classed) error, but the \code{error} field in the final
 error will be \code{NULL}, with an informative message explaining
 what was not balanced.
+}
+
+\section{Dependency resolution}{
+
+
+The \code{search_options} argument controls where outpack searches for
+packets with the given query and if anything might be moved over
+the network (or from one outpack archive to another). By default
+everything is resolved locally only; that is we can only depend
+on packets that are unpacked within our current archive.  If you
+pass a \code{search_options} argument that contains \code{allow_remote = TRUE} (see \link{outpack_search_options} then packets
+that are known anywhere are candidates for using as dependencies
+and \emph{if needed} we will pull the resolved files from a remote
+location. Note that even if the packet is not locally present
+this might not be needed - if you have the same content anywhere
+else in an unpacked packet we will reuse the same content
+without refetching.
+
+If \code{pull_metadata = TRUE}, then we will refresh location metadata
+before pulling, and the \code{location} argument controls which
+locations are pulled from.
 }
 
 \section{Custom metadata}{

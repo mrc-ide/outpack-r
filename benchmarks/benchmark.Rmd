@@ -15,7 +15,7 @@ this repo. It can be downloaded at: https://mrc-ide.myjetbrains.com/youtrack/iss
 ### Opening an outpack root for the first time
 ```{r}
 root <- outpack_root_open("../montagu-reports")
-system.time(root$index(skip_cache=TRUE))
+system.time(root$index(skip_cache = TRUE))
 ```
 ### Adding a packet and then opening the root again
 ```{r}

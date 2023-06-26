@@ -227,15 +227,40 @@ outpack_packet_run <- function(packet, script, envir = .GlobalEnv) {
 ##' @export
 ##' @rdname outpack_packet
 ##'
+##' @section Dependency resolution:
+##'
+##' The `search_options` argument controls where outpack searches for
+##'   packets with the given query and if anything might be moved over
+##'   the network (or from one outpack archive to another). By default
+##'   everything is resolved locally only; that is we can only depend
+##'   on packets that are unpacked within our current archive.  If you
+##'   pass a `search_options` argument that contains `allow_remote =
+##'   TRUE` (see [outpack::outpack_search_options] then packets
+##'   that are known anywhere are candidates for using as dependencies
+##'   and *if needed* we will pull the resolved files from a remote
+##'   location. Note that even if the packet is not locally present
+##'   this might not be needed - if you have the same content anywhere
+##'   else in an unpacked packet we will reuse the same content
+##'   without refetching.
+##'
+##' If `pull_metadata = TRUE`, then we will refresh location metadata
+##'   before pulling, and the `location` argument controls which
+##'   locations are pulled from.
+##'
 ##' @param query An [outpack::outpack_query] object, or something
 ##'   (e.g., a string) that can be trivially converted into one.
 ##'
 ##' @param files A named character vector of files; the name
 ##'   corresponds to the name within the current packet, while the
 ##'   value corresponds to the name within the upstream packet
-outpack_packet_use_dependency <- function(packet, query, files) {
+##'
+##' @param search_options Optional search options for restricting the
+##'   search (see [outpack::outpack_search] for details)
+outpack_packet_use_dependency <- function(packet, query, files,
+                                          search_options = NULL) {
   packet <- check_current_packet(packet)
   query <- as_outpack_query(query)
+  search_options <- as_outpack_search_options(search_options)
 
   if (!query$info$single) {
     stop(paste(
@@ -245,14 +270,29 @@ outpack_packet_use_dependency <- function(packet, query, files) {
   }
 
   id <- outpack_search(query, parameters = packet$parameters,
-                       require_unpacked = TRUE, root = packet$root)
+                       options = search_options, root = packet$root)
+  if (is.na(id)) {
+    ## TODO: this is where we would want to consider explaining what
+    ## went wrong; because that comes with a cost we should probably
+    ## control this behind some options. We also would want to return
+    ## some classed error here to help with formatting and handling
+    ## the error. In particular we definitely want to allow for
+    ## cycling through allow_remote and location in addition to
+    ## near misses on parameters etc.
+    stop(sprintf("Failed to find packet for query:\n    %s", format(query)))
+  }
 
-  ## TODO: currently no capacity here for *querying* to find the id
-  ## (e.g., latest(name) or something more complex).  Any progress on
-  ## this will depend on the query interface.  It's probable that we
-  ## might want to record the query here alongside the id, if one was
-  ## used?  Or should we allow a query here?
-  outpack_copy_files(id, files, packet$path, root = packet$root)
+  needs_pull <- search_options$allow_remote &&
+    packet$root$config$core$require_complete_tree &&
+    !(id %in% packet$root$index()$unpacked$packet)
+  if (needs_pull) {
+    outpack::outpack_location_pull_packet(id, search_options$location,
+                                          root = packet$root)
+  }
+
+  outpack_copy_files(id, files, packet$path,
+                     allow_remote = search_options$allow_remote,
+                     root = packet$root)
 
   query_str <- deparse_query(query$value$expr,
                              lapply(query$subquery, "[[", "expr"))

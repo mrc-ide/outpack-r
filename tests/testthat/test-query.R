@@ -61,6 +61,10 @@ test_that("validate argument numbers", {
     query_parse(quote(latest(a, b)), NULL, emptyenv()),
     "Invalid call to latest(); expected at most 1 args but received 2",
     fixed = TRUE)
+  expect_error(
+    query_parse(quote(uses()), NULL, emptyenv()),
+    "Invalid call to uses(); expected at least 1 args but received 0",
+    fixed = TRUE)
 })
 
 

@@ -1,5 +1,9 @@
 ##' Evaluate a query against the outpack database, returning a vector
-##' of matching packet ids.
+##' of matching packet ids.  Note that by default this only searches
+##' through packets that are unpacked and available for direct use on
+##' this computer; to search within packets known to other locations
+##' (and that we might know about via their metadata) you will need to
+##' use the `options` argument.
 ##'
 ##' @title Query outpack's database
 ##'
@@ -9,34 +13,114 @@
 ##' @param parameters Optionally, a named list of parameters to substitute
 ##'   into the query (using the `this:` prefix)
 ##'
-##' @param require_unpacked Logical, indicating if we should require
-##'   that the packets are unpacked. If `FALSE` (the default) we
-##'   search through all packets known to this outpack root,
-##'   regardless of if they are locally available, but if `TRUE`, only
-##'   unpacked packets will be considered.
+##' @param options Optionally, a [outpack::outpack_search_options]
+##'   object for controlling how the search is performed, and which
+##'   packets should be considered in scope. If not provided, default
+##'   options are used (i.e., `outpack::outpack_search_options()`)
 ##'
 ##' @param root The outpack root. Will be searched for from the
 ##'   current directory if not given.
 ##'
-##' @return A character vector of matching ids
+##' @return A character vector of matching ids. In the case of no
+##'   match from a query returning a single value (e.g., `latest(...)`
+##'   or `single(...)`) this will be a character missing value
+##'   (`NA_character_`)
+##'
 ##' @export
-outpack_search <- function(..., parameters = NULL, require_unpacked = FALSE,
+outpack_search <- function(..., parameters = NULL, options = NULL,
                            root = NULL) {
   root <- outpack_root_open(root, locate = TRUE)
   query <- as_outpack_query(...)
-  outpack_query_eval(query, parameters, require_unpacked, root)
+  options <- as_outpack_search_options(options)
+  outpack_query_eval(query, parameters, options, root)
 }
 
 
-outpack_query_eval <- function(query, parameters, require_unpacked, root) {
+##' Options for controlling how packet searches are carried out, for
+##' example via [outpack::outpack_search] and
+##' [outpack::outpack_packet_use_dependency]. The details here are
+##' never included in the metadata alongside the query (that is,
+##' they're not part of the query even though they affect it).
+##'
+##' @title Packet search options
+##'
+##' @param location Optional vector of locations to pull from. We
+##'   might in future expand this to allow wildcards, exceptions, or
+##'   numeric values corresponding to the location priority (and then
+##'   it's possible we'll change the name).
+##'
+##' @param allow_remote Logical, indicating if we should allow
+##'   packets to be found that are not currently unpacked (i.e., are
+##'   known only to a location that we have metadata from). If this is
+##'   `TRUE`, then inconjunction with
+##'   [outpack::outpack_packet_use_dependency] you might pull a large
+##'   quantity of data.
+##'
+##' @param pull_metadata Logical, indicating if we should pull
+##'   metadata immediately before the search. If `location` is
+##'   given, then we will pass this through to
+##'   [outpack::outpack_location_pull_metadata] to filter locations to
+##'   update.  If pulling many packets in sequence, you *will* want to
+##'   update this option to `FALSE` after the first pull.
+##'
+##' @return An object of class `outpack_search_options` which should
+##'   not be modified after creation (but see note about `pull_metadata`)
+##'
+##' @export
+outpack_search_options <- function(location = NULL,
+                                   allow_remote = FALSE,
+                                   pull_metadata = FALSE) {
+  ## TODO: Later, we might allow something like "before" here too to
+  ## control searching against some previous time on a location.
+  if (!is.null(location)) {
+    assert_character(location)
+  }
+  assert_scalar_logical(allow_remote)
+  assert_scalar_logical(pull_metadata)
+  ret <- list(location = location,
+              allow_remote = allow_remote,
+              pull_metadata = pull_metadata)
+  class(ret) <- "outpack_search_options"
+  ret
+}
+
+
+as_outpack_search_options <- function(x, name = deparse(substitute(x))) {
+  if (!is.name(name)) {
+    name <- "options"
+  }
+  if (is.null(x)) {
+    return(outpack_search_options())
+  }
+  if (inherits(x, "outpack_search_options")) {
+    return(x)
+  }
+  if (!is.list(x)) {
+    stop(sprintf(
+      "Expected '%s' to be an 'outpack_search_options' or a list of options",
+      name),
+      call. = FALSE)
+  }
+  err <- setdiff(names(x), names(formals(outpack_search_options)))
+  if (length(err) > 0) {
+    stop(sprintf("Invalid option passed to 'outpack_search_options': %s",
+                 paste(squote(err), collapse = ", ")),
+         call. = FALSE)
+  }
+  do.call(outpack_search_options, x)
+}
+
+
+outpack_query_eval <- function(query, parameters, options, root) {
   assert_is(query, "outpack_query")
+  assert_is(options, "outpack_search_options")
   assert_is(root, "outpack_root")
   validate_parameters(parameters)
   ## It's simple enough here to pre-compare the provided parameters
   ## with query$info$parameters, but we already have nicer error
   ## reporting at runtime that shows the context of where the
   ## parameter is used.
-  index <- new_query_index(root, require_unpacked)
+  index <- new_query_index(root, options)
   query_eval(query$value, index, parameters, list2env(query$subquery))
 }
 
