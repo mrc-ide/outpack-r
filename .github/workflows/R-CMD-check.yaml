@@ -39,6 +39,13 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
+      - uses: mxschmitt/action-tmate@v3
+        if: runner.os == 'Linux'
+
+      # - name: setup server
+      #   run: |
+      #     cargo install --git https://github.com/mrc-ide/outpack_server --branch main
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
