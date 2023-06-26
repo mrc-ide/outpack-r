@@ -12,7 +12,7 @@ outpack_server <- function(path, timeout = 10) {
   while (!success && px$is_alive() && Sys.time() < t_end) {
     message("testing...")
     result <- tryCatch(httr::GET("http://localhost:8000"), error = identity)
-    success <- !inherits(res, "error")
+    success <- !inherits(result, "error")
   }
   if (!success) {
     stop("Failed to bring up server!")
