@@ -2,8 +2,8 @@ describe("server integration tests", {
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   path <- root$path
   server <- outpack_server(path)
+  url <- "http://localhost:8000"
 
-  url <- server$url("")
   client_http <- outpack_location_http$new(url)
   client_path <- outpack_location_path$new(path)
 
@@ -20,7 +20,7 @@ describe("server integration tests", {
   })
 
   it("returns compatible metadata", {
-    expect_identical(client_http$metadata(ids),
+    expect_identical(trimws(client_http$metadata(ids)),
                      client_path$metadata(ids))
   })
 
@@ -58,7 +58,7 @@ describe("http location integration tests", {
   root <- create_temporary_root(path_archive = "archive", use_file_store = TRUE)
   path <- root$path
   server <- outpack_server(path)
-  url <- server$url("")
+  url <- "http://localhost:8000"
 
   ids <- vcapply(1:3, function(i) create_random_packet(path))
 
