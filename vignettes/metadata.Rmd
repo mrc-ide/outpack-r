@@ -9,7 +9,7 @@ vignette: >
 
 The `outpack` package is the reference implementation at the moment of the outpack specification; a collection of schemas and directory structures that outpack requires. Once we reach version 1.0.0, we will split this specification from the package.
 
-We make use of [json schema](https://json-schema.org) to document the schemas used.
+We make use of [JSON schema](https://json-schema.org) to document the schemas used.
 
 This vignette outlines the basic structure of files within the outpack directories, and is not itself an overview of how outpack works; the primary audience is people working on outpack itself (though a small introduction is provided below).
 
@@ -18,11 +18,11 @@ This vignette outlines the basic structure of files within the outpack directori
 Each "packet" was conceptually a directory, corresponding to a particular analysis or data product, though this is not necessarily how it is stored. The internal representation includes:
 
 * metadata about the packet - which files it contains and their hashes along with information about what was done to create it and the environment it was created in etc (see below)
-* actual file contents of every included file. This might be stored in a simple content-addressable file storage system (see below) or tual copies of the directories as originally created
+* actual file contents of every included file. This might be stored in a simple content-addressable file storage system (see below) or actual copies of the directories as originally created
 
 Every packet is referenced uniquely by a primary key. We use a key format that encodes the current date and time, as well as random data to avoid collisions.
 
-There exists some dependency graph among packets, as one packet depends on another. Each edge of this graph has a hard link (from one packet to anothe by an id) and also a query (e.g., latest packet with some name) which was used to find the packet. This means that there are many ways of looking at or thinking about the dependency graph.
+There exists some dependency graph among packets, as one packet depends on another. Each edge of this graph has a hard link (from one packet to another by an id) and also a query (e.g., latest packet with some name) which was used to find the packet. This means that there are many ways of looking at or thinking about the dependency graph.
 
 Not all packets are available locally, some are on other outpack repositories, typically (but not always) on other machines and accessed over an HTTP API. These are conceptually similar to git "remotes".
 
@@ -101,7 +101,7 @@ This storage format is not human-readable (and indeed present only within the hi
 
 ## An archive (`archive/` by default)
 
-If the configurtion option `core.path_archive` is non-`null` then there will be a directory with that path containing unpacked packets. Each packet will be available at the path
+If the configuration option `core.path_archive` is non-`null` then there will be a directory with that path containing unpacked packets. Each packet will be available at the path
 
 ```
 archive/<name>/<id>/<files...>
@@ -125,7 +125,7 @@ If the repository uses a file store, you should fill this first, because it is m
 
 If the repository has a human-readable archive **and** uses a file store, then after the files are all present in the file store it is easy enough to check them out of the file store to the requested path (the local relative path in the packet manifest). Because you update the file store first, all files are guaranteed to be present.
 
-If the repository **only** uses a human readable archive, the simplest thing is to request each file from the remote. However, it might be more efficient to check locally for any previously fetched copies of files with the same content, verify that they have not been modified, and then copy those into place rather than re-downoading.
+If the repository **only** uses a human readable archive, the simplest thing is to request each file from the remote. However, it might be more efficient to check locally for any previously fetched copies of files with the same content, verify that they have not been modified, and then copy those into place rather than re-downloading.
 
 ## Marking the packet as unpacked and known locally
 
@@ -139,7 +139,7 @@ conforming to the [`location.json`](https://github.com/mrc-ide/outpack/blob/main
 
 ## Ordering of operations
 
-We only need both files and metadata once the packet is marked as unpacked; note that some configurations guarantee that every packet is unpacked ina  complete tree.
+We only need both files and metadata once the packet is marked as unpacked; note that some configurations guarantee that every packet is unpacked in a  complete tree.
 
 You can import files first, or metadata; there is not a lot of disadvantage to either. You should only mark a package unpacked and known locally though once both components are present.
 
@@ -149,7 +149,7 @@ You can import files first, or metadata; there is not a lot of disadvantage to e
 
 Outpack ids match the regular expression `^[0-9]{8}-[0-9]{6}-[0-9a-f]{8}$`; they are encode UTC date-time as with the prefix `YYYYMMDD-HHMMSS-` and are followed by 8 hexadecimal digits. In the R implementation, we encode the current second as the first four digits (2 bytes) and append 2 bytes of cryptographically random data.
 
-The id tries to balance a reasonable degree of collision resistance (65536 combinations per millisecond), lexographic sortability and a reasonble degree of meaningfulness.
+The id tries to balance a reasonable degree of collision resistance (65536 combinations per millisecond), lexicographic sortability and a reasonable degree of meaningfulness.
 
 ## Location ids
 
@@ -169,7 +169,7 @@ If we had instead used the md5 algorithm we would have written
 md5:bd57f7123c6bfb95c3234ff56373b7f4
 ```
 
-The schema curently assumes that the hash value is represented as a hex string.
+The schema currently assumes that the hash value is represented as a hex string.
 
 ## Times
 
@@ -197,7 +197,7 @@ With hopefully a fairly obvious structure. Paths have format:
 <algorithm>/<first two bytes>/<remaining bytes>
 ```
 
-The reason for the second level is to prevent perfomance degredation with directories containing millions of files, again copying git.
+The reason for the second level is to prevent performance degradation with directories containing millions of files, again copying git.
 
 The store is designed to cope with different hashing algorithms, though the R implementation of `outpack` only supports `sha256` for now.
 
