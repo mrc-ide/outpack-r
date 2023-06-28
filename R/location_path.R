@@ -102,10 +102,9 @@ location_path_import_metadata <- function(str, hash, root) {
   }
 
   writeLines(str, file.path(root$path, ".outpack", "metadata", id))
-  location_id <- local_location_id(root)
+  local_id <- local_location_id(root)
   time <- Sys.time()
-  mark_packet_known(id, location_id, hash, time, root)
-  mark_packet_unpacked(id, location_id, time, root)
+  mark_packet_known(id, local_id, hash, time, root)
 }
 
 

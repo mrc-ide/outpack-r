@@ -193,7 +193,7 @@ test_that("Import complete tree via push into server", {
   idx_s <- server$index()
 
   expect_equal(idx_s$metadata, idx_c$metadata)
-  expect_equal(idx_s$unpacked$packet, idx_c$unpacked$packet)
+  expect_equal(idx_s$unpacked, idx_c$unpacked)
   expect_equal(idx_s$location$packet, idx_c$location$packet)
   expect_equal(idx_s$location$hash, idx_c$location$hash)
 
