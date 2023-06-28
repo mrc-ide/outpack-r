@@ -139,7 +139,7 @@ outpack_root <- R6::R6Class(
 
     add_file_store = function() {
       self$files <- file_store$new(file.path(self$path, ".outpack", "files"))
-      invisible(lapply(self$index()$unpacked$packet, function(id) {
+      invisible(lapply(self$index()$unpacked, function(id) {
         meta <- self$metadata(id)
         path <- lapply(meta$files$hash,
                        function(hash) find_file_by_hash(self, hash))
@@ -266,31 +266,6 @@ read_metadata <- function(root, prev) {
 }
 
 
-read_unpacked <- function(root, prev) {
-  if (is.null(prev)) {
-    prev <- data_frame(packet = character(),
-                       time = empty_time(),
-                       location = character())
-  }
-
-  path <- file.path(root$path, ".outpack", "unpacked")
-  id_new <- setdiff(dir(path), prev$packet)
-
-  if (length(id_new) == 0) {
-    return(prev)
-  }
-
-  dat <- lapply(file.path(path, id_new), jsonlite::read_json)
-  new <- data_frame(packet = vcapply(dat, "[[", "packet"),
-                    time = num_to_time(vnapply(dat, "[[", "time")),
-                    location = vcapply(dat, "[[", "location"))
-  ret <- rbind(prev, new)
-
-  rownames(ret) <- NULL
-  ret
-}
-
-
 ## The index consists of a few bits:
 ## $location - data.frame of id, location and date
 ## $metadata - named list of full metadata
@@ -307,12 +282,12 @@ index_update <- function(root, prev, skip_cache) {
   }
 
   data <- prev
+  local_id <- local_location_id(root)
 
   ## TODO: Add some logging through here.
-
   data$location <- read_locations(root, data$location)
   data$metadata <- read_metadata(root, data$metadata)
-  data$unpacked <- read_unpacked(root, data$unpacked)
+  data$unpacked <- data$location$packet[data$location$location == local_id]
 
   if (!identical(data, prev)) {
     fs::dir_create(dirname(path_index))
@@ -416,7 +391,7 @@ find_file_by_hash <- function(root, hash) {
 
   ## TODO: allow short circuiting validation (e.g., check only the
   ## size matches, or check nothing)
-  for (id in index$unpacked$packet) {
+  for (id in index$unpacked) {
     meta <- index$metadata[[id]]
     for (i in which(meta$files$hash == hash)) {
       path <- file.path(path_archive, meta$name, id, meta$files$path[[i]])
@@ -454,7 +429,7 @@ validate_packet_has_file <- function(root, id, path) {
 
 root_list_unknown_packets <- function(ids, unpacked, root) {
   if (unpacked) {
-    setdiff(ids, root$index()$unpacked$packet)
+    setdiff(ids, root$index()$unpacked)
   } else {
     setdiff(ids, names(root$index()$metadata))
   }
@@ -466,7 +441,7 @@ root_list_unknown_files <- function(hashes, root) {
     hashes[!root$files$exists(hashes)]
   } else {
     idx <- root$index()
-    if (length(idx$unpacked$packet) == 0) {
+    if (length(idx$unpacked) == 0) {
       return(hashes)
     }
     ## This could be quite a slow operation, especially if we always

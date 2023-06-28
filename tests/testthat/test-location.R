@@ -363,8 +363,7 @@ test_that("can pull a packet from one location to another, using file store", {
   outpack_location_pull_packet(id, root = root$dst)
 
   index <- root$dst$index()
-  expect_equal(index$unpacked$packet, id)
-  expect_equal(index$unpacked$location, lookup_location_id("src", root$dst))
+  expect_equal(index$unpacked, id)
   expect_true(file.exists(
     file.path(root$dst$path, "archive", "data", id, "data.rds")))
   expect_true(all(root$dst$files$exists(root$dst$metadata(id)$files$hash)))
@@ -384,8 +383,7 @@ test_that("can pull a packet from one location to another, archive only", {
   outpack_location_pull_packet(id, root = root$dst)
 
   index <- root$dst$index()
-  expect_equal(index$unpacked$packet, id)
-  expect_equal(index$unpacked$location, lookup_location_id("src", root$dst))
+  expect_equal(index$unpacked, id)
   expect_true(file.exists(
     file.path(root$dst$path, "archive", "data", id, "data.rds")))
 })
@@ -499,10 +497,8 @@ test_that("Can pull a tree recursively", {
     c(id$a, id$b, id$c))
 
   index <- root$dst$index()
-  expect_equal(index$unpacked$packet,
-               root$src$index()$unpacked$packet)
-  expect_equal(index$unpacked$location,
-               rep(lookup_location_id("src", root$dst), 3))
+  expect_equal(index$unpacked,
+               root$src$index()$unpacked)
 
   expect_equal(
     outpack_location_pull_packet(id$c, "src", recursive = TRUE,
@@ -705,10 +701,10 @@ test_that("if recursive pulls are required, pulls are recursive by default", {
   }
 
   outpack_location_pull_packet(id[["c"]], recursive = NULL, root = root$shallow)
-  expect_equal(root$shallow$index()$unpacked$packet, id[["c"]])
+  expect_equal(root$shallow$index()$unpacked, id[["c"]])
 
   outpack_location_pull_packet(id[["c"]], recursive = NULL, root = root$deep)
-  expect_setequal(root$deep$index()$unpacked$packet, id)
+  expect_setequal(root$deep$index()$unpacked, id)
 })
 
 

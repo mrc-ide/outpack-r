@@ -100,7 +100,7 @@ new_query_index <- function(root, options) {
     metadata <- metadata[names(metadata) %in% include]
   }
   if (!options$allow_remote) {
-    metadata <- metadata[names(metadata) %in% idx$unpacked$packet]
+    metadata <- metadata[names(metadata) %in% idx$unpacked]
   }
 
   index <- data_frame(

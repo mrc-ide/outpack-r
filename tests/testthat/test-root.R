@@ -105,10 +105,7 @@ test_that("Can't get nonexistant metadata", {
 test_that("empty root has nothing unpacked", {
   root <- create_temporary_root()
   index <- root$index()
-  expect_equal(index$unpacked,
-               data_frame(packet = character(),
-                          time = empty_time(),
-                          location = character()))
+  expect_equal(index$unpacked, character())
 })
 
 

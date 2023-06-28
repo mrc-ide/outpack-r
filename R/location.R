@@ -283,7 +283,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
 
   ## Later, it might be better if we did not skip over unpacked
   ## packets, but instead validate and/or repair them (see mrc-3052)
-  id <- setdiff(id, index$unpacked$packet)
+  id <- setdiff(id, index$unpacked)
   if (length(id) == 0) {
     return(id)
   }
@@ -292,6 +292,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
                                         include_local = FALSE,
                                         allow_no_locations = FALSE)
   plan <- location_build_pull_plan(id, location_id, root)
+  local_id <- local_location_id(root)
 
   ## At this point we should really be providing logging about how
   ## many packets, files, etc are being copied.  I've done this as a
@@ -309,6 +310,9 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
   ## workflows, but there's also an argument that we might try looking
   ## for a given file in any location at some point.
   for (i in seq_len(nrow(plan))) {
+    ## See mrc-4351 (assumption is this was validated on insert).
+    hash <- index$location$hash[index$location$packet == plan$packet[i] &
+                                index$location$location == plan$location_id[i]]
     driver <- location_driver(plan$location_id[i], root)
     if (root$config$core$use_file_store) {
       location_pull_files_store(root, driver, plan$packet[i])
@@ -316,7 +320,7 @@ outpack_location_pull_packet <- function(id, location = NULL, recursive = NULL,
     if (!is.null(root$config$core$path_archive)) {
       location_pull_files_archive(root, driver, plan$packet[i])
     }
-    mark_packet_unpacked(plan$packet[i], plan$location_id[i], Sys.time(), root)
+    mark_packet_known(plan$packet[i], local_id, hash, Sys.time(), root)
   }
 
   invisible(id)
