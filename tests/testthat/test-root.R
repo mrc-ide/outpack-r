@@ -144,26 +144,24 @@ test_that("Can work out what packets are missing", {
   outpack_location_pull_metadata(root = root$b)
 
   ## Nothing missing in this case:
-  expect_equal(root_list_unknown_packets(ids, TRUE, root$a),
+  expect_equal(root_list_unknown_packets(ids, root$a),
                character())
-  expect_equal(root_list_unknown_packets(ids[[1]], TRUE, root$a),
+  expect_equal(root_list_unknown_packets(ids[[1]], root$a),
                character())
-  expect_equal(root_list_unknown_packets(character(), TRUE, root$a),
+  expect_equal(root_list_unknown_packets(character(), root$a),
                character())
 
   ids_fake <- replicate(4, outpack_id())
-  expect_equal(root_list_unknown_packets(ids_fake, TRUE, root$a),
+  expect_equal(root_list_unknown_packets(ids_fake, root$a),
                ids_fake)
-  expect_equal(root_list_unknown_packets(rev(ids_fake), TRUE, root$a),
+  expect_equal(root_list_unknown_packets(rev(ids_fake), root$a),
                rev(ids_fake))
 
   ids_all <- sample(c(unname(ids), ids_fake))
-  expect_equal(root_list_unknown_packets(ids_all, TRUE, root$a),
+  expect_equal(root_list_unknown_packets(ids_all, root$a),
                setdiff(ids_all, ids))
-  expect_equal(root_list_unknown_packets(ids_all, TRUE, root$b),
+  expect_equal(root_list_unknown_packets(ids_all, root$b),
                ids_all)
-  expect_equal(root_list_unknown_packets(ids_all, FALSE, root$b),
-               setdiff(ids_all, ids))
 })
 
 

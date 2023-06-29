@@ -52,11 +52,8 @@ outpack_location_path <- R6::R6Class(
       dest
     },
 
-    list_unknown_packets = function(ids, unpacked) {
-      if (!unpacked) {
-        stop("Eliminate this option!")
-      }
-      root_list_unknown_packets(ids, unpacked = TRUE, root = private$root)
+    list_unknown_packets = function(ids) {
+      root_list_unknown_packets(ids, root = private$root)
     },
 
     list_unknown_files = function(hashes) {
@@ -88,7 +85,7 @@ location_path_import_metadata <- function(str, hash, root) {
       sprintf("Can't import metadata for '%s', as files missing:\n%s",
               id, paste(sprintf("  - %s", unknown_files), collapse = "\n")))
   }
-  unknown_packets <- root_list_unknown_packets(meta$depends$packet, TRUE, root)
+  unknown_packets <- root_list_unknown_packets(meta$depends$packet, root)
   if (length(unknown_packets) > 0) {
     stop(sprintf(
       "Can't import metadata for '%s', as dependencies missing:\n%s",

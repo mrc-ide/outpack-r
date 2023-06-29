@@ -427,12 +427,8 @@ validate_packet_has_file <- function(root, id, path) {
 }
 
 
-root_list_unknown_packets <- function(ids, unpacked, root) {
-  if (unpacked) {
-    setdiff(ids, root$index()$unpacked)
-  } else {
-    setdiff(ids, names(root$index()$metadata))
-  }
+root_list_unknown_packets <- function(ids, root) {
+  setdiff(ids, root$index()$unpacked)
 }
 
 
