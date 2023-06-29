@@ -159,6 +159,7 @@ test_that("Removing a location orphans packets only from that location", {
   id1 <- create_random_packet(root$c)
   id2 <- create_random_packet(root$b)
   outpack_location_pull_metadata(root = root$b)
+  outpack_location_pull_packet(id1, root = root$b)
   outpack_location_pull_metadata(root = root$a)
 
   # id1 should now be found in both b and c
@@ -326,7 +327,9 @@ test_that("Can pull metadata through chain of locations", {
   ## Create a packet and make sure it's in both b and c
   id1 <- create_random_packet(root$a)
   outpack_location_pull_metadata(root = root$b)
+  outpack_location_pull_packet(id1, root = root$b)
   outpack_location_pull_metadata(root = root$c)
+  outpack_location_pull_packet(id1, root = root$c)
 
   ## And another in just 'c'
   id2 <- create_random_packet(root$c)
@@ -610,12 +613,16 @@ test_that("Can filter locations", {
   ids_a <- vcapply(1:3, function(i) create_random_packet(root$a$path))
   outpack_location_add("a", "path", list(path = root$a$path), root = root$b)
   outpack_location_pull_metadata(root = root$b)
+  outpack_location_pull_packet(ids_a, root = root$b)
+
   ids_b <- c(ids_a,
              vcapply(1:3, function(i) create_random_packet(root$b$path)))
   ids_c <- vcapply(1:3, function(i) create_random_packet(root$c$path))
   outpack_location_add("a", "path", list(path = root$a$path), root = root$d)
   outpack_location_add("c", "path", list(path = root$c$path), root = root$d)
   outpack_location_pull_metadata(root = root$d)
+  outpack_location_pull_packet(ids_a, root = root$d)
+  outpack_location_pull_packet(ids_c, root = root$d)
   ids_d <- c(ids_c,
              vcapply(1:3, function(i) create_random_packet(root$d$path)))
 
