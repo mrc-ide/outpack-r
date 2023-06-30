@@ -2,22 +2,19 @@ outpack_location_path <- R6::R6Class(
   "outpack_location_path",
 
   private = list(
-    root = NULL
+    root = NULL,
+    local_id = NULL
   ),
 
   public = list(
     initialize = function(path) {
-      ## TODO: filter so that we only count some locations as
-      ## possibilities to export.
       private$root <- outpack_root_open(path, locate = FALSE)
+      private$local_id <- local_location_id(private$root)
     },
 
     list = function() {
-      ## Later on, it might be possible to generalise this to allow us
-      ## to request "changes since time" or similar, to reduce the
-      ## total amount of information that travels across the wire.
       dat <- private$root$index()$location
-      dat[c("packet", "time", "hash")]
+      dat[dat$location == private$local_id, c("packet", "time", "hash")]
     },
 
     metadata = function(packet_ids) {
@@ -25,7 +22,7 @@ outpack_location_path <- R6::R6Class(
       ## shipping results from, then we need to validate that these
       ## ids are all found within our data.
       dat <- private$root$index()$location
-      msg <- setdiff(packet_ids, dat$packet)
+      msg <- setdiff(packet_ids, dat$packet[dat$location == private$local_id])
       if (length(msg) > 0) {
         stop("Some packet ids not found: ",
              paste(squote(msg), collapse = ", "))
@@ -55,8 +52,8 @@ outpack_location_path <- R6::R6Class(
       dest
     },
 
-    list_unknown_packets = function(ids, unpacked) {
-      root_list_unknown_packets(ids, unpacked, private$root)
+    list_unknown_packets = function(ids) {
+      root_list_unknown_packets(ids, root = private$root)
     },
 
     list_unknown_files = function(hashes) {
@@ -88,7 +85,7 @@ location_path_import_metadata <- function(str, hash, root) {
       sprintf("Can't import metadata for '%s', as files missing:\n%s",
               id, paste(sprintf("  - %s", unknown_files), collapse = "\n")))
   }
-  unknown_packets <- root_list_unknown_packets(meta$depends$packet, TRUE, root)
+  unknown_packets <- root_list_unknown_packets(meta$depends$packet, root)
   if (length(unknown_packets) > 0) {
     stop(sprintf(
       "Can't import metadata for '%s', as dependencies missing:\n%s",

@@ -546,7 +546,7 @@ location_build_push_plan <- function(packet_id, location_id, root) {
   driver <- location_driver(location_id, root)
 
   packet_id <- sort(find_all_dependencies(packet_id, root$index()$metadata))
-  packet_id_msg <- driver$list_unknown_packets(packet_id, unpacked = TRUE)
+  packet_id_msg <- driver$list_unknown_packets(packet_id)
 
   if (length(packet_id_msg) == 0) {
     files_msg <- character(0)
